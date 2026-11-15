@@ -670,6 +670,8 @@ function render() {
     const k = M.min(1, stateT / 20);
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
     const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
+    X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
+    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 120, 12); X.fill(); X.stroke();
     txt('RIDEAU !', ox, oy, 40, COL.red);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
