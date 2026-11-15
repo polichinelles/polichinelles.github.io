@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1c1838">
 <title>Les Polichinelles - le jeu</title>
 <style>
-html,body{margin:0;height:100%;background:#1c1838;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;width:100%;background:#1c1838;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #entry{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.55);z-index:5;touch-action:auto}
 #entry.on{display:flex}
@@ -37,6 +37,57 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #lb li.r1{background:rgba(230,184,48,.16)}
 #lb .msg{padding:22px 10px;text-align:center;color:#ccc;font-weight:400;background:none}
 #lb footer{padding:10px 12px 14px;text-align:center}
+#wdBtn{position:fixed;right:calc(10px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));z-index:4;width:48px;height:48px;border-radius:50%;border:2px solid #e6b830;background:rgba(28,24,56,.82);font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent}
+#wdBtn:active{transform:scale(.92)}#wdBtn[hidden]{display:none}
+#wdBtn .dot{position:absolute;right:-2px;top:-2px;width:14px;height:14px;border-radius:50%;background:#ff3b5c;border:2px solid #fff;display:none}
+#wdBtn.new .dot{display:block}
+#wd{position:fixed;inset:0;overflow:hidden;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.65);z-index:7;touch-action:pan-y}
+#wd.on{display:flex}
+#wd .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;width:min(96vw,440px);max-height:94vh;display:flex;flex-direction:column;color:#fff;font:600 15px Georgia,serif;box-shadow:0 12px 34px rgba(0,0,0,.55);overflow:hidden}
+#wd header{background:#8a1f2a;padding:10px 12px;display:flex;align-items:center;gap:10px;border-bottom:2px solid #e6b830}
+#wd h2{margin:0;color:#e6b830;font-size:20px;flex:1}
+#wd .wallet{background:#1c1838;border:1px solid #e6b830;border-radius:20px;padding:4px 10px;color:#ffe9a0;white-space:nowrap}
+#wd .close{width:34px;height:34px;border-radius:50%;border:0;background:#5e0f18;color:#fff;font-size:18px;padding:0;cursor:pointer;flex:none}
+#wd .body{display:flex;flex-direction:column;min-height:0;flex:1}
+#wd .stage{position:relative;background:linear-gradient(#e9dcc6 0 70%,#8a1f2a 70% 100%);height:min(30vh,190px);flex:none;border-bottom:2px solid #e6b830}
+#wd .stage canvas{width:100%;height:100%;display:block}
+#wd .stage .nm{position:absolute;left:0;right:0;bottom:6px;text-align:center;color:#fff;text-shadow:0 1px 3px #000;font-size:14px}
+#wd .right{display:flex;flex-direction:column;min-height:0;min-width:0;flex:1}
+#wd .body,#wd nav,#wd .grid{min-width:0}
+#wd nav{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;flex:none;touch-action:pan-x;scrollbar-width:none}
+#wd nav::-webkit-scrollbar{display:none}
+#wd nav button{flex:none;border:1px solid #e6b830;background:transparent;color:#e6b830;border-radius:18px;padding:7px 12px;font:600 14px Georgia,serif;cursor:pointer;position:relative}
+#wd nav button.on{background:#e6b830;color:#1c1838}
+#wd nav button .dot{position:absolute;right:-3px;top:-3px;width:10px;height:10px;border-radius:50%;background:#ff3b5c;display:none}
+#wd nav button.new .dot{display:block}
+#wd .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:2px 10px 10px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;min-height:120px}
+#wd .card{position:relative;background:rgba(255,255,255,.06);border:2px solid transparent;border-radius:12px;padding:6px 4px 6px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#wd .card canvas{width:64px;height:72px;display:block;margin:0 auto}
+#wd .card .n{font-size:12px;line-height:1.15;margin-top:2px;min-height:28px;display:flex;align-items:center;justify-content:center}
+#wd .card .st{font-size:12px;color:#ffe9a0;margin-top:2px}
+#wd .card.sel{border-color:#9fe0ff;background:rgba(159,224,255,.12)}
+#wd .card.eq{border-color:#e6b830}
+#wd .card.eq::after{content:'✓';position:absolute;right:6px;top:4px;color:#e6b830;font-size:16px}
+#wd .card.lock canvas{opacity:.45;filter:grayscale(.7)}
+#wd .card.lock .st{color:#c9c2d8}
+#wd .card .nw{position:absolute;left:6px;top:4px;background:#ff3b5c;color:#fff;font-size:10px;border-radius:8px;padding:1px 5px}
+#wd footer{border-top:2px solid #e6b830;padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:46px;flex:none;background:#241f48}
+#wd footer .info{flex:1;font-size:14px;line-height:1.25}
+#wd footer .info small{display:block;color:#c9c2d8;font-weight:400;font-size:12px}
+#wd footer button{font:700 15px Georgia,serif;padding:10px 16px;border-radius:9px;border:0;cursor:pointer;flex:none}
+#wd footer .buy{background:#e6b830;color:#2a2230}#wd footer .buy:disabled{background:#5a5470;color:#aaa}
+#wd footer .wear{background:#3a8f5a;color:#fff}
+#wd .prog{height:6px;background:rgba(255,255,255,.12);border-radius:3px;margin-top:5px;overflow:hidden}
+#wd .prog i{display:block;height:100%;background:#9fe0ff}
+@media (orientation:landscape) and (max-height:560px){
+  #wd .box{width:min(96vw,760px);max-height:96vh}
+  #wd .body{flex-direction:row}
+  #wd .stage{width:36%;height:auto;border-bottom:0;border-right:2px solid #e6b830}
+  #wd .grid{grid-template-columns:repeat(4,1fr)}
+}
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9;background:#1c1838;border:2px solid #e6b830;color:#fff;border-radius:14px;padding:10px 16px;font:600 15px Georgia,serif;box-shadow:0 6px 18px rgba(0,0,0,.5);transition:transform .35s;pointer-events:none;max-width:86vw;text-align:center}
+#toast.on{transform:translate(-50%,0)}
+#toast b{color:#e6b830}
 #lb footer button{font:700 16px Georgia,serif;padding:11px 26px;border-radius:9px;border:0;background:#e6b830;color:#2a2230;cursor:pointer}
 </style>
 </head>
@@ -48,6 +99,16 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
   <ol id="lbList"></ol>
   <footer><button class="back">Retour au jeu</button></footer>
 </div></div>
+<button id="wdBtn" aria-label="La Loge : tenues" title="Tenues">🎩<span class="dot"></span></button>
+<div id="wd" role="dialog" aria-modal="true" aria-label="La Loge"><div class="box">
+  <header><h2>🎩 La Loge</h2><span class="wallet">⭐ <b id="wdWallet">0</b></span><button class="close" aria-label="Fermer">✕</button></header>
+  <div class="body">
+    <div class="stage"><canvas id="wdPrev"></canvas><div class="nm" id="wdName"></div></div>
+    <div class="right"><nav id="wdTabs"></nav><div class="grid" id="wdGrid"></div></div>
+  </div>
+  <footer id="wdBar"></footer>
+</div></div>
+<div id="toast"></div>
 <div id="entry"><form class="box" autocomplete="off">
   <h2>Bravo !</h2>
   <p id="entryMsg">Tu entres dans le classement.<br>Ton prénom :</p>
@@ -57,7 +118,8 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 </form></div>
 <script>
 "use strict";
-const c = document.getElementById('c'), X = c.getContext('2d');
+const c = document.getElementById('c'), MAINX = c.getContext('2d');
+let X = MAINX;
 if (!X.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h) };
 const M = Math, rnd = (a, b) => a + M.random() * (b - a);
 
@@ -258,10 +320,116 @@ const POWERS = {
   cape:  { dur: 600, label: 'Triple saut' },
   clock: { dur: 300, label: 'Ralenti' }
 };
-let fellIn = null, fallY = 0;
+let fellIn = null, fallY = 0, earned = 0, tip = 0;
 let power = null, slowK = 1, combo = 0, starPts = 0, bonusPts = 0, nextPow = 0, popups = [];
 function popup(x, y, text, k = '#fff') { popups.push({ x, y, text, k, l: 60 }) }
 function maxJumps() { return power && power.type === 'cape' ? 3 : 2 }
+
+// ---------- La Loge : interface ----------
+const wdEl = document.getElementById('wd'), wdBtn = document.getElementById('wdBtn'), wdGrid = document.getElementById('wdGrid'),
+  wdTabs = document.getElementById('wdTabs'), wdBar = document.getElementById('wdBar'), wdPrev = document.getElementById('wdPrev'),
+  wdName = document.getElementById('wdName'), wdWallet = document.getElementById('wdWallet');
+let wdCat = 'costume', wdSel = null, wdTry = null;
+function isNew(id) { return PROF.owned.includes(id) && !PROF.seen.includes(id) }
+function updateWdBtn() { wdBtn.classList.toggle('new', PROF.owned.some(isNew)) }
+function withCtx(ctx, fn) { const old = X; X = ctx; try { fn() } finally { X = old } }
+function thumb(cv, it) {
+  const d = M.min(window.devicePixelRatio || 1, 2); cv.width = 64 * d; cv.height = 72 * d;
+  const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, 64, 72);
+  withCtx(ctx, () => {
+    if (it.cat === 'trail') {
+      const type = it.v.trail;
+      if (type === 'none') { txt('—', 32, 36, 22, '#888', 'center', false); return }
+      for (let i = 0; i < 7; i++) drawPart({ x: 12 + i * 7, y: 50 - i * 5 + (i % 2) * 6, s: 6, l: 40, r: i, k: { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a' }[type] || ['#d8402c', '#2e9a4c', '#3070d0', '#e6b830', '#f27ab0'][i % 5], shape: type });
+      return;
+    }
+    const look = buildLook({ ...PROF.eq, [it.cat]: it.id });
+    const zoom = it.cat === 'hat' || it.cat === 'face';
+    if (zoom) { if (it.cat === 'face') { X.translate(32, 36 + 74 * 1.8); X.scale(1.8, 1.8) } else { X.translate(32, 38 + 82 * 1.3); X.scale(1.3, 1.3) } }
+    else { X.translate(34, 69); X.scale(.62, .62) }
+    if (it.cat === 'prop') { X.translate(8, 0) }
+    drawPoli({ run: 0, idle: true }, look);
+  });
+}
+function statusOf(it) {
+  if (PROF.eq[it.cat] === it.id) return 'Porté';
+  if (PROF.owned.includes(it.id)) return 'Possédé';
+  if (it.price) return '⭐ ' + it.price;
+  return '🔒 Défi';
+}
+function renderTabs() {
+  wdTabs.innerHTML = CATS.map(c => `<button data-c="${c}" class="${c === wdCat ? 'on' : ''}${WARD[c].items.some(i => isNew(i.id)) ? ' new' : ''}">${WARD[c].label}<span class="dot"></span></button>`).join('');
+}
+function renderGrid() {
+  wdGrid.innerHTML = '';
+  for (const it of WARD[wdCat].items) {
+    const own = PROF.owned.includes(it.id), eq = PROF.eq[it.cat] === it.id;
+    const el = document.createElement('div');
+    el.className = 'card' + (eq ? ' eq' : '') + (own ? '' : ' lock') + (wdSel === it.id ? ' sel' : '');
+    el.innerHTML = `${isNew(it.id) ? '<span class="nw">NEW</span>' : ''}<canvas></canvas><div class="n">${it.name}</div><div class="st">${statusOf(it)}</div>`;
+    thumb(el.querySelector('canvas'), it);
+    el.onclick = () => select(it.id);
+    wdGrid.appendChild(el);
+  }
+  // items of this tab have now been seen
+  let ch = false; for (const it of WARD[wdCat].items) if (isNew(it.id)) { PROF.seen.push(it.id); ch = true }
+  if (ch) { saveProf(); updateWdBtn() }
+}
+function renderBar() {
+  wdWallet.textContent = PROF.wallet;
+  const it = ITEM[wdSel];
+  if (!it) { wdBar.innerHTML = `<div class="info">Touche une tenue pour l’essayer.<small>Gagne des ⭐ en jouant pour acheter des tenues.</small></div>`; return }
+  const own = PROF.owned.includes(it.id), eq = PROF.eq[it.cat] === it.id;
+  if (eq) wdBar.innerHTML = `<div class="info">${it.name}<small>Déjà porté ✓</small></div>`;
+  else if (own) wdBar.innerHTML = `<div class="info">${it.name}<small>Dans ta loge</small></div><button class="wear">Porter</button>`;
+  else if (it.price) {
+    const miss = it.price - PROF.wallet;
+    wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
+  } else {
+    const a = ACH[it.ach], v = M.min(statVal(a.stat), a.goal);
+    wdBar.innerHTML = `<div class="info">🔒 ${it.name}<small>Défi : ${a.text} (${v} / ${a.goal})</small><div class="prog"><i style="width:${v / a.goal * 100}%"></i></div></div>`;
+  }
+  const b = wdBar.querySelector('.buy'), w = wdBar.querySelector('.wear');
+  if (b) b.onclick = () => { if (PROF.wallet >= it.price) { PROF.wallet -= it.price; PROF.owned.push(it.id); PROF.seen.push(it.id); equip(it); sfx.star(); toast(`🎉 <b>${it.name}</b> ajouté à ta loge !`) } };
+  if (w) w.onclick = () => equip(it);
+}
+function equip(it) { PROF.eq[it.cat] = it.id; LOOK = buildLook(PROF.eq); saveProf(); wdTry = null; refreshWd() }
+function select(id) {
+  wdSel = id; const it = ITEM[id];
+  wdTry = PROF.eq[it.cat] === id ? null : buildLook({ ...PROF.eq, [it.cat]: id });
+  wdName.textContent = it.name + (PROF.owned.includes(id) ? '' : ' (essai)');
+  refreshWd();
+}
+function refreshWd() { renderTabs(); renderGrid(); renderBar(); if (!wdSel) wdName.textContent = '' }
+function openWd() { if (entryOpen) return; wdSel = null; wdTry = null; wdEl.classList.add('on'); refreshWd() }
+function closeWd() { wdEl.classList.remove('on'); wdTry = null }
+wdBtn.addEventListener('click', openWd);
+wdEl.querySelector('.close').onclick = closeWd;
+wdEl.addEventListener('click', e => { if (e.target === wdEl) closeWd() });
+wdTabs.addEventListener('click', e => { const b = e.target.closest('button'); if (b) { const sl = wdTabs.scrollLeft; wdCat = b.dataset.c; wdSel = null; wdTry = null; refreshWd(); wdTabs.scrollLeft = sl; wdGrid.scrollTop = 0; scrollTo(0, 0) } });
+addEventListener('scroll', () => { if (scrollX || scrollY) scrollTo(0, 0) });
+for (const el of [wdEl, wdBtn]) for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) el.addEventListener(ev, e => e.stopPropagation());
+addEventListener('keydown', e => { if (e.key === 'Escape' && wdEl.classList.contains('on')) closeWd() });
+// live preview on its little stage
+let prevParts = [];
+function drawPreview() {
+  const r = wdPrev.getBoundingClientRect(); if (!r.width) return;
+  const d = M.min(window.devicePixelRatio || 1, 2);
+  if (wdPrev.width !== M.round(r.width * d)) { wdPrev.width = M.round(r.width * d); wdPrev.height = M.round(r.height * d) }
+  const ctx = wdPrev.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+  const look = wdTry || LOOK, gy = r.height * .7 + 8, sc = M.min((gy - 8) / 108, r.width / 90);
+  withCtx(ctx, () => {
+    // spotlight
+    const g = X.createRadialGradient(r.width / 2, gy - 50 * sc, 5, r.width / 2, gy - 50 * sc, 90 * sc); g.addColorStop(0, 'rgba(255,250,220,.6)'); g.addColorStop(1, 'rgba(255,250,220,0)');
+    X.fillStyle = g; X.fillRect(0, 0, r.width, r.height);
+    X.fillStyle = 'rgba(0,0,0,.25)'; X.beginPath(); X.ellipse(r.width / 2, gy, 22 * sc, 4 * sc, 0, 0, 6.29); X.fill();
+    if (look.trail !== 'none' && t % 4 === 0) prevParts.push({ x: r.width / 2 - 10 * sc + rnd(-6, 6), y: gy - rnd(15, 80) * sc, vx: -rnd(.4, 1.2), vy: rnd(-.6, .1), l: 50, s: 5 * sc / 1.4, r: rnd(0, 6), g: look.trail === 'confetti' ? .04 : -.01, shape: look.trail, k: { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a' }[look.trail] || ['#d8402c', '#2e9a4c', '#3070d0', '#e6b830', '#f27ab0'][M.random() * 5 | 0] });
+    if (look.trail === 'none') prevParts = [];
+    for (const p of prevParts) { p.x += p.vx; p.y += p.vy; p.vy += p.g; p.l--; drawPart(p) }
+    prevParts = prevParts.filter(p => p.l > 0);
+    X.save(); X.translate(r.width / 2, gy); X.scale(sc, sc); drawPoli({ run: t * .05, idle: true }, look); X.restore();
+  });
+}
 
 // ---------- state ----------
 let state = 'title'; // title | opening | play | over
@@ -293,6 +461,7 @@ function wakeAudio() {
   if (AC && AC.state === 'suspended') AC.resume();
 }
 function menuPress() {
+  if (wdEl.classList.contains('on')) return true;
   if (state === 'title') { reset(); state = 'opening'; stateT = 0; return true }
   if (state === 'over') { if (entryOpen) return true; if (stateT > 45) { reset(); state = 'opening'; stateT = 0 } return true }
   return state !== 'play';
@@ -342,10 +511,122 @@ addEventListener('contextmenu', e => e.preventDefault());
 function dust(x, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rnd(-10, 10), y: G - 2, vx: rnd(-2, -.5) - speed * .2, vy: rnd(-1.5, -.3), l: 25, k: '#5a5070', s: rnd(2, 4) }) }
 function burst(x, y, n, cols, sp = 4) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(1, sp); parts.push({ x, y: G + y, vx: M.cos(a) * v, vy: M.sin(a) * v - 1, l: rnd(30, 60), k: cols[i % cols.length], s: rnd(2, 4), g: .12 }) } }
 
+function spawnTrail(type) {
+  const k = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a' }[type] || ['#d8402c', '#2e9a4c', '#3070d0', '#e6b830', '#f27ab0'][M.random() * 5 | 0];
+  parts.push({ x: PX - 12 + rnd(-4, 4), y: G - P.y - rnd(14, 70), vx: -speed * .45 - rnd(.2, 1), vy: rnd(-.7, .2), l: 42, k, s: type === 'confetti' ? rnd(2.5, 4) : rnd(4, 6), g: type === 'confetti' ? .05 : -.01, shape: type, r: rnd(0, 6) });
+}
+function drawPart(p) {
+  X.globalAlpha = M.min(1, p.l / 20); X.fillStyle = p.k;
+  switch (p.shape) {
+    case 'star': star(p.x, p.y, p.s, p.r + p.l * .1); break;
+    case 'note': X.font = `bold ${p.s * 2.4}px Georgia,serif`; X.textAlign = 'center'; X.textBaseline = 'middle'; X.lineWidth = 2.5; X.strokeStyle = '#2a2230'; X.strokeText(p.r > 3 ? '♪' : '♫', p.x, p.y); X.fillText(p.r > 3 ? '♪' : '♫', p.x, p.y); break;
+    case 'spark': X.save(); X.translate(p.x, p.y); X.rotate(p.l * .15); X.fillRect(-p.s / 2, -.8, p.s, 1.6); X.fillRect(-.8, -p.s / 2, 1.6, p.s); X.restore(); break;
+    case 'heart': { const r = p.s * .45; X.beginPath(); X.arc(p.x - r, p.y, r, M.PI, 0); X.arc(p.x + r, p.y, r, M.PI, 0); X.lineTo(p.x, p.y + r * 2.2); X.closePath(); X.fill(); break }
+    case 'confetti': X.save(); X.translate(p.x, p.y); X.rotate(p.r + p.l * .2); X.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); X.restore(); break;
+    default: X.fillRect(p.x, p.y, p.s, p.s);
+  }
+  X.globalAlpha = 1;
+}
+
 // ---------- drawing helpers ----------
 function poly(k, a) { X.fillStyle = k; X.beginPath(); for (let i = 0; i < a.length; i += 2) X.lineTo(a[i], a[i + 1]); X.closePath(); X.fill() }
 function line(k, w, a, cap = 'round') { X.strokeStyle = k; X.lineWidth = w; X.lineCap = cap; X.lineJoin = 'round'; X.beginPath(); for (let i = 0; i < a.length; i += 2) X.lineTo(a[i], a[i + 1]); X.stroke() }
 function circ(k, x, y, r) { X.fillStyle = k; X.beginPath(); X.arc(x, y, r, 0, 6.29); X.fill() }
+
+// ---------- La Loge : outfits, unlocks, profile ----------
+const WARD = {
+  costume: { label: 'Costume', items: [
+    { id: 'c_classic', name: 'Classique', free: 1, v: { stripes: ['#d8402c', '#2e9a4c', '#3070d0'], sleeves: ['#d8402c', '#3070d0'], trim: '#e6b830' } },
+    { id: 'c_ocean', name: 'Océan', price: 40, v: { stripes: ['#1e6fb8', '#2bb3c0', '#123e78'], sleeves: ['#2bb3c0', '#123e78'], trim: '#bfe9ff' } },
+    { id: 'c_foret', name: 'Forêt', price: 40, v: { stripes: ['#2f7a3a', '#7bb04a', '#6b4a2a'], sleeves: ['#7bb04a', '#6b4a2a'], trim: '#e6c35a' } },
+    { id: 'c_bonbon', name: 'Bonbon', price: 60, v: { stripes: ['#f27ab0', '#fff0f6', '#8fd3f4'], sleeves: ['#f27ab0', '#8fd3f4'], trim: '#ff4f9a' } },
+    { id: 'c_feu', name: 'Feu', price: 70, v: { stripes: ['#e0401f', '#f08a1c', '#f2c230'], sleeves: ['#e0401f', '#f2c230'], trim: '#3a1a0a' } },
+    { id: 'c_royal', name: 'Royal', price: 100, v: { stripes: ['#5b2a86', '#c99a2e', '#1d2a6b'], sleeves: ['#5b2a86', '#1d2a6b'], trim: '#f2d27a' } },
+    { id: 'c_nuit', name: 'Nuit', ach: 'act3', v: { stripes: ['#24242c', '#5a5a70', '#a0a0b8'], sleeves: ['#24242c', '#a0a0b8'], trim: '#d8d8e8' } },
+    { id: 'c_or', name: 'Or', ach: 'best1500', v: { stripes: ['#c99a2e', '#f2d27a', '#a87a18'], sleeves: ['#f2d27a', '#a87a18'], trim: '#fff3c0' } }
+  ] },
+  hat: { label: 'Chapeau', items: [
+    { id: 'h_classic', name: 'Rouge', free: 1, v: { hat: '#d8402c', knob: 'ball', pattern: 0 } },
+    { id: 'h_bleu', name: 'Bleu', price: 25, v: { hat: '#3070d0', knob: 'ball', pattern: 0 } },
+    { id: 'h_vert', name: 'Vert', price: 25, v: { hat: '#2e9a4c', knob: 'ball', pattern: 0 } },
+    { id: 'h_raye', name: 'Rayé', price: 50, v: { hat: '#d8402c', knob: 'ball', pattern: '#f4f0e8' } },
+    { id: 'h_grelot', name: 'Grelot', ach: 'games10', v: { hat: '#d8402c', knob: 'bell', pattern: 0 } },
+    { id: 'h_etoile', name: 'Étoilé', ach: 'combo5', v: { hat: '#5b2a86', knob: 'star', pattern: 0 } },
+    { id: 'h_or', name: 'Doré', ach: 'best2500', v: { hat: '#d9a830', knob: 'bell', pattern: '#fff3c0' } }
+  ] },
+  legs: { label: 'Jambes', items: [
+    { id: 'l_classic', name: 'Menthe', free: 1, v: { legs: '#9ed8c8', socks: '#2a62c8', shoes: '#6b4430' } },
+    { id: 'l_blanc', name: 'Blanc', price: 20, v: { legs: '#f2efe8', socks: '#d8402c', shoes: '#2a2230' } },
+    { id: 'l_citron', name: 'Citron', price: 20, v: { legs: '#f2e06a', socks: '#3070d0', shoes: '#6b4430' } },
+    { id: 'l_rose', name: 'Rose', price: 25, v: { legs: '#f6a8c8', socks: '#8a1f2a', shoes: '#6b4430' } },
+    { id: 'l_noir', name: 'Noir', price: 35, v: { legs: '#3a3a46', socks: '#c99a2e', shoes: '#111' } },
+    { id: 'l_or', name: 'Or', ach: 'stars200', v: { legs: '#e6c35a', socks: '#8a1f2a', shoes: '#3a2010' } }
+  ] },
+  face: { label: 'Visage', items: [
+    { id: 'f_barbe', name: 'Barbe', free: 1, v: { face: 'beard' } },
+    { id: 'f_joues', name: 'Joues roses', price: 15, v: { face: 'blush' } },
+    { id: 'f_moust', name: 'Moustache', price: 30, v: { face: 'mustache' } },
+    { id: 'f_loup', name: 'Loup', ach: 'masks5', v: { face: 'mask' } }
+  ] },
+  prop: { label: 'Objet', items: [
+    { id: 'p_canne', name: 'Canne', free: 1, v: { prop: 'cane' } },
+    { id: 'p_aucun', name: 'Rien', free: 1, v: { prop: 'none' } },
+    { id: 'p_fleur', name: 'Fleur', price: 20, v: { prop: 'flower' } },
+    { id: 'p_marotte', name: 'Marotte', price: 35, v: { prop: 'bells' } },
+    { id: 'p_epee', name: 'Épée de bois', price: 40, v: { prop: 'sword' } },
+    { id: 'p_parapluie', name: 'Parapluie', price: 50, v: { prop: 'umbrella' } },
+    { id: 'p_baguette', name: 'Baguette magique', ach: 'act5', v: { prop: 'wand' } }
+  ] },
+  trail: { label: 'Effet', items: [
+    { id: 't_aucun', name: 'Aucun', free: 1, v: { trail: 'none' } },
+    { id: 't_etoiles', name: 'Étoiles', price: 60, v: { trail: 'star' } },
+    { id: 't_notes', name: 'Notes', price: 70, v: { trail: 'note' } },
+    { id: 't_confettis', name: 'Confettis', price: 80, v: { trail: 'confetti' } },
+    { id: 't_paillettes', name: 'Paillettes', ach: 'games25', v: { trail: 'spark' } },
+    { id: 't_coeurs', name: 'Cœurs', ach: 'traps3', v: { trail: 'heart' } }
+  ] }
+};
+const ACH = {
+  act3: { text: 'Atteindre l’Acte III', stat: 'maxAct', goal: 3 },
+  act5: { text: 'Atteindre l’Acte V', stat: 'maxAct', goal: 5 },
+  best1500: { text: 'Faire un record de 1 500', stat: 'best', goal: 1500 },
+  best2500: { text: 'Faire un record de 2 500', stat: 'best', goal: 2500 },
+  games10: { text: 'Jouer 10 parties', stat: 'games', goal: 10 },
+  games25: { text: 'Jouer 25 parties', stat: 'games', goal: 25 },
+  combo5: { text: 'Faire un combo ×5', stat: 'maxCombo', goal: 5 },
+  stars200: { text: 'Ramasser 200 étoiles au total', stat: 'totalStars', goal: 200 },
+  masks5: { text: 'Attraper 5 masques', stat: 'masks', goal: 5 },
+  traps3: { text: 'Tomber dans 3 trappes', stat: 'traps', goal: 3 }
+};
+const CATS = Object.keys(WARD);
+const ITEM = {}; for (const cat of CATS) for (const it of WARD[cat].items) { it.cat = cat; ITEM[it.id] = it }
+const PROF_KEY = 'polichinelles_loge';
+let PROF = { wallet: 0, owned: [], eq: {}, stats: { games: 0, totalStars: 0, maxAct: 1, maxCombo: 0, masks: 0, traps: 0 }, seen: [] };
+try { const raw = JSON.parse(localStorage.getItem(PROF_KEY)); if (raw) PROF = { ...PROF, ...raw, stats: { ...PROF.stats, ...(raw.stats || {}) } } } catch (e) {}
+for (const cat of CATS) for (const it of WARD[cat].items) if (it.free && !PROF.owned.includes(it.id)) { PROF.owned.push(it.id); PROF.seen.push(it.id) }
+for (const cat of CATS) if (!ITEM[PROF.eq[cat]]) PROF.eq[cat] = WARD[cat].items[0].id;
+function saveProf() { try { localStorage.setItem(PROF_KEY, JSON.stringify(PROF)) } catch (e) {} }
+function statVal(k) { return k === 'best' ? best : PROF.stats[k] || 0 }
+function buildLook(eq) { const L = {}; for (const cat of CATS) Object.assign(L, ITEM[eq[cat]].v); return L }
+let LOOK = buildLook(PROF.eq);
+// unlock every challenge item whose goal is reached; announces new ones
+function checkUnlocks() {
+  const got = [];
+  for (const id in ITEM) {
+    const it = ITEM[id];
+    if (it.ach && !PROF.owned.includes(id) && statVal(ACH[it.ach].stat) >= ACH[it.ach].goal) { PROF.owned.push(id); got.push(it) }
+  }
+  if (got.length) { saveProf(); for (const it of got) toast(`🔓 Débloqué : <b>${it.name}</b> (${WARD[it.cat].label.toLowerCase()})`); sfx.power(); updateWdBtn() }
+}
+// ---------- toast ----------
+const toastEl = document.getElementById('toast'); const toastQ = []; let toastBusy = false;
+function toast(html) { toastQ.push(html); if (!toastBusy) nextToast() }
+function nextToast() {
+  const h = toastQ.shift(); if (!h) { toastBusy = false; return }
+  toastBusy = true; toastEl.innerHTML = h; toastEl.classList.add('on');
+  setTimeout(() => { toastEl.classList.remove('on'); setTimeout(nextToast, 400) }, 2600);
+}
+updateWdBtn();
 
 // ---------- the polichinelle (redrawn from the logo, skeleton based) ----------
 // pose = { run, air, duck (0..1), sq (landing squash 0..1), dead, idle }
@@ -359,27 +640,84 @@ function ik(hx, hy, fx, fy, out) {
   const ang = base + (out < 0 ? al : -al);
   return [hx + M.cos(ang) * THIGH, hy + M.sin(ang) * THIGH, fx, fy];
 }
+let DL = LOOK;   // look used by the drawing functions
 function dashedTrim(cx, cy, rx, ry, rot, a0, a1, w) {
   X.beginPath(); X.ellipse(cx, cy, rx, ry, rot, a0, a1);
-  X.lineCap = 'butt'; X.strokeStyle = COL.yellow; X.lineWidth = w; X.stroke();
+  X.lineCap = 'butt'; X.strokeStyle = DL.trim; X.lineWidth = w; X.stroke();
   X.setLineDash([2.2, 2.6]); X.strokeStyle = '#1d1d1d'; X.stroke(); X.setLineDash([]);
-  X.strokeStyle = COL.yellow; X.lineWidth = w * .45; X.stroke();
+  X.strokeStyle = DL.trim; X.lineWidth = w * .45; X.stroke();
 }
 function drawLeg(hx, hy, fx, fy, out) {
   const [kx, ky] = ik(hx, hy, fx, fy, out);
   X.lineCap = 'round'; X.lineJoin = 'round';
   // thigh (mint tights)
-  X.strokeStyle = COL.mint; X.lineWidth = 10; X.beginPath(); X.moveTo(hx, hy); X.lineTo(kx, ky); X.stroke();
+  X.strokeStyle = DL.legs; X.lineWidth = 10; X.beginPath(); X.moveTo(hx, hy); X.lineTo(kx, ky); X.stroke();
   // calf: mint top then blue sock
   const mx = kx + (fx - kx) * .35, my = ky + (fy - ky) * .35;
   X.lineWidth = 8.5; X.beginPath(); X.moveTo(kx, ky); X.lineTo(mx, my); X.stroke();
-  X.strokeStyle = COL.sock; X.beginPath(); X.moveTo(mx, my); X.lineTo(fx, fy - 2); X.stroke();
+  X.strokeStyle = DL.socks; X.beginPath(); X.moveTo(mx, my); X.lineTo(fx, fy - 2); X.stroke();
   // shoe, pointing outward
-  X.fillStyle = COL.shoe; X.beginPath(); X.ellipse(fx + out * 3, fy - 2.5, 7.5, 3.6, out * .12, 0, 6.29); X.fill();
+  X.fillStyle = DL.shoes; X.beginPath(); X.ellipse(fx + out * 3, fy - 2.5, 7.5, 3.6, out * .12, 0, 6.29); X.fill();
   return [kx, ky];
 }
-function drawPoli(pose) {
+function drawProp(type, t0) {
+  // drawn in the left hand's frame: the stick goes from y=-34 (top) to y=26 (bottom)
+  if (type === 'none') return;
+  if (type === 'cane') { line(COL.cane, 3.5, [0, -34, 0, 26]); circ('#7d7d7d', 0, -35, 2.6); return }
+  if (type === 'flower') {
+    line('#3c8a3c', 2.5, [0, -22, 0, 18]); poly('#3c8a3c', [0, -4, 7, -9, 2, -2]);
+    for (let i = 0; i < 5; i++) { const a = i * 1.257 + t0 * .02; circ('#ff7ab0', M.cos(a) * 4.5, -24 + M.sin(a) * 4.5, 3.2) }
+    circ('#f2c230', 0, -24, 2.6); return
+  }
+  if (type === 'bells') {
+    line('#7a4a2a', 3, [0, -24, 0, 26]);
+    poly('#d8402c', [0, -26, -10, -36, -4, -24]); poly('#2e9a4c', [0, -26, 10, -36, 4, -24]); poly('#3070d0', [0, -26, 0, -40, 3, -26]);
+    for (const [bx, by] of [[-10, -36], [10, -36], [0, -40]]) { circ('#e6b830', bx, by, 2.6); circ('#8a6a10', bx, by + 1, .9) }
+    circ('#f4f0e8', 0, -24, 3.2); return
+  }
+  if (type === 'sword') {
+    poly('#e2c38a', [-2.2, -32, 2.2, -32, 2.2, 6, -2.2, 6]); poly('#e2c38a', [-2.2, -32, 0, -38, 2.2, -32]);
+    line('#b8945a', 1, [0, -34, 0, 4]);
+    X.fillStyle = '#7a4a2a'; X.fillRect(-7, 6, 14, 3.5); X.fillRect(-1.8, 9, 3.6, 12); circ('#e6b830', 0, 22, 2.4); return
+  }
+  if (type === 'umbrella') {
+    line('#444', 2, [0, -38, 0, 22]); X.strokeStyle = '#444'; X.lineWidth = 2; X.beginPath(); X.arc(4, 22, 4, M.PI, 0, true); X.stroke();
+    poly('#d8402c', [0, -36, -5, -6, 5, -6]); poly('rgba(0,0,0,.18)', [0, -36, 0, -6, 5, -6]);
+    X.fillStyle = '#e6b830'; X.fillRect(-5, -8, 10, 2); return
+  }
+  if (type === 'wand') {
+    line('#2a2230', 3, [0, -24, 0, 24]); X.fillStyle = '#f4f0e8'; X.fillRect(-1.6, 18, 3.2, 6);
+    star(0, -28, 7, t0 * .05); if (M.floor(t0 / 8) % 2) circ('#fff', 6, -34, 1.4); else circ('#fff', -6, -22, 1.2); return
+  }
+}
+function drawHat(flop) {
+  const L = DL, ap = -66 + flop;
+  X.lineCap = 'butt'; X.lineJoin = 'miter';
+  X.strokeStyle = L.hat; X.lineWidth = 8.5; X.beginPath(); X.moveTo(-17, -30); X.lineTo(0, ap); X.lineTo(17, -30); X.stroke();
+  if (L.pattern) { X.setLineDash([4, 4]); X.strokeStyle = L.pattern; X.lineWidth = 8.5; X.stroke(); X.setLineDash([]) }
+  X.strokeStyle = 'rgba(0,0,0,.18)'; X.lineWidth = 1.2; X.beginPath(); X.moveTo(-12, -30); X.lineTo(0, -57 + flop); X.lineTo(12, -30); X.stroke();
+  if (L.knob === 'bell') { circ('#e6b830', 0, ap - 3, 4.6); circ('#fff3c0', -1.4, ap - 4.6, 1.3); X.fillStyle = '#8a6a10'; X.fillRect(-2.5, ap - 1.5, 5, 1.3) }
+  else if (L.knob === 'star') star(0, ap - 4, 6.5, 0);
+  else circ(COL.ink, 0, ap - 2, 3.8);
+}
+function drawFace(dead, duck) {
+  const f = DL.face;
+  // ruff / beard under the face
+  if (f === 'mustache') { poly('#f4f1ea', [-9, -37, 9, -37, 5, -32, 0, -31, -5, -32]) }
+  else { poly('#d9d5ce', [-9, -38, 9, -38, 4, -26, 0, -22, -4, -26]); poly('#f4f1ea', [-7, -38, 7, -38, 2, -29, 0, -27, -2, -29]) }
+  circ(COL.face, 0, -41, 7.5);
+  if (f === 'mask') { X.fillStyle = '#1d1d24'; X.beginPath(); X.ellipse(-3.2, -42.4, 3.6, 2.6, -.2, 0, 6.29); X.ellipse(3.2, -42.4, 3.6, 2.6, .2, 0, 6.29); X.fill(); X.fillRect(-3, -43.5, 6, 2.2) }
+  const eye = f === 'mask' ? '#fff' : COL.ink;
+  if (dead) { for (const ex of [-3, 3]) { line(eye, 1.3, [ex - 1.5, -43.5, ex + 1.5, -40.5]); line(eye, 1.3, [ex + 1.5, -43.5, ex - 1.5, -40.5]) } }
+  else if (duck > .5) { line(eye, 1.3, [-4.3, -42, -1.6, -41.5]); line(eye, 1.3, [1.6, -41.5, 4.3, -42]) }
+  else { circ(eye, -2.9, -42.3, 1.15); circ(eye, 2.9, -42.3, 1.15) }
+  if (f === 'blush') { X.save(); X.globalAlpha = .55; circ('#ff7a9a', -4.6, -38.8, 2); circ('#ff7a9a', 4.6, -38.8, 2); X.restore() }
+  circ('#e88', 0, -39.4, 1.3);
+  if (f === 'mustache') { X.strokeStyle = '#2a2230'; X.lineWidth = 1.8; X.lineCap = 'round'; X.beginPath(); X.moveTo(0, -38.2); X.quadraticCurveTo(-4, -39.5, -6.5, -37); X.quadraticCurveTo(-7.5, -35.5, -6, -36); X.moveTo(0, -38.2); X.quadraticCurveTo(4, -39.5, 6.5, -37); X.quadraticCurveTo(7.5, -35.5, 6, -36); X.stroke() }
+}
+function drawPoli(pose, look) {
   const { run = 0, air = false, duck = 0, sq = 0, dead = false, idle = false } = pose;
+  DL = look || LOOK;
   X.save();
   if (dead) X.rotate(-.3);
   // ---- hips & feet
@@ -406,7 +744,7 @@ function drawPoli(pose) {
   const sh = M.sin(run) * (air || idle ? 0 : .12);
   X.save(); X.translate(hipX, hipY); X.rotate(lean);
   X.save(); X.translate(-19, -10); X.rotate(-.42 + sh + (idle ? M.sin(run * 2) * .08 : 0));
-  line(COL.cane, 3.5, [0, -34, 0, 26]); circ('#7d7d7d', 0, -35, 2.6);
+  drawProp(DL.prop, t);
   X.restore();
   X.restore();
   // ---- legs (back leg first)
@@ -416,15 +754,15 @@ function drawPoli(pose) {
   X.save(); X.translate(hipX, hipY); X.rotate(lean);
   // sleeves + white gloves (hands low, near the knees, like the logo)
   const hs = air ? -6 : idle ? M.sin(run * 2) * 2 : M.sin(run) * 3;
-  line(COL.red, 6, [-11, -26, -17, -14, -18, -4 + hs]);
-  line(COL.blue, 6, [11, -26, 17, -14, 19, -4 - hs]);
+  line(DL.sleeves[0], 6, [-11, -26, -17, -14, -18, -4 + hs]);
+  line(DL.sleeves[1], 6, [11, -26, 17, -14, 19, -4 - hs]);
   circ('#f4f1ea', -18, -2 + hs, 4); circ('#f4f1ea', 19, -2 - hs, 4);
   // torso: tilted oval with red / green / blue diagonal bands
   X.save(); X.beginPath(); X.ellipse(0, -18, 17, 21, .3, 0, 6.29); X.clip();
   X.rotate(.55);
-  X.fillStyle = COL.red; X.fillRect(-60, -80, 49, 120);
-  X.fillStyle = COL.green; X.fillRect(-11, -80, 14, 120);
-  X.fillStyle = COL.blue; X.fillRect(3, -80, 40, 120);
+  X.fillStyle = DL.stripes[0]; X.fillRect(-60, -80, 49, 120);
+  X.fillStyle = DL.stripes[1]; X.fillRect(-11, -80, 14, 120);
+  X.fillStyle = DL.stripes[2]; X.fillRect(3, -80, 40, 120);
   X.restore();
   // yellow trims with black dashes (left edge and upper-right edge)
   dashedTrim(0, -18, 17, 21, .3, M.PI * .7, M.PI * 1.1, 6);
@@ -432,21 +770,10 @@ function drawPoli(pose) {
   X.strokeStyle = 'rgba(0,0,0,.2)'; X.lineWidth = 1.2; X.beginPath(); X.ellipse(0, -18, 17, 21, .3, 0, 6.29); X.stroke();
   // ---- head group (ruff, face, hat) bows forward when crouching
   X.save(); X.translate(0, -30); X.rotate(duck * .75); X.translate(0, 30);
-  // white ruff / beard under the face
-  poly('#d9d5ce', [-9, -38, 9, -38, 4, -26, 0, -22, -4, -26]);
-  poly('#f4f1ea', [-7, -38, 7, -38, 2, -29, 0, -27, -2, -29]);
-  // face
-  circ(COL.face, 0, -41, 7.5);
-  if (dead) { for (const ex of [-3, 3]) { line(COL.ink, 1.3, [ex - 1.5, -43.5, ex + 1.5, -40.5]); line(COL.ink, 1.3, [ex + 1.5, -43.5, ex - 1.5, -40.5]) } }
-  else if (duck > .5) { line(COL.ink, 1.3, [-4.3, -42, -1.6, -41.5]); line(COL.ink, 1.3, [1.6, -41.5, 4.3, -42]) }   // eyes squeezed shut
-  else { circ(COL.ink, -2.9, -42.3, 1.15); circ(COL.ink, 2.9, -42.3, 1.15) }
-  circ('#e88', 0, -39.4, 1.3);
+  drawFace(dead, duck);
   // red pointed hat: the big "A" (legs of the A rest on the shoulders)
   const flop = air ? -2 : idle ? 0 : M.sin(run * 2) * .8 * (1 - duck);
-  X.lineCap = 'butt'; X.lineJoin = 'miter';
-  X.strokeStyle = COL.red; X.lineWidth = 8.5; X.beginPath(); X.moveTo(-17, -30); X.lineTo(0, -66 + flop); X.lineTo(17, -30); X.stroke();
-  X.strokeStyle = 'rgba(0,0,0,.18)'; X.lineWidth = 1.2; X.beginPath(); X.moveTo(-12, -30); X.lineTo(0, -57 + flop); X.lineTo(12, -30); X.stroke();
-  circ(COL.ink, 0, -68 + flop, 3.8);
+  drawHat(flop);
   X.restore();
   X.restore();
   X.restore();
@@ -776,7 +1103,7 @@ function update() {
     dist += speed; score = M.floor(dist / 10) + starPts + bonusPts;
     // acts: colours change every 500 points of distance
     const a = M.floor(M.floor(dist / 10) / 500);
-    if (a !== act) setAct(a, false);
+    if (a !== act) { setAct(a, false); if (a + 1 > PROF.stats.maxAct) { PROF.stats.maxAct = a + 1; checkUnlocks() } }
     if (ambK < 1) { ambK = M.min(1, ambK + 1 / 120); mixAmb() }
     if (actBanner > 0) actBanner--;
     if (power && --power.t <= 0) { power = null; sfx.duck() }
@@ -788,6 +1115,7 @@ function update() {
     P.y = M.max(0, P.y + P.vy);
     if (P.y === 0) { if (wasAir) { P.squash = 1; dust(PX, 6); sfx.land() } P.vy = 0; P.jumps = 0 }
     P.squash *= .8;
+    if (LOOK.trail !== 'none' && t % 3 === 0) spawnTrail(LOOK.trail);
     P.duckK += ((P.duck && P.y === 0 ? 1 : 0) - P.duckK) * .4;
     P.run += speed * .045;
     if (P.y === 0 && M.floor(P.run / M.PI) !== P.lastStep) { P.lastStep = M.floor(P.run / M.PI); sfx.step() }
@@ -830,11 +1158,13 @@ function update() {
       if (px - 4 < sx + 22 && px + pw + 4 > sx && py < sy + 22 && py + ph > sy) {
         if (s.type === 'star') {
           stars++; combo = M.min(5, combo + 1); const pts = 25 * combo; starPts += pts;
+          if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() }
           combo > 1 ? sfx.combo(combo) : sfx.star();
           popup(s.x, G - s.y - 18, combo > 1 ? `+${pts}  ×${combo}` : `+${pts}`, combo > 1 ? '#ffe066' : '#fff');
           burst(s.x, -s.y, 14, [COL.yellow, '#fff', COL.red], 4); flash = 6;
         } else {
           power = { type: s.type, t: POWERS[s.type].dur, max: POWERS[s.type].dur };
+          if (s.type === 'mask') { PROF.stats.masks++; checkUnlocks() }
           sfx.power(); flash = 10; burst(s.x, -s.y, 24, ['#fff', COL.yellow, '#5aa0ff'], 5);
           popup(s.x, G - s.y - 20, POWERS[s.type].label + ' !', '#9fe0ff');
         }
@@ -855,12 +1185,20 @@ function gameOver() {
   P.duck = false; P.duckK = 0; P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false;
   burst(PX, -P.y - 50, 30, [COL.red, COL.green, COL.blue, COL.yellow], 6);
   if (score > best) { best = score; saveBest() }
+  // La Loge: stars collected + a tip from the audience go to the wallet
+  tip = M.floor(M.floor(dist / 10) / 150); earned = stars + tip;
+  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars; if (fellIn) PROF.stats.traps++;
+  saveProf(); checkUnlocks(); updateWdBtn();
   lastRank = -1;
   if (qualifies(score)) setTimeout(() => { if (state === 'over') openEntry() }, 700);
 }
 
 // ---------- render ----------
+let lastBtnState = '';
 function render() {
+  const bs = state === 'title' || (state === 'over' && stateT > 30) ? 'show' : 'hide';
+  if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
+  if (wdEl.classList.contains('on')) drawPreview();
   X.setTransform(S * dpr, 0, 0, S * dpr, 0, T * S * dpr);
   if (shake > .5) X.translate(rnd(-shake, shake), rnd(-shake, shake));
   drawStage();
@@ -883,7 +1221,7 @@ function render() {
   drawPoli({ run: P.run, air: P.y > 0, sq: P.squash, dead: state === 'over', duck: P.duckK });
   X.restore();
   if (power && power.type === 'clock') { X.fillStyle = 'rgba(90,140,255,.10)'; X.fillRect(0, -T, W, H) }
-  for (const p of parts) { X.globalAlpha = M.min(1, p.l / 20); X.fillStyle = p.k; X.fillRect(p.x, p.y, p.s, p.s) }
+  for (const p of parts) drawPart(p);
   X.globalAlpha = 1;
   for (const q of popups) { X.globalAlpha = M.min(1, q.l / 20); txt(q.text, q.x, q.y, 14, q.k); X.globalAlpha = 1 }
   drawCrowd();
@@ -949,7 +1287,8 @@ function render() {
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
     const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
-    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 120, 12); X.fill(); X.stroke();
+    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 146, 12); X.fill(); X.stroke();
+    txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
     txt('RIDEAU !', ox, oy, 40, COL.red);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
