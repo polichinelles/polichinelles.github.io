@@ -320,7 +320,7 @@ const POWERS = {
   cape:  { dur: 600, label: 'Triple saut' },
   clock: { dur: 300, label: 'Ralenti' }
 };
-let fellIn = null, fallY = 0, earned = 0, tip = 0;
+let fellIn = null, fallY = 0, earned = 0, tip = 0, playT = 0;
 let power = null, slowK = 1, combo = 0, starPts = 0, bonusPts = 0, nextPow = 0, popups = [];
 function popup(x, y, text, k = '#fff') { popups.push({ x, y, text, k, l: 60 }) }
 function maxJumps() { return power && power.type === 'cape' ? 3 : 2 }
@@ -445,7 +445,7 @@ for (let i = 0; i < 60; i++) crowd.push({ x: i * 22 + rnd(-6, 6), r: rnd(9, 13),
 
 function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
-  fellIn = null; fallY = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
+  fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -1099,7 +1099,8 @@ function update() {
   if (state === 'play') {
     // slow motion from the clock power-up
     slowK += ((power && power.type === 'clock' ? .55 : 1) - slowK) * .06;
-    speed = M.min(12.5, 5 + dist / 1800) * slowK;   // reaches top speed ~20 % later
+    playT++;
+    speed = (5 + 7.5 * M.min(1, playT / 3600)) * slowK;   // steady ramp: top speed after 1 minute of play
     dist += speed; score = M.floor(dist / 10) + starPts + bonusPts;
     // acts: colours change every 500 points of distance
     const a = M.floor(M.floor(dist / 10) / 500);
