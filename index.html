@@ -120,6 +120,11 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #setP .tg::after{content:'';position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
 #setP .tg.on{background:#e6b830}#setP .tg.on::after{left:25px}
 #setP .ok{display:block;margin:14px auto 0;font:700 15px Georgia,serif;padding:10px 26px;border-radius:9px;border:0;background:#e6b830;color:#2a2230;cursor:pointer}
+#hz{position:fixed;inset:0;z-index:2;display:none}
+#hz.on{display:block}
+#hz label{position:absolute;top:0;bottom:0;display:block;-webkit-tap-highlight-color:transparent}
+#hz label input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:.001;-webkit-appearance:none;appearance:none}
+#hz .l{left:0;width:40%}#hz .r{right:0;width:60%}
 #toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9;background:#1c1838;border:2px solid #e6b830;color:#fff;border-radius:14px;padding:10px 16px;font:600 15px Georgia,serif;box-shadow:0 6px 18px rgba(0,0,0,.5);transition:transform .35s;pointer-events:none;max-width:86vw;text-align:center}
 #toast.on{transform:translate(-50%,0)}
 #toast b{color:#e6b830}
@@ -143,6 +148,7 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
   </div>
   <footer id="wdBar"></footer>
 </div></div>
+<div id="hz" aria-hidden="true"><label class="l"><input type="checkbox" switch tabindex="-1"></label><label class="r"><input type="checkbox" switch tabindex="-1"></label></div>
 <div id="toast"></div>
 <button id="setBtn" aria-label="Réglages" title="Réglages">⚙️</button>
 <div id="setP" role="dialog" aria-modal="true"><div class="box"><h2>⚙️ Réglages</h2>
@@ -266,18 +272,24 @@ function curtainJingle() {
 }
 
 // ---------- vibrations ----------
-let iosHaptic = null;
+// Android: standard Vibration API.
+// iPhone: Safari has no vibration API. Two tricks based on the native switch control (<input type=checkbox switch>),
+// whose toggle makes the Taptic Engine tick:
+//  1. iOS 17.4 → 26.4: clicking a hidden switch from code gives a tick for any game event (crash, bonus…).
+//  2. iOS 26.5+: Apple only allows it on a real finger tap, so during a game the jump / duck zones are
+//     covered by invisible native switches: every tap gives a tick (see #hz below).
+const IS_IPHONE = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function iosTick() {
+  const l = document.createElement('label'); l.ariaHidden = 'true'; l.style.display = 'none';
+  const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', '');
+  l.appendChild(i); document.head.appendChild(l); l.click(); document.head.removeChild(l);
+}
 function buzz(pattern) {
   if (!OPTS.vib) return;
   if (navigator.vibrate) { try { navigator.vibrate(pattern) } catch (e) {} return }
-  // iPhone (iOS 18+): no vibration API, but toggling a native switch gives a light haptic tick
-  if (/iPhone/.test(navigator.userAgent)) {
-    if (!iosHaptic) {
-      iosHaptic = document.createElement('label'); iosHaptic.style.cssText = 'position:fixed;left:-99px;top:0;opacity:0;pointer-events:none';
-      const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); iosHaptic.appendChild(i); document.body.appendChild(iosHaptic);
-    }
-    const n = Array.isArray(pattern) ? M.ceil(pattern.length / 2) : 1;
-    for (let k = 0; k < n; k++) setTimeout(() => iosHaptic.click(), k * 90);
+  if (IS_IPHONE) {
+    const n = Array.isArray(pattern) ? M.ceil(pattern.length / 2) + (pattern[pattern.length - 1] > 120 ? 1 : 0) : (pattern > 150 ? 3 : 1);
+    for (let k = 0; k < n; k++) setTimeout(iosTick, k * 70);
   }
 }
 const sfx = {
@@ -593,7 +605,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 // ---------- settings panel ----------
 const setBtn = document.getElementById('setBtn'), setP = document.getElementById('setP');
 function renderSet() { setP.querySelectorAll('.tg').forEach(b => b.classList.toggle('on', !!OPTS[b.dataset.k])) }
-document.getElementById('vibNote').textContent = navigator.vibrate ? '' : (/iPhone/.test(navigator.userAgent) ? 'iPhone : légères vibrations (iOS 18 et +)' : 'Non disponible sur cet appareil');
+document.getElementById('vibNote').textContent = navigator.vibrate ? '' : (IS_IPHONE ? 'iPhone : petits retours haptiques (iOS 17.4 et +)' : 'Non disponible sur cet appareil');
 setBtn.onclick = () => { renderSet(); setP.classList.add('on') };
 setP.querySelector('.ok').onclick = () => setP.classList.remove('on');
 setP.addEventListener('click', e => { if (e.target === setP) setP.classList.remove('on') });
@@ -657,7 +669,8 @@ function updateDuck() {
 }
 function isDuckZone(e) { return e.clientX < innerWidth * 0.4 }
 addEventListener('pointerdown', e => {
-  e.preventDefault(); wakeAudio();
+  if (!(e.target.closest && e.target.closest('#hz'))) e.preventDefault();   // let the haptic switches receive their click
+  wakeAudio();
   if (menuPress()) return;
   if (paused || resumeT > 0) return;
   if (isDuckZone(e)) { duckPointers.add(e.pointerId); updateDuck() }
@@ -1544,11 +1557,14 @@ function gameOver() {
 
 // ---------- render ----------
 let lastBtnState = '';
+const hzEl = document.getElementById('hz');
 function render() {
   const bs = state === 'title' || (state === 'over' && stateT > 30) ? 'show' : 'hide';
   if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
   const ob = state === 'over' && stateT > 40 && !entryOpen;
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
+  const hz = IS_IPHONE && OPTS.vib && state === 'play' && !paused;
+  if (hz !== hzEl.classList.contains('on')) hzEl.classList.toggle('on', hz);
   const ib = state === 'title' && !STANDALONE;
   if (ib !== installBtn.classList.contains('on')) installBtn.classList.toggle('on', ib);
   if (wdEl.classList.contains('on')) drawPreview();
