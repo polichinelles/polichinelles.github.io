@@ -84,7 +84,7 @@ try { best = +localStorage.getItem('polichinelles_best') || 0 } catch (e) {}
 function saveBest() { try { localStorage.setItem('polichinelles_best', best) } catch (e) {} }
 
 // ---------- shared leaderboard (Firebase Firestore, REST, no SDK) ----------
-const FIREBASE = { apiKey: '__API_KEY__', projectId: '__PROJECT_ID__' };
+const FIREBASE = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
 const LB_SIZE = 10;
 let board = [], boardStatus = FIREBASE.apiKey.startsWith('__') ? 'off' : 'loading', entryOpen = false, lastRank = -1;
 const fsBase = () => `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents`;
@@ -93,11 +93,11 @@ async function loadBoard() {
   try {
     const r = await fetch(`${fsBase()}:runQuery?key=${FIREBASE.apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: LB_SIZE } })
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: LB_SIZE + 5 } })
     });
     if (!r.ok) throw new Error(r.status);
     const rows = await r.json();
-    board = rows.filter(x => x.document).map(x => ({ name: x.document.fields.name.stringValue, score: +x.document.fields.score.integerValue }));
+    board = rows.filter(x => x.document).map(x => ({ name: x.document.fields.name.stringValue, score: +x.document.fields.score.integerValue })).filter(b => b.score > 0).slice(0, LB_SIZE);
     boardStatus = 'ok';
   } catch (e) { boardStatus = 'err' }
 }
