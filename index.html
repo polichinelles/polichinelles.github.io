@@ -646,10 +646,21 @@ function reset() {
 const duckPointers = new Set(), jumpPointers = new Set();
 let keyDuck = false;
 function wakeAudio() {
+  // iPhone: play through the media channel so the music is heard even with the silent switch on
+  try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback' } catch (e) {}
   if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)() } catch (e) {} }
-  if (AC && AC.state === 'suspended') AC.resume();
+  if (!AC) return;
+  if (AC.state !== 'running') { const r = AC.resume(); if (r && r.catch) r.catch(() => {}) }
+  if (!AC._unlocked) {
+    // a silent sound started inside the user's gesture unlocks audio on older iOS
+    try { const b = AC.createBuffer(1, 1, 22050), s = AC.createBufferSource(); s.buffer = b; s.connect(AC.destination); s.start(0); AC._unlocked = true } catch (e) {}
+  }
   startMusic();
 }
+// browsers only allow sound after a real gesture: on phones that is when the finger is lifted (touchend / click)
+for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, wakeAudio, { capture: true, passive: true });
+// coming back to the game (after a call, another app…) wakes the audio up again
+document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && AC.state !== 'running') { const r = AC.resume(); if (r && r.catch) r.catch(() => {}) } });
 function menuPress() {
   if (wdEl.classList.contains('on') || setP.classList.contains('on')) return true;
   if (state === 'title') { reset(); state = 'opening'; stateT = 0; return true }
