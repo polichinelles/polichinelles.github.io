@@ -5,8 +5,9 @@ const PASS_DE = { course: 'de La Course', envol: 'de L’Envol', trampo: 'du Tra
 const PASS_A = { course: 'à La Course', envol: 'à L’Envol', trampo: 'au Trampoline', tir: 'au Tir Forain', tape: 'à Tape-Polichinelle', pyramide: 'à La Pyramide', jongleur: 'au Jongleur' };
 const PASS_SCORE = { course: 800, envol: 150, trampo: 200, tir: 1500, tape: 300, pyramide: 120, jongleur: 250 };
 // season pass: one reward per level; levels 10/20/30/40 are the big ones
-const PASS_ITEMS = { 2: 'h_carnaval', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 9: 'k_cravate_or', 10: 'c_carnaval', 12: 't_glitter', 14: 'h_venise', 16: 'l_paillettes', 18: 'f_goldmask', 20: 'b_plumes', 22: 'c_paillettes', 24: 'h_plumes', 26: 'p_goldfan', 28: 'b_cape_or', 30: 'c_venise', 33: 'c_minuit', 36: 'k_jabot_or', 38: 'h_licorne_or', 40: 'c_legende' };
-function passReward(lvl) { return PASS_ITEMS[lvl] ? { kind: 'item', id: PASS_ITEMS[lvl] } : { kind: 'stars', n: 20 + lvl * 3 } }
+const PASS_ITEMS = { 2: 'h_carnaval', 3: 'p_baguette_pain', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 8: 'h_helice', 9: 'k_cravate_or', 10: 'c_carnaval', 11: 'p_poisson', 12: 't_glitter', 13: 'f_3d', 14: 'h_venise', 16: 'l_paillettes', 17: 'h_gateau', 18: 'f_goldmask', 19: 'c_tigre', 20: 'b_plumes', 21: 'p_canard', 22: 'c_paillettes', 23: 'h_theiere', 24: 'h_plumes', 26: 'p_goldfan', 27: 'c_pasteque', 28: 'b_cape_or', 29: 'h_nuage', 30: 'c_venise', 31: 't_bananes', 32: 'b_escargot', 33: 'c_minuit', 34: 'h_poulet', 35: 'h_bocal', 36: 'k_jabot_or', 37: 'p_poele', 38: 'h_licorne_or', 39: 'h_minime', 40: 'c_legende' };
+const PASS_STARS = { 1: 50, 6: 80, 15: 120, 25: 200 };
+function passReward(lvl) { return PASS_ITEMS[lvl] ? { kind: 'item', id: PASS_ITEMS[lvl] } : { kind: 'stars', n: PASS_STARS[lvl] || 50 } }
 function xpNeed(n) { return 250 + 40 * (n - 1) }
 function levelInfo(xp) { let n = 1, x = xp; while (x >= xpNeed(n)) { x -= xpNeed(n); n++ } return { level: n, into: x, need: xpNeed(n) } }
 function loadPass() {

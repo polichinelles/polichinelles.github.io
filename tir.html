@@ -760,7 +760,7 @@ addEventListener('contextmenu', e => e.preventDefault());
 function dust(x, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rnd(-10, 10), y: G - 2, vx: rnd(-2, -.5) - speed * .2, vy: rnd(-1.5, -.3), l: 25, k: '#5a5070', s: rnd(2, 4) }) }
 function burst(x, y, n, cols, sp = 4) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(1, sp); parts.push({ x, y: G + y, vx: M.cos(a) * v, vy: M.sin(a) * v - 1, l: rnd(30, 60), k: cols[i % cols.length], s: rnd(2, 4), g: .12 }) } }
 
-const TRAILK = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a', bubble: '#bfe9ff', snow: '#fff', leaf: '#6ac04a', flame: '#f08a1c', rainbow: '#fff', glitter: '#f2c230' };
+const TRAILK = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a', bubble: '#bfe9ff', snow: '#fff', leaf: '#6ac04a', flame: '#f08a1c', rainbow: '#fff', glitter: '#f2c230', banana: '#f2c230' };
 function spawnTrail(type) {
   const k = TRAILK[type] || ['#d8402c', '#2e9a4c', '#3070d0', '#e6b830', '#f27ab0'][M.random() * 5 | 0];
   parts.push({ x: PX - 12 + rnd(-4, 4), y: G - P.y - rnd(14, 70), vx: -speed * .45 - rnd(.2, 1), vy: rnd(-.7, .2), l: 42, k, s: type === 'confetti' ? rnd(2.5, 4) : rnd(4, 6), g: type === 'confetti' ? .05 : -.01, shape: type, r: rnd(0, 6) });
@@ -778,6 +778,7 @@ function drawPart(p) {
     case 'leaf': X.save(); X.translate(p.x, p.y); X.rotate(p.r + p.l * .08); X.fillStyle = ['#6ac04a', '#f2a030', '#d8602c'][M.floor(p.r) % 3]; X.beginPath(); X.ellipse(0, 0, p.s * .6, p.s * .3, 0, 0, 6.29); X.fill(); X.restore(); break;
     case 'flame': X.fillStyle = '#f08a1c'; X.beginPath(); X.moveTo(p.x, p.y - p.s); X.quadraticCurveTo(p.x + p.s * .6, p.y, p.x, p.y + p.s * .5); X.quadraticCurveTo(p.x - p.s * .6, p.y, p.x, p.y - p.s); X.fill(); circ('#f2c230', p.x, p.y + p.s * .1, p.s * .25); break;
     case 'glitter': { X.fillStyle = ['#f2c230', '#fff3c0', '#f27ab0'][M.floor(p.r) % 3]; const s = p.s * .7; X.save(); X.translate(p.x, p.y); X.rotate(p.l * .1); X.beginPath(); X.moveTo(0, -s); X.lineTo(s * .25, -s * .25); X.lineTo(s, 0); X.lineTo(s * .25, s * .25); X.lineTo(0, s); X.lineTo(-s * .25, s * .25); X.lineTo(-s, 0); X.lineTo(-s * .25, -s * .25); X.fill(); X.restore(); break }
+    case 'banana': { X.save(); X.translate(p.x, p.y); X.rotate(p.r + p.l * .08); X.strokeStyle = '#f2c230'; X.lineWidth = p.s * .45; X.lineCap = 'round'; X.beginPath(); X.arc(0, 0, p.s * .6, .3, 2.6); X.stroke(); X.fillStyle = '#6b4430'; X.fillRect(M.cos(.3) * p.s * .6 - .8, M.sin(.3) * p.s * .6 - .8, 1.6, 1.6); X.restore(); break }
     case 'rainbow': circ(`hsl(${(p.r * 60 + p.l * 6) % 360},90%,62%)`, p.x, p.y, p.s * .45); break;
     default: X.fillRect(p.x, p.y, p.s, p.s);
   }
@@ -832,7 +833,9 @@ const WARD = {
     { id: 'c_paillettes', name: 'Paillettes', pass: 22, v: { stripes: ['#d8402c', '#f2d27a', '#fff3c0'], sleeves: ['#d8402c', '#f2d27a'], trim: '#fff3c0', motif: 'etoiles' } },
     { id: 'c_venise', name: 'Venise', pass: 30, v: { stripes: ['#5b2a86', '#c99a2e', '#1d1d24'], sleeves: ['#5b2a86', '#c99a2e'], trim: '#f2d27a', motif: 'damier' } },
     { id: 'c_minuit', name: 'Carnaval de minuit', pass: 33, v: { stripes: ['#0d1430', '#9fe0ff', '#f27ab0'], sleeves: ['#1d2a6b', '#0d1430'], trim: '#9fe0ff', motif: 'lunes' } },
-    { id: 'c_legende', name: 'Légende du Carnaval', pass: 40, v: { stripes: ['#f2c230', '#ffffff', '#f27ab0'], sleeves: ['#f2c230', '#9fe0ff'], trim: '#ffffff', motif: 'rayures' } }
+    { id: 'c_legende', name: 'Légende du Carnaval', pass: 40, v: { stripes: ['#f2c230', '#ffffff', '#f27ab0'], sleeves: ['#f2c230', '#9fe0ff'], trim: '#ffffff', motif: 'disco' } },
+    { id: 'c_tigre', name: 'Tigre', pass: 19, v: { stripes: ['#f08a1c', '#1d1d24', '#f4f0e8'], sleeves: ['#f08a1c', '#1d1d24'], trim: '#1d1d24', motif: 'tigre' } },
+    { id: 'c_pasteque', name: 'Pastèque', pass: 27, v: { stripes: ['#e8404a', '#1d1d24', '#2e9a4c'], sleeves: ['#2e9a4c', '#9ed86a'], trim: '#2e9a4c', motif: 'pasteque' } }
   ] },
   hat: { label: 'Chapeau', items: [
     { id: 'h_classic', name: 'Rouge', free: 1, v: { hat: '#d8402c', knob: 'ball', pattern: 0 } },
@@ -875,7 +878,14 @@ const WARD = {
     { id: 'h_carnaval', name: 'Bouffon du Carnaval', pass: 2, v: { hat: '#8a4a9a', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } },
     { id: 'h_venise', name: 'Bicorne de Venise', pass: 14, v: { hat: '#5b2a86', pattern: '#f2d27a', knob: 'ball', hatShape: 'pirate' } },
     { id: 'h_plumes', name: 'Chapeau à plumes', pass: 24, v: { hat: '#d8402c', pattern: '#f27ab0', knob: 'ball', hatShape: 'plume' } },
-    { id: 'h_licorne_or', name: 'Licorne dorée', pass: 38, v: { hat: '#f2d27a', pattern: '#9fe0ff', knob: 'ball', hatShape: 'unicorn' } }
+    { id: 'h_licorne_or', name: 'Licorne dorée', pass: 38, v: { hat: '#f2d27a', pattern: '#9fe0ff', knob: 'ball', hatShape: 'unicorn' } },
+    { id: 'h_helice', name: 'Casquette à hélice', pass: 8, v: { hat: '#d8402c', pattern: '#f2c230', knob: 'ball', hatShape: 'helice' } },
+    { id: 'h_gateau', name: 'Gâteau d’anniversaire', pass: 17, v: { hat: '#f6a8c8', pattern: '#fff', knob: 'ball', hatShape: 'gateau' } },
+    { id: 'h_theiere', name: 'Théière', pass: 23, v: { hat: '#9fd0f0', pattern: '#f4f0e8', knob: 'ball', hatShape: 'theiere' } },
+    { id: 'h_nuage', name: 'Petit nuage de pluie', pass: 29, v: { hat: '#c8c8d8', pattern: 0, knob: 'ball', hatShape: 'nuage' } },
+    { id: 'h_poulet', name: 'Poule sur la tête', pass: 34, v: { hat: '#f4f0e8', pattern: '#d8402c', knob: 'ball', hatShape: 'poulet' } },
+    { id: 'h_bocal', name: 'Bocal à poisson', pass: 35, v: { hat: '#bfe9ff', pattern: '#f08a1c', knob: 'ball', hatShape: 'bocal' } },
+    { id: 'h_minime', name: 'Mini-polichinelle', pass: 39, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'minime' } }
   ] },
   collar: { label: 'Col', items: [
     { id: 'k_aucun', name: 'Aucun', free: 1, v: { collar: 'none' } },
@@ -942,7 +952,8 @@ const WARD = {
     { id: 'f_coeur', name: 'Cœur sur la joue', price: 55, v: { face: 'heartcheek' } },
     { id: 'f_larme', name: 'Larme de Pierrot', price: 65, v: { face: 'tear' } },
     { id: 'f_carnaval', name: 'Masque du Carnaval', pass: 5, v: { face: 'carnival' } },
-    { id: 'f_goldmask', name: 'Masque d’or', pass: 18, v: { face: 'goldmask' } }
+    { id: 'f_goldmask', name: 'Masque d’or', pass: 18, v: { face: 'goldmask' } },
+    { id: 'f_3d', name: 'Lunettes 3D', pass: 13, v: { face: 'glasses3d' } }
   ] },
   prop: { label: 'Objet', items: [
     { id: 'p_canne', name: 'Canne', free: 1, v: { prop: 'cane' } },
@@ -962,7 +973,11 @@ const WARD = {
     { id: 'p_ballon', name: 'Ballon cœur', price: 60, v: { prop: 'heartballoon' } },
     { id: 'p_sceptre', name: 'Sceptre', ach: 'act10', v: { prop: 'scepter' } },
     { id: 'p_serpentin', name: 'Serpentin', pass: 7, v: { prop: 'streamer' } },
-    { id: 'p_goldfan', name: 'Éventail doré', pass: 26, v: { prop: 'goldfan' } }
+    { id: 'p_goldfan', name: 'Éventail doré', pass: 26, v: { prop: 'goldfan' } },
+    { id: 'p_baguette_pain', name: 'Baguette de pain', pass: 3, v: { prop: 'bread' } },
+    { id: 'p_poisson', name: 'Poisson', pass: 11, v: { prop: 'fish' } },
+    { id: 'p_canard', name: 'Canard en plastique', pass: 21, v: { prop: 'duck' } },
+    { id: 'p_poele', name: 'Poêle et son œuf', pass: 37, v: { prop: 'pan' } }
   ] },
   back: { label: 'Dos', items: [
     { id: 'b_aucun', name: 'Rien', free: 1, v: { back: 'none' } },
@@ -979,7 +994,8 @@ const WARD = {
     { id: 'b_ballons', name: 'Grappe de ballons', price: 90, v: { back: 'balloons' } },
     { id: 'b_fusee', name: 'Fusée', price: 180, v: { back: 'jetpack' } },
     { id: 'b_plumes', name: 'Roue de plumes', pass: 20, v: { back: 'plumes' } },
-    { id: 'b_cape_or', name: 'Cape dorée', pass: 28, v: { back: 'cape', capeColor: '#c99a2e', capeIn: '#5b2a86', capeStars: 1 } }
+    { id: 'b_cape_or', name: 'Cape dorée', pass: 28, v: { back: 'cape', capeColor: '#c99a2e', capeIn: '#5b2a86', capeStars: 1 } },
+    { id: 'b_escargot', name: 'Coquille d’escargot', pass: 32, v: { back: 'snail' } }
   ] },
   trail: { label: 'Effet', items: [
     { id: 't_aucun', name: 'Aucun', free: 1, v: { trail: 'none' } },
@@ -993,7 +1009,8 @@ const WARD = {
     { id: 't_feuilles', name: 'Feuilles', price: 70, v: { trail: 'leaf' } },
     { id: 't_flammes', name: 'Flammes', price: 100, v: { trail: 'flame' } },
     { id: 't_arcenciel', name: 'Arc-en-ciel', price: 130, v: { trail: 'rainbow' } },
-    { id: 't_glitter', name: 'Paillettes dorées', pass: 12, v: { trail: 'glitter' } }
+    { id: 't_glitter', name: 'Paillettes dorées', pass: 12, v: { trail: 'glitter' } },
+    { id: 't_bananes', name: 'Bananes', pass: 31, v: { trail: 'banana' } }
   ] }
 };
 const ACH = {
@@ -1141,6 +1158,10 @@ function drawProp(type, t0) {
   if (type === 'heartballoon') { const b = M.sin(t0 * .06) * 2; line('#888', 1, [0, 20, 0, -18 + b]); const r = 6, y = -30 + b; X.fillStyle = '#ff4f6a'; X.beginPath(); X.arc(-r, y, r, M.PI, 0); X.arc(r, y, r, M.PI, 0); X.lineTo(0, y + r * 2.2); X.closePath(); X.fill(); circ('rgba(255,255,255,.6)', -6, y - 2, 1.6); return }
   if (type === 'streamer') { line('#f4f0e8', 2, [0, 0, 0, 24]); poly('#d8402c', [-2.5, 0, 2.5, 0, 1.5, -6, -1.5, -6]); const cols = ['#f2c230', '#2bb3c0', '#f27ab0', '#8a4a9a']; for (let i = 0; i < 16; i++) { const y0 = -6 - i * 2.4, x0 = M.sin(i * .8 + t0 * .15) * (2 + i * .5), x1 = M.sin((i + 1) * .8 + t0 * .15) * (2 + (i + 1) * .5); line(cols[i % 4], 2.2, [x0, y0, x1, y0 - 2.4]) } return }
   if (type === 'goldfan') { line('#8a4a9a', 2, [0, -12, 0, 24]); for (let i = 0; i < 7; i++) { const a0 = -M.PI * .88 + i * .25; X.fillStyle = i & 1 ? '#f2d27a' : '#8a4a9a'; X.beginPath(); X.moveTo(0, -12); X.arc(0, -12, 18, a0, a0 + .25); X.closePath(); X.fill() } X.strokeStyle = '#fff3c0'; X.lineWidth = 1.2; X.beginPath(); X.arc(0, -12, 18, -M.PI * .88, -M.PI * .88 + 1.75); X.stroke(); for (let i = 0; i < 4; i++) star(M.cos(-2.5 + i * .4) * 13, -12 + M.sin(-2.5 + i * .4) * 13, 1.4, 0, '#fff'); return }
+  if (type === 'bread') { X.save(); X.rotate(.05); X.fillStyle = '#d8a058'; X.beginPath(); X.roundRect(-3.6, -38, 7.2, 58, 3.6); X.fill(); X.strokeStyle = '#f2d8a0'; X.lineWidth = 1.2; for (let y = -32; y < 14; y += 9) { X.beginPath(); X.moveTo(-2.5, y + 3); X.lineTo(2.5, y); X.stroke() } X.restore(); return }
+  if (type === 'fish') { const w = M.sin(t0 * .3) * .15; X.save(); X.rotate(w); poly('#2bb3c0', [0, -4, -4, 2, 4, 2]); X.fillStyle = '#2bb3c0'; X.beginPath(); X.ellipse(0, -18, 6, 14, 0, 0, 6.29); X.fill(); X.fillStyle = '#7fd4b8'; X.beginPath(); X.ellipse(1.5, -18, 2.6, 10, 0, 0, 6.29); X.fill(); circ('#fff', -2, -27, 1.8); circ('#1d1d24', -2, -27, .8); X.strokeStyle = '#1d6a78'; X.lineWidth = .8; X.beginPath(); X.arc(0, -31, 2.4, .3, 2.8); X.stroke(); X.restore(); return }
+  if (type === 'duck') { X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(0, -6, 8, 6, 0, 0, 6.29); X.fill(); circ('#f2c230', 4, -14, 5); poly('#f08a1c', [8, -14, 13, -13, 8, -11.5]); circ('#1d1d24', 5.5, -15.5, .9); X.fillStyle = '#e8b020'; X.beginPath(); X.ellipse(-2, -6, 4, 2.4, -.3, 0, 6.29); X.fill(); return }
+  if (type === 'pan') { line('#3a3a44', 3, [0, 24, 0, -6]); X.fillStyle = '#2a2a33'; X.beginPath(); X.ellipse(0, -18, 12, 12, 0, 0, 6.29); X.fill(); X.fillStyle = '#4a4a55'; X.beginPath(); X.ellipse(0, -18, 10, 10, 0, 0, 6.29); X.fill(); X.fillStyle = '#fff'; X.beginPath(); X.ellipse(-1, -18, 7, 6, .3, 0, 6.29); X.fill(); circ('#f2c230', 0, -19, 3) ; return }
   if (type === 'scepter') { line('#c99a2e', 3, [0, -26, 0, 24]); circ('#a07818', 0, 24, 2.6); circ('#c99a2e', 0, -28, 5); circ('#d8402c', 0, -29, 3.2); circ('rgba(255,255,255,.7)', -1, -30, 1); for (const a of [0, 1.57, 3.14, 4.71]) circ('#f2d27a', M.cos(a) * 5, -28 + M.sin(a) * 5, 1.1); return }
 }
 function drawHat(flop) {
@@ -1212,6 +1233,13 @@ function drawTorsoPattern() {
   } else if (mo === 'ecailles') {
     X.lineWidth = .8; X.strokeStyle = 'rgba(0,0,0,.25)';
     for (let j = -14; j <= 7; j++) for (let i = -8; i <= 8; i++) { X.fillStyle = (j & 1) ? S3[1] : S3[2]; X.beginPath(); X.arc(i * 8 + (j & 1) * 4, j * 5, 4.4, 0, M.PI); X.fill(); X.stroke() }
+  } else if (mo === 'tigre') {
+    X.fillStyle = S3[1];
+    for (let j = -12; j <= 6; j++) { const y = j * 7; X.beginPath(); X.moveTo(-60, y); for (let x = -60; x <= 60; x += 6) X.lineTo(x, y + M.sin(x * .2 + j) * 2.2); for (let x = 60; x >= -60; x -= 6) X.lineTo(x, y + 2.4 + M.sin(x * .25 + j * 2) * 1.4 * (M.abs(x) % 18 < 9 ? 1 : 0)); X.fill() }
+  } else if (mo === 'pasteque') {
+    for (let i = -7; i <= 7; i++) for (let j = -10; j <= 4; j++) if ((i * 5 + j * 3) % 4 === 0) { const x = i * 8 + (j & 1) * 4, y = j * 8; X.fillStyle = S3[1]; X.beginPath(); X.ellipse(x, y, 1.1, 2, .4, 0, 6.29); X.fill() }
+  } else if (mo === 'disco') {
+    for (let i = -9; i <= 8; i++) for (let j = -12; j <= 6; j++) { X.fillStyle = `hsl(${(i * 40 + j * 25 + t * 4) % 360},85%,${(i + j) & 1 ? 60 : 72}%)`; X.fillRect(i * 7, j * 7, 7, 7) }
   } else if (mo === 'lunes') {
     for (let i = -7; i <= 7; i++) for (let j = -9; j <= 4; j++) if ((i + j) % 2 === 0) { const x = i * 8, y = j * 9 + (i & 1) * 4; circ(S3[1], x, y, 2.8); circ(S3[0], x + 1.2, y - .8, 2.4); if ((i * j) % 3 === 0) circ(S3[2], x + 4, y + 4, .8) }
   }
@@ -1359,6 +1387,43 @@ function drawHatShape(flop) {
   } else if (sh === 'halo') {
     X.save(); X.globalAlpha = .35; X.strokeStyle = '#fff3c0'; X.lineWidth = 5; X.beginPath(); X.ellipse(0, -56 + flop, 9, 2.6, 0, 0, 6.29); X.stroke(); X.restore();
     X.strokeStyle = L.hat; X.lineWidth = 2.2; X.beginPath(); X.ellipse(0, -56 + flop, 9, 2.6, 0, 0, 6.29); X.stroke();
+  } else if (sh === 'helice') {
+    const cols = [L.hat, L.pattern || '#f2c230', '#3070d0', L.hat];
+    for (let i = 0; i < 4; i++) { X.fillStyle = cols[i]; X.beginPath(); X.moveTo(0, -48); X.arc(0, -48, 10, M.PI + i * M.PI / 4, M.PI + (i + 1) * M.PI / 4); X.closePath(); X.fill() }
+    X.fillStyle = '#1d1d24'; X.fillRect(-1, -62 + flop, 2, 6); circ('#e6b830', 0, -62 + flop, 1.6);
+    const w = M.cos(t * .6) * 11; X.fillStyle = '#d8402c'; X.beginPath(); X.ellipse(w / 2, -63 + flop, M.abs(w / 2) + .5, 1.6, 0, 0, 6.29); X.fill(); X.fillStyle = '#3070d0'; X.beginPath(); X.ellipse(-w / 2, -63 + flop, M.abs(w / 2) + .5, 1.6, 0, 0, 6.29); X.fill();
+  } else if (sh === 'gateau') {
+    X.fillStyle = L.hat; X.beginPath(); X.roundRect(-11, -55, 22, 8, 2); X.fill(); X.beginPath(); X.roundRect(-7, -61 + flop * .5, 14, 6, 2); X.fill();
+    X.fillStyle = '#fff'; for (let x = -10; x <= 10; x += 4) { X.beginPath(); X.arc(x, -55, 2, 0, M.PI); X.fill() } for (let x = -6; x <= 6; x += 4) { X.beginPath(); X.arc(x, -61 + flop * .5, 1.6, 0, M.PI); X.fill() }
+    for (const [x, c] of [[-4, '#3070d0'], [0, '#2e9a4c'], [4, '#f2c230']]) { X.fillStyle = c; X.fillRect(x - .8, -67 + flop * .5, 1.6, 6); const fl = 1 + M.sin(t * .5 + x) * .3; X.fillStyle = '#f08a1c'; X.beginPath(); X.ellipse(x, -68.5 + flop * .5, 1.1, 1.9 * fl, 0, 0, 6.29); X.fill() }
+    circ('#d8402c', -7, -51, 1.2); circ('#d8402c', 7, -51, 1.2);
+  } else if (sh === 'theiere') {
+    X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -55, 11, 8, 0, 0, 6.29); X.fill();
+    X.strokeStyle = L.hat; X.lineWidth = 2.6; X.beginPath(); X.moveTo(9, -56); X.quadraticCurveTo(16, -58, 17, -64); X.stroke(); X.beginPath(); X.arc(-12, -55, 4, M.PI * .5, M.PI * 1.5); X.stroke();
+    X.fillStyle = L.pattern || '#f4f0e8'; X.beginPath(); X.ellipse(0, -62, 6, 2, 0, 0, 6.29); X.fill(); circ(L.pattern || '#f4f0e8', 0, -64.5, 1.6);
+    X.fillStyle = '#3070d0'; for (const x of [-5, 0, 5]) { X.beginPath(); X.arc(x, -54, 1.6, 0, 6.29); X.fill() }
+    X.save(); X.globalAlpha = .5; X.strokeStyle = '#fff'; X.lineWidth = 1.1; const s = (t * .5) % 10; X.beginPath(); X.moveTo(17, -66 - s); X.quadraticCurveTo(20, -69 - s, 17, -72 - s); X.stroke(); X.restore();
+  } else if (sh === 'nuage') {
+    const y = -66 + M.sin(t * .05) * 1.5;
+    X.save(); X.strokeStyle = '#6ab0e0'; X.lineWidth = 1.1; for (let i = 0; i < 5; i++) { const x = -9 + i * 4.5, d = (t * 1.6 + i * 7) % 14; X.beginPath(); X.moveTo(x, y + 4 + d); X.lineTo(x - .8, y + 7 + d); X.stroke() } X.restore();
+    X.fillStyle = L.hat; X.beginPath(); X.arc(-6, y, 5.5, 0, 6.29); X.arc(1, y - 3, 7, 0, 6.29); X.arc(8, y, 5, 0, 6.29); X.fill(); X.fillRect(-11, y, 24, 4.5);
+    if (t % 160 < 6) { poly('#f2c230', [3, y + 4, -1, y + 11, 2, y + 11, -2, y + 18, 6, y + 8, 3, y + 8]) }
+  } else if (sh === 'poulet') {
+    const bl = t % 120 < 6;
+    X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -55, 10, 7.5, 0, 0, 6.29); X.fill(); X.beginPath(); X.arc(6, -62, 5, 0, 6.29); X.fill();
+    poly('#e6e0d4', [-10, -57, -15, -63, -9, -59]); X.fillStyle = '#e6e0d4'; X.beginPath(); X.ellipse(-2, -55, 6, 3.5, -.2, 0, 6.29); X.fill();
+    poly(L.pattern || '#d8402c', [4, -66, 5, -70, 7, -67, 8, -70, 9, -66]); poly('#f08a1c', [10.5, -62.5, 14, -61.5, 10.5, -60.5]); poly(L.pattern || '#d8402c', [10, -60, 11.5, -57.5, 9.5, -58.5]);
+    if (bl) line('#1d1d24', .8, [6.6, -62.8, 8.6, -62.8]); else circ('#1d1d24', 7.6, -62.8, .9);
+  } else if (sh === 'bocal') {
+    X.save(); X.globalAlpha = .3; circ(L.hat, 0, -45, 14); X.restore();
+    X.save(); X.beginPath(); X.arc(0, -45, 14, 0, 6.29); X.clip(); X.globalAlpha = .28; X.fillStyle = '#3070d0'; X.fillRect(-14, -50 + M.sin(t * .1) * .6, 28, 20); X.restore();
+    const fx = M.sin(t * .03) * 7, dir = M.cos(t * .03) > 0 ? 1 : -1;
+    X.fillStyle = L.pattern || '#f08a1c'; X.beginPath(); X.ellipse(fx, -36, 3.4, 2, 0, 0, 6.29); X.fill(); poly(L.pattern || '#f08a1c', [fx - dir * 3, -36, fx - dir * 6, -38.5, fx - dir * 6, -33.5]); circ('#1d1d24', fx + dir * 1.6, -36.6, .5);
+    X.strokeStyle = 'rgba(255,255,255,.75)'; X.lineWidth = 1.3; X.beginPath(); X.arc(0, -45, 14, 0, 6.29); X.stroke(); X.beginPath(); X.arc(0, -45, 11, -2.6, -1.9); X.stroke();
+    for (let i = 0; i < 3; i++) { const by = -36 - ((t * .4 + i * 6) % 18); circ('rgba(255,255,255,.7)', fx + dir * 4 + i, by, .8) }
+  } else if (sh === 'minime') {
+    const keep = DL, mini = { ...DL, hatShape: 'A', knob: 'ball', back: 'none', prop: 'cane' };
+    X.save(); X.translate(0, -47); X.scale(.3, .3); drawPoli({ run: t * .1, idle: true }, mini); X.restore(); DL = keep;
   } else if (sh === 'unicorn') {
     X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -47, 10, 2.4, 0, M.PI, 0); X.fill();
     poly('#f2d27a', [-3, -48, 3, -48, 0, -66 + flop]); X.strokeStyle = '#c99a2e'; X.lineWidth = .8; X.beginPath(); X.moveTo(-2, -52); X.lineTo(2, -54); X.moveTo(-1.5, -57); X.lineTo(1.5, -59); X.stroke();
@@ -1386,6 +1451,10 @@ function drawFaceExtra(f) {
     if (gold) { circ('#d8402c', 0, -45, .9); star(-6, -44.5, 1, 0, '#fff') }
     else { poly('#f27ab0', [7, -44, 14, -53, 10, -43]); poly('#2bb3c0', [7.5, -43, 15, -48, 10.5, -42]); poly('#f2c230', [7, -45, 10, -55, 8.5, -44]) }
   }
+  else if (f === 'glasses3d') {
+    X.fillStyle = '#f4f0e8'; X.fillRect(-7.2, -44.6, 14.4, 4.6);
+    X.fillStyle = '#ff3a3a'; X.fillRect(-6.4, -43.9, 5.4, 3.2); X.fillStyle = '#2bd8e0'; X.fillRect(1, -43.9, 5.4, 3.2);
+  }
   else if (f === 'tear') { X.fillStyle = '#4a8ad0'; X.beginPath(); X.moveTo(-3, -40); X.quadraticCurveTo(-4.4, -37.6, -3, -36.8); X.quadraticCurveTo(-1.6, -37.6, -3, -40); X.fill() }
 }
 
@@ -1402,6 +1471,13 @@ function drawBackExtra(type) {
     const cols = ['#f27ab0', '#8a4a9a', '#2bb3c0', '#f2c230', '#d8402c', '#2bb3c0', '#8a4a9a', '#f27ab0', '#f2c230'];
     for (let i = 0; i < 9; i++) { const a = -2.75 + i * .26 + M.sin(t * .05 + i) * .03; X.save(); X.translate(0, -30); X.rotate(a); X.fillStyle = cols[i]; X.beginPath(); X.ellipse(20, 0, 20, 4.5, 0, 0, 6.29); X.fill(); circ('#1d2a6b', 34, 0, 2.2); circ('#f2d27a', 34, 0, 1) ; X.restore() }
     return true;
+  }
+  if (type === 'snail') {
+    X.save(); X.translate(-19, -17);
+    X.fillStyle = '#c87a3a'; X.beginPath(); X.arc(0, 0, 14, 0, 6.29); X.fill(); X.strokeStyle = '#7a4a1a'; X.lineWidth = 1.4; X.stroke();
+    X.strokeStyle = '#7a4a1a'; X.lineWidth = 2; X.beginPath(); for (let a = 0; a < 15; a += .25) X.lineTo(M.cos(a) * a * .9, M.sin(a) * a * .9); X.stroke();
+    X.fillStyle = 'rgba(255,255,255,.25)'; X.beginPath(); X.ellipse(-5, -7, 4, 2, -.6, 0, 6.29); X.fill();
+    X.restore(); return true;
   }
   if (type === 'balloons') {
     const bob = M.sin(t * .06) * 2;
