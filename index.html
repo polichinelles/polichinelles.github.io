@@ -182,25 +182,26 @@ function drawArt(cv, kind) {
 // ---------- general leaderboard: ranking points from every game ----------
 const FB = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
 const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_trampo', '🤸'], ['scores_tir', '🎯'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹']];
+const RTDB = 'https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app';
 async function topOf(coll) {
-  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents:runQuery?key=${FB.apiKey}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 12 } })
-  });
+  const key = coll === 'scores' ? 'course' : coll.slice(7);
+  const r = await fetch(`${RTDB}/lb/${key}.json?orderBy=%22score%22&limitToLast=12`);
   if (!r.ok) throw new Error(r.status);
-  const rows = await r.json();
-  return rows.filter(x => x.document).map(x => ({ name: x.document.fields.name.stringValue, score: +x.document.fields.score.integerValue })).filter(x => x.score > 0);
+  const d = await r.json() || {};
+  return Object.values(d).filter(x => x && x.score > 0).map(x => ({ name: String(x.name), score: +x.score })).sort((a, b) => b.score - a.score);
 }
 const esc = t => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = n => n.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 async function loadGeneral() {
   const list = document.getElementById('genList');
   // cached for 3 minutes so that coming back to the menu costs no database reads
-  let res = null;
-  try { const c = JSON.parse(localStorage.getItem('polichinelles_gen')); if (c && Date.now() - c.t < 180000 && c.v === BOARDS.length) res = c.r } catch (e) {}
+  let res = null, cache = null;
+  try { cache = JSON.parse(localStorage.getItem('polichinelles_gen')); if (cache && Date.now() - cache.t < 180000 && cache.v === BOARDS.length) res = cache.r } catch (e) {}
   if (!res) {
     res = (await Promise.allSettled(BOARDS.map(([c]) => topOf(c)))).map(r => r.status === 'fulfilled' ? { status: 'fulfilled', value: r.value } : { status: 'rejected' });
-    if (res.some(r => r.status === 'fulfilled')) try { localStorage.setItem('polichinelles_gen', JSON.stringify({ t: Date.now(), v: BOARDS.length, r: res })) } catch (e) {}
+    if (res.every(r => r.status === 'fulfilled')) try { localStorage.setItem('polichinelles_gen', JSON.stringify({ t: Date.now(), v: BOARDS.length, r: res })) } catch (e) {}
+    // offline or server problem: fall back to the last general ranking we received
+    else if (cache && cache.v === BOARDS.length) { res = cache.r; document.querySelector('.gen .sub').textContent = 'Dernier classement connu (hors ligne)' }
   }
   const tot = new Map();
   let ok = 0;

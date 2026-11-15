@@ -330,27 +330,30 @@ function saveBest() { try { localStorage.setItem('polichinelles_best_tir', best)
 const FIREBASE = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
 const LB_SIZE = 10;
 const GAME = 'tir', LB_COLL = 'scores_tir';
-let board = [], boardStatus = FIREBASE.apiKey.startsWith('__') ? 'off' : 'loading', entryOpen = false, lastRank = -1;
+let board = [], boardStatus = 'loading', entryOpen = false, lastRank = -1;
 const fsBase = () => `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents`;
+const RTDB = 'https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app';
+const LB_KEY = LB_COLL === 'scores' ? 'course' : LB_COLL.slice(7), LB_CACHE = 'polichinelles_lb_' + LB_KEY;
+let boardStale = false;
+const nameKey = n => n.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').slice(0, 32) || 'x';
 async function loadBoard() {
   if (boardStatus === 'off') return;
   try {
-    const r = await fetch(`${fsBase()}:runQuery?key=${FIREBASE.apiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: LB_COLL }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: LB_SIZE + 2 } })
-    });
+    const r = await fetch(`${RTDB}/lb/${LB_KEY}.json?orderBy=%22score%22&limitToLast=${LB_SIZE + 2}`);
     if (!r.ok) throw new Error(r.status);
-    const rows = await r.json();
-    board = rows.filter(x => x.document).map(x => ({ name: x.document.fields.name.stringValue, score: +x.document.fields.score.integerValue })).filter(b => b.score > 0).slice(0, LB_SIZE);
-    boardStatus = 'ok';
-  } catch (e) { boardStatus = 'err' }
+    const d = await r.json() || {};
+    board = Object.values(d).filter(b => b && b.score > 0).map(b => ({ name: String(b.name), score: +b.score })).sort((a, b) => b.score - a.score).slice(0, LB_SIZE);
+    boardStatus = 'ok'; boardStale = false;
+    try { localStorage.setItem(LB_CACHE, JSON.stringify(board)) } catch (e) {}
+  } catch (e) {
+    // no network or a server problem: show the last leaderboard we received
+    let c = null; try { c = JSON.parse(localStorage.getItem(LB_CACHE)) } catch (e2) {}
+    if (c && c.length) { board = c; boardStatus = 'ok'; boardStale = true } else boardStatus = 'err';
+  }
 }
 async function postScore(name, sc) {
-  const r = await fetch(`${fsBase()}/${LB_COLL}?key=${FIREBASE.apiKey}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { name: { stringValue: name }, score: { integerValue: String(sc) } } })
-  });
-  if (!r.ok) throw new Error(r.status);
+  const r = await fetch(`${RTDB}/lb/${LB_KEY}/${nameKey(name)}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, score: sc }) });
+  if (!r.ok && r.status !== 401 && r.status !== 403) throw new Error(r.status);   // 401/403 = this name already has a better score
 }
 function qualifies(sc) { return boardStatus === 'ok' && sc > 0 && (board.length < LB_SIZE || sc > board[board.length - 1].score) }
 function cleanName(n) { return n.replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16) }
@@ -411,6 +414,7 @@ function renderPanel() {
   const medal = ['🥇', '🥈', '🥉'];
   lbList.innerHTML = board.slice(0, LB_SIZE).map((b, i) =>
     `<li class="${i === 0 ? 'r1' : ''}${b.name === me ? ' me' : ''}"><span class="rk">${medal[i] || (i + 1)}</span><span class="nm">${esc(b.name)}</span><span class="sc">${b.score}</span></li>`).join('');
+  if (boardStale) lbList.innerHTML += '<li class="msg">Dernier classement connu (hors ligne)</li>';
   lbList.scrollTop = 0;
 }
 async function openPanel() {
