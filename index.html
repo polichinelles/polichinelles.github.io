@@ -869,25 +869,29 @@ function drawBack(type) {
     X.fillStyle = '#ff5a8a'; X.beginPath(); X.ellipse(-27, -56 + bob, 8.5, 10.5, -.15, 0, 6.29); X.fill();
     poly('#ff5a8a', [-26, -46 + bob, -28.5, -43 + bob, -23.5, -43 + bob]);
     circ('rgba(255,255,255,.6)', -30, -60 + bob, 2.4);
-  } else if (type === 'fairy') {
-    for (const [rot, rx, ry, col] of [[-.55 + f, 19, 9, 'rgba(180,230,255,.6)'], [-1.15 - f, 13, 7, 'rgba(255,190,240,.6)']]) {
-      X.save(); X.translate(-6, -28); X.rotate(rot);
-      X.fillStyle = col; X.beginPath(); X.ellipse(-rx, 0, rx, ry, 0, 0, 6.29); X.fill();
-      X.strokeStyle = 'rgba(255,255,255,.9)'; X.lineWidth = 1.2; X.stroke();
+  } else {
+    // wings: one on each side of the body, mirrored, gently flapping
+    for (const side of [-1, 1]) {
+      X.save(); X.translate(side * 4, -27); X.scale(side, 1); X.rotate(f * (side < 0 ? 1 : -1) * 0 + f);
+      if (type === 'fairy') {
+        for (const [rot, rx, ry, col] of [[-.45, 18, 8.5, 'rgba(180,230,255,.62)'], [.35, 12, 6.5, 'rgba(255,190,240,.62)']]) {
+          X.save(); X.rotate(rot); X.fillStyle = col; X.beginPath(); X.ellipse(rx, 0, rx, ry, 0, 0, 6.29); X.fill();
+          X.strokeStyle = 'rgba(255,255,255,.95)'; X.lineWidth = 1.2; X.stroke(); X.restore();
+        }
+      } else if (type === 'bat') {
+        X.rotate(-.15);
+        X.fillStyle = '#2a2230'; X.beginPath(); X.moveTo(0, 0); X.lineTo(28, -14); X.lineTo(32, 2);
+        X.quadraticCurveTo(26, -2, 22, 6); X.quadraticCurveTo(16, 0, 12, 9); X.quadraticCurveTo(7, 3, 0, 8); X.closePath(); X.fill();
+        line('#4a4058', 1.2, [0, 0, 28, -14]);
+      } else if (type === 'angel') {
+        X.rotate(-.3);
+        for (let i = 4; i >= 0; i--) {
+          X.fillStyle = '#fbfaf6'; X.strokeStyle = '#c9c4bb'; X.lineWidth = 1;
+          X.beginPath(); X.ellipse(7 + i * 4.5, i * 2.6, 11 - i, 4, .35 - i * .12, 0, 6.29); X.fill(); X.stroke();
+        }
+      }
       X.restore();
     }
-  } else if (type === 'bat') {
-    X.save(); X.translate(-6, -28); X.rotate(-.25 + f);
-    X.fillStyle = '#2a2230'; X.beginPath(); X.moveTo(0, 0); X.lineTo(-30, -14); X.lineTo(-34, 2);
-    X.quadraticCurveTo(-28, -2, -24, 6); X.quadraticCurveTo(-18, 0, -13, 9); X.quadraticCurveTo(-8, 3, 0, 8); X.closePath(); X.fill();
-    line('#4a4058', 1.2, [0, 0, -30, -14]); X.restore();
-  } else if (type === 'angel') {
-    X.save(); X.translate(-6, -28); X.rotate(-.35 + f);
-    for (let i = 4; i >= 0; i--) {
-      X.fillStyle = '#fbfaf6'; X.strokeStyle = '#c9c4bb'; X.lineWidth = 1;
-      X.beginPath(); X.ellipse(-8 - i * 5, i * 3, 12 - i, 4.2, -.35 + i * .12, 0, 6.29); X.fill(); X.stroke();
-    }
-    X.restore();
   }
 }
 function drawCollar() {
