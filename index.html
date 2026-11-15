@@ -32,6 +32,20 @@
   h1 small{display:block;font-size:.5em;color:#fff;letter-spacing:3px;margin-bottom:2px}
   .wallet{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:#1c1838;border:2px solid #e6b830;border-radius:22px;padding:6px 14px;color:#ffe9a0;font-weight:700}
   .wallet span{color:#c9c2d8;font-weight:400;font-size:12px}
+  .gen{max-width:760px;margin:16px auto 0;padding:0 14px}
+  .gen .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.45);overflow:hidden}
+  .gen h2{margin:0;padding:12px 14px 4px;font-size:20px;color:#e6b830;text-align:center}
+  .gen .sub{text-align:center;font-size:12px;color:#c9c2d8;padding:0 14px 8px}
+  .gen ol{list-style:none;margin:0;padding:4px 10px 10px;max-height:360px;overflow-y:auto}
+  .gen li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;margin:4px 0;background:rgba(255,255,255,.05)}
+  .gen li.r1{background:rgba(230,184,48,.18)}
+  .gen .rk{width:30px;text-align:center;font-size:18px;color:#e6b830;flex:none}
+  .gen .nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gen .gm{font-size:13px;letter-spacing:1px;flex:none}
+  .gen .pt{font-weight:700;color:#ffe9a0;flex:none;font-variant-numeric:tabular-nums}
+  .gen .msg{text-align:center;color:#c9c2d8;padding:16px;background:none}
+  .gen details{padding:0 14px 12px;font-size:12px;color:#c9c2d8}
+  .gen summary{cursor:pointer;color:#e6b830}
   main{max-width:760px;margin:18px auto 0;padding:0 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
   .card{position:relative;border-radius:16px;overflow:hidden;border:3px solid #e6b830;background:#1c1838;box-shadow:0 8px 20px rgba(0,0,0,.45);text-decoration:none;color:#fff;display:flex;flex-direction:column;transition:transform .15s}
   .card:active{transform:scale(.97)}
@@ -67,6 +81,13 @@
   <h1><small>LE THÉÂTRE DES</small>POLICHINELLES</h1>
   <div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles pour la Loge</span></div>
 </header>
+
+<section class="gen"><div class="box">
+  <h2>🏆 Classement général</h2>
+  <div class="sub">Tous les jeux du Théâtre réunis</div>
+  <ol id="genList"><li class="msg">Chargement…</li></ol>
+  <details><summary>Comment ça marche ?</summary>Dans chaque jeu, le top 10 rapporte des points : 10 points pour le 1er, 9 pour le 2e… jusqu’à 1 point pour le 10e. Le classement général additionne les points de tous les jeux (on compte le meilleur score de chaque prénom).</details>
+</div></section>
 
 <main id="games"></main>
 
@@ -155,6 +176,43 @@ function drawArt(cv, kind) {
     poli(bx, by + 92, .56);
   }
 }
+
+// ---------- general leaderboard: ranking points from every game ----------
+const FB = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
+const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_kart', '🏎️'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹']];
+async function topOf(coll) {
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents:runQuery?key=${FB.apiKey}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 60 } })
+  });
+  if (!r.ok) throw new Error(r.status);
+  const rows = await r.json();
+  return rows.filter(x => x.document).map(x => ({ name: x.document.fields.name.stringValue, score: +x.document.fields.score.integerValue })).filter(x => x.score > 0);
+}
+const esc = t => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = n => n.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+async function loadGeneral() {
+  const list = document.getElementById('genList');
+  const res = await Promise.allSettled(BOARDS.map(([c]) => topOf(c)));
+  const tot = new Map();
+  let ok = 0;
+  res.forEach((r, gi) => {
+    if (r.status !== 'fulfilled') return; ok++;
+    const seen = new Set(), top = [];
+    for (const row of r.value) { const k = norm(row.name); if (!k || seen.has(k)) continue; seen.add(k); top.push(row); if (top.length === 10) break }
+    top.forEach((row, i) => {
+      const k = norm(row.name), e = tot.get(k) || { name: row.name, pts: 0, games: [] };
+      e.pts += 10 - i; e.games.push(BOARDS[gi][1]); tot.set(k, e);
+    });
+  });
+  if (!ok) { list.innerHTML = '<li class="msg">Classement indisponible pour le moment.</li>'; return }
+  const rows = [...tot.values()].sort((a, b) => b.pts - a.pts).slice(0, 10);
+  if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; return }
+  const medal = ['🥇', '🥈', '🥉'];
+  let me = ''; try { me = norm(localStorage.getItem('polichinelles_name') || '') } catch (e) {}
+  list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><span class="nm">${esc(r.name)}</span><span class="gm">${r.games.join('')}</span><span class="pt">${r.pts} pts</span></li>`).join('');
+}
+loadGeneral();
 
 // ---------- install (same behaviour as in the games) ----------
 const installBtn = document.getElementById('installBtn'), instEl = document.getElementById('inst'), instBody = document.getElementById('instBody');
