@@ -1,6 +1,6 @@
 // Les Polichinelles - service worker
 // Network first (players always get the latest version when online), cache as a fallback (works offline).
-const CACHE = 'polichinelles-v12';
+const CACHE = 'polichinelles-v13';
 const CORE = ['./', 'index.html', 'course.html', 'envol.html', 'tape.html', 'pyramide.html', 'jongleur.html', 'trampo.html', 'tir.html', 'shots/course.jpg', 'shots/envol.jpg', 'shots/trampo.jpg', 'shots/tir.jpg', 'shots/tape.jpg', 'shots/pyramide.jpg', 'shots/jongleur.jpg', 'kart.html', 'three.module.min.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
 
 self.addEventListener('install', e => {

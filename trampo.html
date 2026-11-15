@@ -1562,7 +1562,7 @@ function update() {
     }
     picks = picks.filter(k => !k.got && k.y - camY < VH + 40);
     score = M.floor(climbed()) + starPts;
-    const a = M.floor(climbed() / 150); if (a !== act) setAct(a, false);
+    const a = M.floor(climbed() / 100); if (a !== act) setAct(a, false);
     if (state === 'play' && p.y - camY > VH + 30) gameOver();
   }
   for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g || .05; p.l-- }
@@ -1743,7 +1743,7 @@ function drawProp(kind, x, y, sway, seed) {
     }
     case 1: { // costume on a hanger
       line('#999', 2, [0, 0, 0, 8]); X.strokeStyle = '#8a6a44'; X.lineWidth = 3; X.beginPath(); X.moveTo(-20, 18); X.lineTo(0, 8); X.lineTo(20, 18); X.stroke();
-      const c = [['#d8402c', '#2e9a4c'], ['#3070d0', '#e6b830'], ['#8a4a9a', '#f4f0e8']][seed % 3];
+      const c = [['#d8402c', '#2e9a4c'], ['#3070d0', '#e6b830'], ['#8a4a9a', '#f4f0e8']][((seed % 3) + 3) % 3];
       poly(c[0], [-18, 18, 0, 18, 0, 70, -28, 70]); poly(c[1], [0, 18, 18, 18, 28, 70, 0, 70]);
       X.fillStyle = '#f4f0e8'; for (let i = 0; i < 4; i++) { X.beginPath(); X.arc(-16 + i * 11, 20, 6, 0, M.PI); X.fill() }
       circ('#e6b830', 0, 34, 2.5); circ('#e6b830', 0, 46, 2.5); break;
@@ -1786,7 +1786,7 @@ function drawStage() {
   { const pf = .45, SEC = 700, base = cy * pf, n0 = M.floor(base / SEC) - 1, n1 = M.floor((base + H) / SEC) + 1;
     for (let n = n0; n <= n1; n++) {
       const wx = (hsh(n, 41) < .5 ? .22 : .78) * W, wy = n * SEC - base + 120;
-      X.save(); X.globalAlpha = .07; X.fillStyle = '#c8d8ff'; X.beginPath(); X.moveTo(wx - 22, wy); X.lineTo(wx + 22, wy); X.lineTo(wx + 140 * (wx < W / 2 ? 1 : -1) + 60, wy + 420); X.lineTo(wx + 140 * (wx < W / 2 ? 1 : -1) - 60, wy + 420); X.fill(); X.restore();
+      X.save(); X.globalAlpha = .1; X.fillStyle = `rgb(${AMB.spot})`; X.beginPath(); X.moveTo(wx - 22, wy); X.lineTo(wx + 22, wy); X.lineTo(wx + 140 * (wx < W / 2 ? 1 : -1) + 60, wy + 420); X.lineTo(wx + 140 * (wx < W / 2 ? 1 : -1) - 60, wy + 420); X.fill(); X.restore();
       circ('#5a3a24', wx, wy, 30); circ('#1a2448', wx, wy, 25); X.save(); X.beginPath(); X.arc(wx, wy, 25, 0, 6.29); X.clip();
       for (let i = 0; i < 8; i++) { X.fillStyle = '#fff'; X.fillRect(wx - 20 + hsh(n, i) * 40, wy - 20 + hsh(i, n) * 40, 1.5, 1.5) } circ('#fff6dc', wx + 8, wy - 6, 7); X.restore();
       X.fillStyle = '#5a3a24'; X.fillRect(wx - 25, wy - 1.5, 50, 3); X.fillRect(wx - 1.5, wy - 25, 3, 50);
@@ -1809,6 +1809,9 @@ function drawStage() {
   X.fillStyle = '#ffe8c0';
   for (let i = 0; i < 36; i++) { X.globalAlpha = .12 + .1 * M.sin(t * .03 + i); X.fillRect((i * 97 + M.sin(t * .01 + i) * 24 + W * 2) % W, ((i * 173 - cy * .8 + t * .15) % H + H) % H, 2, 2) }
   X.globalAlpha = 1;
+  // colour of the current act over the whole attic
+  X.save(); X.globalCompositeOperation = 'soft-light'; X.globalAlpha = .55; X.fillStyle = `rgb(${AMB.spot})`; X.fillRect(0, 0, W, H); X.restore();
+  X.save(); X.globalAlpha = .1; X.fillStyle = `rgb(${AMB.spot})`; X.fillRect(0, 0, W, H); X.restore();
   // vignette so that the planks and bats stay readable
   const v = X.createRadialGradient(W / 2, H * .45, M.min(W, H) * .25, W / 2, H * .45, M.max(W, H) * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); X.fillStyle = v; X.fillRect(0, 0, W, H);
   X.restore();
