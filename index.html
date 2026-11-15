@@ -69,18 +69,22 @@ const COL = {
 };
 
 // ---------- layout ----------
-let W, H, T, S, dpr;
+let W, H, T, S, dpr, LAND = false;
 const SCENE = 360, G = 262; // scene band height, ground line inside band
 function resize() {
   dpr = M.min(window.devicePixelRatio || 1, 2);
   const iw = innerWidth, ih = innerHeight;
-  W = iw < ih ? 340 : 640;
-  S = iw / W;
-  H = M.max(SCENE, ih / S);
-  T = (H - SCENE) * 0.45;
+  LAND = iw >= ih;
+  if (!LAND) {                    // portrait: fit the width, extra room above and below
+    W = 340; S = iw / W; H = M.max(SCENE, ih / S); T = (H - SCENE) * 0.45;
+  } else {                        // landscape: fit the height so the floor and buttons are always visible
+    S = M.min(ih / 322, iw / 560); W = iw / S; H = ih / S; T = 0;
+  }
   c.width = M.round(iw * dpr); c.height = M.round(ih * dpr);
 }
-addEventListener('resize', resize); resize();
+addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200));
+if (window.visualViewport) visualViewport.addEventListener('resize', resize);
+resize();
 
 // ---------- audio ----------
 let AC = null;
@@ -570,7 +574,8 @@ function drawDrape(o) {
 function drawTrap(o) {
   const x = o.x, w = o.w;
   // the open hole in the stage
-  X.fillStyle = '#050309'; X.fillRect(x, G, w, H);
+  X.fillStyle = '#050309'; X.fillRect(x, G, w, 40);
+  const pg = X.createLinearGradient(0, G + 24, 0, G + 44); pg.addColorStop(0, 'rgba(5,3,9,1)'); pg.addColorStop(1, 'rgba(5,3,9,0)'); X.fillStyle = pg; X.fillRect(x, G + 24, w, 20);
   const gr = X.createLinearGradient(0, G, 0, G + 30); gr.addColorStop(0, 'rgba(255,255,255,.08)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
   X.fillStyle = gr; X.fillRect(x, G, w, 30);
   // hatch door hanging down inside the hole
@@ -695,8 +700,8 @@ function drawValance() {
 // ---------- touch buttons ----------
 function drawControls() {
   const portrait = T > 80;
-  const y = portrait ? H - T - 70 : SCENE - 46, r = portrait ? 34 : 24;
-  const lx = W * .2, rx = W * .7;
+  const y = portrait ? H - T - 70 : M.min(H - 30, G + 34), r = portrait ? 34 : 24;
+  const lx = portrait ? W * .2 : 52, rx = portrait ? W * .7 : W - 52;
   X.save();
   X.globalAlpha = P.duck ? .55 : .28; circ('#fff', lx, y, r);
   X.globalAlpha = P.hold ? .55 : .28; circ('#fff', rx, y, r);
@@ -888,7 +893,7 @@ function render() {
 
   // HUD
   if (state === 'play' || state === 'over') {
-    const hy = T > 60 ? -T + 64 : 46;
+    const hy = T > 60 ? -T + 64 : 66;
     txt(String(score).padStart(5, '0'), W - 12, hy, 20, '#fff', 'right');
     star(W - 22, hy + 26, 8); txt('× ' + stars, W - 34, hy + 27, 14, '#fff', 'right');
     if (combo > 1 && state === 'play') txt('COMBO ×' + combo, W - 12, hy + 50, 13, '#ffe066', 'right');
@@ -916,6 +921,18 @@ function render() {
     txt(paused ? 'PAUSE' : String(M.ceil(resumeT / 30)), W / 2, 150, paused ? 34 : 56, COL.yellow);
   }
   if (state === 'title') {
+    if (LAND) {
+      const mx = W * .47;
+      X.save(); X.translate(W * .16, G + 8); X.scale(1.25, 1.25); drawPoli({ run: P.run, idle: true }); X.restore();
+      txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
+      txt('le jeu', W / 2, 76, 17, '#fff');
+      if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
+      txt('Droite : sauter (2× = double saut)', mx, 166, 13, '#ddd', 'center', false);
+      txt('Gauche : se baisser (garder appuyé)', mx, 184, 13, '#ddd', 'center', false);
+      drawPowerIcon('mask', mx - 50, 216, .7); drawPowerIcon('cape', mx, 216, .7); drawPowerIcon('clock', mx + 50, 216, .7);
+      if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
+      drawBoard(W - 95, 110, 5, true);
+    } else {
     const ty = M.max(-T + 70, 46 - T * .6);
     X.save(); X.translate(W / 2, G - 14); X.scale(1.3, 1.3); drawPoli({ run: P.run, idle: true }); X.restore();
     txt('LES POLICHINELLES', W / 2, ty, W < 400 ? 26 : 34, COL.yellow);
@@ -925,7 +942,7 @@ function render() {
     txt('Gauche : se baisser (garder appuyé)', W / 2, G + 80, 13, '#ddd', 'center', false);
     if (T > 80) { drawPowerIcon('mask', W / 2 - 60, G + 108, .7); drawPowerIcon('cape', W / 2, G + 108, .7); drawPowerIcon('clock', W / 2 + 60, G + 108, .7) }
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); drawBoard(W / 2, G + 152, 5, false) }
-    else { drawBoard(W - 100, 150, 5, true); if (best) txt('Ton record : ' + best, 92, 80, 14, COL.yellow) }
+    }
   }
   if (state === 'over') {
     const k = M.min(1, stateT / 20);
@@ -938,7 +955,7 @@ function render() {
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
     else txt('Ton record : ' + best, ox, oy + 70, 16, '#ddd');
     if (portrait) drawBoard(W / 2, G + 50, 7, false); else drawBoard(W - 110, 70, 7, false);
-    if (stateT > 40 && !entryOpen && M.floor(t / 30) % 2 === 0) txt('Touche pour rejouer', ox, portrait ? G + 250 : G + 34, 17, '#fff');
+    if (stateT > 40 && !entryOpen && M.floor(t / 30) % 2 === 0) txt('Touche pour rejouer', ox, portrait ? G + 250 : M.min(H - 20, G + 34), 17, '#fff');
   }
 }
 
