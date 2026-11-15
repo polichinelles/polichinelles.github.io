@@ -1600,7 +1600,7 @@ function render() {
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
   const hz = IS_IPHONE && OPTS.vib && state === 'play' && !paused;
   if (hz !== hzEl.classList.contains('on')) hzEl.classList.toggle('on', hz);
-  const ib = state === 'title' && !STANDALONE;
+  const ib = false;   // the menu page offers the install button
   if (ib !== installBtn.classList.contains('on')) installBtn.classList.toggle('on', ib);
   if (wdEl.classList.contains('on')) drawPreview();
   X.setTransform(S * dpr, 0, 0, S * dpr, 0, T * S * dpr);
@@ -1669,11 +1669,11 @@ function render() {
     } else {
     const ty = M.max(-T + 70, 46 - T * .6);
     drawFlyerTitle(W / 2, 1.7);
-    txt('LES POLICHINELLES', W / 2, ty, W < 300 ? 21 : W < 400 ? 26 : 34, COL.yellow);
+    txt('LES POLICHINELLES', W / 2, ty, W < 330 ? 21 : W < 400 ? 26 : 34, COL.yellow);
     txt('L’Envol', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Touche pour donner un coup de ballon', W / 2, G + 62, 13, '#ddd', 'center', false);
-    txt('Passe entre les rideaux et les coffres', W / 2, G + 80, 13, '#ddd', 'center', false);
+    txt('Touche pour donner un coup de ballon', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Passe entre les rideaux et les coffres', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     if (T > 80) { star(W / 2 - 66, G + 106, 8); txt('Attrape les étoiles !', W / 2 - 54, G + 106, 13, '#ffe9a0', 'left', false) }
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }

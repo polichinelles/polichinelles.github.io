@@ -1593,7 +1593,7 @@ function render() {
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
   const hz = IS_IPHONE && OPTS.vib && state === 'play' && !paused;
   if (hz !== hzEl.classList.contains('on')) hzEl.classList.toggle('on', hz);
-  const ib = state === 'title' && !STANDALONE;
+  const ib = false;   // the menu page offers the install button
   if (ib !== installBtn.classList.contains('on')) installBtn.classList.toggle('on', ib);
   if (wdEl.classList.contains('on')) drawPreview();
   X.setTransform(S * dpr, 0, 0, S * dpr, 0, T * S * dpr);
@@ -1673,8 +1673,8 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 400 ? 26 : 34, COL.yellow);
     txt('La Course', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Droite : sauter (2× = double saut)', W / 2, G + 62, 13, '#ddd', 'center', false);
-    txt('Gauche : se baisser (garder appuyé)', W / 2, G + 80, 13, '#ddd', 'center', false);
+    txt('Droite : sauter (2× = double saut)', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Gauche : se baisser (garder appuyé)', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     if (T > 80) { drawPowerIcon('mask', W / 2 - 60, G + 108, .7); drawPowerIcon('cape', W / 2, G + 108, .7); drawPowerIcon('clock', W / 2 + 60, G + 108, .7) }
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }

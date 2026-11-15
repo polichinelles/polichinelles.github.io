@@ -81,10 +81,10 @@
 "use strict";
 const GAMES = [
   { id: 'course', name: 'La Course', href: 'course.html', best: 'polichinelles_best', desc: 'Cours sur la scène, saute les sièges, baisse-toi sous les projecteurs et évite les trappes.', art: 'course', bg: ['#e9dcc6', '#8a1f2a'] },
-  { id: 'envol', name: 'L’Envol', href: 'envol.html', best: 'polichinelles_best_envol', desc: 'Accroché à ton ballon, passe entre les rideaux et les piles de coffres.', art: 'envol', bg: ['#a9bcdd', '#1f3a7a'], fresh: true },
-  { id: 'tape', name: 'Tape-Polichinelle', soon: true, desc: 'Ils surgissent des trappes : tape-les vite… mais pas le directeur !', emoji: '🔨', bg: ['#dcb6dc', '#5a1f6e'] },
-  { id: 'pyramide', name: 'La Pyramide', soon: true, desc: 'Lâche les polichinelles au bon moment pour bâtir la plus haute pyramide.', emoji: '🏛️', bg: ['#c2dcb8', '#1f5a3a'] },
-  { id: 'jongleur', name: 'Le Jongleur', soon: true, desc: 'Garde les quilles et les balles en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] }
+  { id: 'envol', name: 'L’Envol', href: 'envol.html', best: 'polichinelles_best_envol', desc: 'Accroché à ton ballon, passe entre les rideaux et les piles de coffres.', art: 'envol', bg: ['#a9bcdd', '#1f3a7a'] },
+  { id: 'tape', name: 'Tape-Polichinelle', href: 'tape.html', best: 'polichinelles_best_tape', fresh: true, desc: 'Ils surgissent des trappes : tape-les vite… mais pas le directeur !', emoji: '🔨', bg: ['#dcb6dc', '#5a1f6e'] },
+  { id: 'pyramide', name: 'La Pyramide', href: 'pyramide.html', best: 'polichinelles_best_pyramide', fresh: true, desc: 'Lâche les polichinelles au bon moment pour bâtir la plus haute pyramide.', emoji: '🏛️', bg: ['#c2dcb8', '#1f5a3a'] },
+  { id: 'jongleur', name: 'Le Jongleur', href: 'jongleur.html', best: 'polichinelles_best_jongleur', fresh: true, desc: 'Garde les quilles et les balles en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] }
 ];
 const ls = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
 try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
