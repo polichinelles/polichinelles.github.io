@@ -308,12 +308,15 @@ const sfx = {
   twang: () => beep(140, 220, .3, 'triangle', .08),
   boxPick: () => [660, 880, 1100].forEach((f, i) => setTimeout(() => beep(f, f, .06, 'square', .05), i * 50)),
   turbo: () => beep(200, 900, .5, 'sawtooth', .06),
+  pad: () => beep(300, 1200, .25, 'square', .05),
   spin: () => beep(700, 150, .5, 'triangle', .08),
   bump: () => beep(160, 80, .15, 'square', .09),
   boing: () => beep(220, 880, .25, 'sine', .1),
-  lap: () => [523, 659, 784].forEach((f, i) => setTimeout(() => beep(f, f, .1, 'square', .06), i * 90)),
+  lap: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, f, .1, 'square', .06), i * 90)),
+  pass: () => beep(660, 990, .1, 'triangle', .06),
   go: () => beep(880, 880, .35, 'square', .08),
   ready: () => beep(440, 440, .15, 'square', .07),
+  tick: () => beep(1200, 1200, .04, 'square', .05),
 
   power: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, f * 1.01, .12, 'triangle', .1), i * 70)),
   smash: () => { beep(500, 120, .18, 'square', .08); beep(1500, 900, .1, 'triangle', .05) },
@@ -640,18 +643,19 @@ const PX = 70;                       // player x
 const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
-// ---- Le Grand Prix : pseudo-3D kart racing ----
-const SEG = 200, ROADW = 2000, RUMBLE = 3, CAMH = 900, DRAWD = 150, CDEPTH = 1 / M.tan(50 * M.PI / 180), PZ = CAMH * CDEPTH;
-const MAXV = 200, ACC = MAXV / 150, DEC = MAXV / 260, OFFMAX = MAXV * .38, LAPS = 3;
-let segs = [], TRACKLEN = 0, kv = 0, pos = 0, pX = 0, pDist = 0, steer = 0, accelOn = false, keySteer = 0;
-let race = null, cars = [], hazards = [], item = null, boost = 0, jumpT = 0, invT = 0, spinT = 0, skyX = 0, bumpT = 0;
-let joyId = null, accId = null, place = 1, lap = 0, raceTime = 0, finishPlace = 0;
+// ---- Le Grand Prix : endless time-attack kart race (pseudo-3D) ----
+const SEG = 200, ROADW = 2000, RUMBLE = 3, CAMH = 900, DRAWD = 160, CDEPTH = 1 / M.tan(50 * M.PI / 180), PZ = CAMH * CDEPTH;
+const MAXV = 200, ACC = MAXV / 150, DEC = MAXV / 260, OFFMAX = MAXV * .38;
+const START_TIME = 35 * 60, NCARS = 6;
+let segs = [], TRACKLEN = 0, kv = 0, pos = 0, pX = 0, pDist = 0, steer = 0, accelOn = false, keySteer = 0, keyAcc = false;
+let race = null, cars = [], item = null, boost = 0, jumpT = 0, invT = 0, spinT = 0, skyX = 0, bumpT = 0, draftT = 0;
+let joyId = null, accId = null, lap = 0, timeLeft = 0, passes = 0, cpFlash = 0, cpBonus = 0, raceT = 0, kartFx = [];
 function easeIn(a, b, p) { return a + (b - a) * p * p }
 function easeInOut(a, b, p) { return a + (b - a) * ((-M.cos(p * M.PI) / 2) + .5) }
 function lastY() { return segs.length ? segs[segs.length - 1].p2.w.y : 0 }
 function addSeg(curve, y) {
   const n = segs.length;
-  segs.push({ i: n, p1: { w: { y: lastY(), z: n * SEG }, c: {}, s: {} }, p2: { w: { y, z: (n + 1) * SEG }, c: {}, s: {} }, curve, sprites: [], dark: M.floor(n / RUMBLE) % 2 });
+  segs.push({ i: n, p1: { w: { y: lastY(), z: n * SEG }, c: {}, s: {} }, p2: { w: { y, z: (n + 1) * SEG }, c: {}, s: {} }, curve, sprites: [], dark: M.floor(n / RUMBLE) % 2, pad: null });
 }
 function addRoad(enter, hold, leave, curve, hill) {
   const sy = lastY(), ey = sy + hill * SEG, tot = enter + hold + leave;
@@ -672,27 +676,33 @@ function buildTrack() {
   addRoad(25, 25, 25, -5, 0);
   for (let i = 0; i < 4; i++) addRoad(8, 8, 8, 0, i % 2 ? -3 : 3);
   addRoad(30, 30, 30, 3, 0);
-  addRoad(40, 25, 40, 0, -lastY() / SEG);                  // back down to the start height
+  addRoad(40, 25, 40, 0, -lastY() / SEG);
   TRACKLEN = segs.length * SEG;
   // roadside decor
-  const props = ['lamp', 'flag', 'tent', 'mask', 'stand', 'lamp', 'balloons', 'flag'];
+  const props = ['lamp', 'flag', 'tent', 'mask', 'stand', 'lamp', 'balloons', 'flag', 'carousel'];
   for (let i = 20; i < segs.length; i += 6) {
-    const k = props[(i / 6 | 0) % props.length];
-    segs[i].sprites.push({ k, off: (i / 6 | 0) % 2 ? -1.35 - (k === 'tent' || k === 'stand' ? .9 : 0) : 1.35 + (k === 'tent' || k === 'stand' ? .9 : 0) });
+    const k = props[(i / 6 | 0) % props.length], big = k === 'tent' || k === 'stand' || k === 'carousel';
+    segs[i].sprites.push({ k, off: ((i / 6 | 0) % 2 ? -1 : 1) * (1.35 + (big ? .95 : 0)) });
   }
+  for (let i = 30; i < segs.length; i += 36) segs[i].sprites.push({ k: 'garland', off: 0 });
   segs[6].sprites.push({ k: 'arch', off: 0 }); segs[M.floor(segs.length / 2)].sprites.push({ k: 'arch', off: 0 });
-  // bonus boxes and stars on the road
+  // bonus boxes, a few stars, turbo pads
   for (let i = 110; i < segs.length - 40; i += 210) for (const off of [-.55, 0, .55]) segs[i].sprites.push({ k: 'box', off, hide: 0 });
-  for (let i = 60; i < segs.length - 30; i += 150) { const off = [-.5, 0, .5][(i / 150 | 0) % 3]; for (let j = 0; j < 3; j++) segs[i + j * 5].sprites.push({ k: 'star', off, got: -1 }) }
+  for (const i of [200, 700]) for (let j = 0; j < 3; j++) segs[i + j * 6].sprites.push({ k: 'star', off: i === 200 ? -.5 : .5, got: -1 });
+  for (const [i, off] of [[150, .5], [420, -.5], [560, 0], [880, .45]]) for (let j = 0; j < 4; j++) segs[i + j].pad = off;
 }
-function pRace() { return pDist + PZ }                     // the player's distance on the track
+function pRace() { return pDist + PZ }
 function segAt(z) { return segs[M.floor(((z % TRACKLEN) + TRACKLEN) % TRACKLEN / SEG) % segs.length] }
 function randomLook() {
   const eq = {};
   for (const c of CATS) { const its = WARD[c].items; eq[c] = c === 'trail' ? its[0].id : its[M.random() * its.length | 0].id }
   return buildLook(eq);
 }
-const KCOL = ['#d8402c', '#3070d0', '#2e9a4c', '#e6b830', '#8a4a9a', '#f27ab0'];
+const KCOL = ['#d8402c', '#3070d0', '#2e9a4c', '#e6b830', '#8a4a9a', '#f27ab0', '#2bb3c0', '#f08a1c'];
+function newCar(dist, i) {
+  const lvl = M.min(1, lap / 6);
+  return { dist, off: rnd(-.7, .7), v: MAXV * .6, top: MAXV * (.84 + lvl * .1 + rnd(0, .06)), look: randomLook(), col: KCOL[1 + (i % 7)], spin: 0, tgt: rnd(-.7, .7), num: i, ahead: true, counted: false, dropT: rnd(300, 900), drafted: 0 };
+}
 
 let obs = [], items = [], parts = [];
 const crowd = [];
@@ -703,12 +713,12 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  buildTrack(); kv = 0; pX = 0; steer = 0; accelOn = false; boost = 0; jumpT = 0; invT = 0; spinT = 0; skyX = 0; bumpT = 0; item = null; hazards = [];
-  joyId = null; accId = null; place = 6; lap = 0; raceTime = 0; finishPlace = 0;
-  pos = TRACKLEN - 3 * SEG - PZ; pDist = -3 * SEG - PZ;   // camera position; the player's kart is PZ ahead of it
+  buildTrack(); kv = 0; pX = 0; steer = 0; accelOn = false; keyAcc = false; keySteer = 0; boost = 0; jumpT = 0; invT = 0; spinT = 0; skyX = 0; bumpT = 0; draftT = 0; item = null; kartFx = [];
+  joyId = null; accId = null; lap = 0; timeLeft = START_TIME; passes = 0; cpFlash = 0; cpBonus = 0; raceT = 0;
+  pos = TRACKLEN - 3 * SEG - PZ; pDist = -3 * SEG - PZ;
   race = { phase: 'count', t: 0 };
-  cars = [];
-  for (let i = 0; i < 5; i++) cars.push({ dist: -3 * SEG + 1200 + i * 650, off: i % 2 ? -.5 : .5, v: 0, top: MAXV * (.86 + i * .025), look: randomLook(), col: KCOL[(i + 1) % 6], spin: 0, tgt: i % 2 ? -.45 : .45, num: i + 2, done: false });
+  cars = []; for (let i = 0; i < NCARS; i++) cars.push(newCar(-3 * SEG + 1200 + i * 700, i + 2));
+  for (const c of cars) c.off = c.num % 2 ? -.5 : .5;
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -1553,77 +1563,81 @@ function update() {
   if (state === 'title') { curtain = 1; P.run += .06 }
   if (state === 'play') {
     playT++;
-    speed = 5 + 7.5 * (kv / MAXV);                      // keeps the music tempo in step with the kart
+    speed = 5 + 7.5 * (kv / MAXV);
+    if (cpFlash > 0) cpFlash--;
     if (race.phase === 'count') {
       race.t++;
-      if (race.t % 60 === 0 && race.t < 180) { sfx.ready(); buzz(20) }
-      if (race.t >= 180) { race.phase = 'race'; race.t = 0; sfx.go(); buzz([40, 30, 40]) }
+      if (race.t % 50 === 0 && race.t < 150) { sfx.ready(); buzz(20) }
+      if (race.t >= 150) { race.phase = 'race'; race.t = 0; sfx.go(); buzz([40, 30, 40]) }
     } else {
       race.t++;
-      if (race.phase === 'race') raceTime++;
-      const ps = segAt(pos + PZ), sp = kv / MAXV;
-      // steering (joystick or keyboard) + the pull of the bends
+      if (race.phase === 'race') {
+        raceT++; timeLeft--;
+        if (timeLeft <= 600 && timeLeft > 0 && timeLeft % 60 === 0) sfx.tick();
+        if (timeLeft <= 0) { timeLeft = 0; race.phase = 'timeout'; race.t = 0; sfx.hit(); buzz([80, 50, 160]) }
+      }
+      const ps = segAt(pRace()), sp = kv / MAXV;
       const st = M.max(-1, M.min(1, steer + keySteer));
       const dx = .036 * sp;
-      if (spinT <= 0) pX += dx * st * 1.15;
+      if (spinT <= 0 && race.phase === 'race') pX += dx * st * 1.15;
       pX -= dx * sp * ps.curve * .32;
-      // speed
       const off = M.abs(pX) > 1 && jumpT <= 0 && invT <= 0;
-      if (race.phase === 'finished') kv = M.max(kv - DEC * 2, MAXV * .3);
+      if (race.phase === 'timeout') kv = M.max(0, kv - ACC * 1.5);
       else if (spinT > 0) kv = M.max(0, kv - ACC * 2);
       else if (boost > 0) kv = M.min(MAXV * 1.4, kv + ACC * 3);
-      else if (accelOn || keyAcc) kv = M.min(MAXV, kv + ACC);
+      else if (accelOn || keyAcc) kv = M.min(MAXV * (draftT > 0 ? 1.12 : 1), kv + ACC);
       else kv = M.max(0, kv - DEC);
       if (off && kv > OFFMAX) kv -= ACC * 2.2;
       pX = M.max(-2.4, M.min(2.4, pX));
-      if (boost > 0) boost--; if (jumpT > 0) jumpT--; if (invT > 0) invT--; if (spinT > 0) spinT--; if (bumpT > 0) bumpT--;
+      if (boost > 0) boost--; if (jumpT > 0) jumpT--; if (invT > 0) invT--; if (spinT > 0) spinT--; if (bumpT > 0) bumpT--; if (draftT > 0) draftT--;
       skyX += ps.curve * sp * .0012;
-      // roadside props hurt when driving off the road
+      if (off && kv > 30 && t % 2 === 0) kartFx.push({ x: rnd(-.3, .3), y: 0, vx: rnd(-1, 1), vy: rnd(-2, -.5), l: 25, k: 'rgba(150,60,70,.7)' });
       if (M.abs(pX) > 1.2 && jumpT <= 0) for (const s of ps.sprites) {
-        if (s.k === 'box' || s.k === 'star' || s.k === 'arch' || s.k === 'confetti') continue;
+        if (s.k === 'box' || s.k === 'star' || s.k === 'arch' || s.k === 'confetti' || s.k === 'garland') continue;
         if (M.abs(pX - s.off) < .35) { kv = MAXV / 6; pX += pX > 0 ? -.25 : .25; shake = 5; sfx.bump(); buzz(30); break }
       }
-      const oldDist = pDist;
       pos = (pos + kv) % TRACKLEN; pDist += kv;
-      // pick-ups on the player's segment
+      // turbo pads painted on the road
+      if (ps.pad !== null && M.abs(pX - ps.pad) < .3 && jumpT <= 0 && boost < 30) { boost = 45; sfx.pad(); buzz(20) }
       for (const s of ps.sprites) {
         if (s.k === 'box' && s.hide <= 0 && M.abs(pX - s.off) < .3 && jumpT <= 0) { s.hide = 300; if (!item) { item = ['turbo', 'confetti', 'ressort', 'masque'][M.random() * 4 | 0]; sfx.boxPick(); buzz(15) } }
-        if (s.k === 'star' && s.got !== lap && M.abs(pX - s.off) < .28) { s.got = lap; stars++; starPts += 10; sfx.star() }
+        if (s.k === 'star' && s.got !== lap && M.abs(pX - s.off) < .28) { s.got = lap; stars++; starPts += 25; sfx.star() }
         if (s.k === 'confetti' && M.abs(pX - s.off) < .3 && jumpT <= 0 && invT <= 0 && spinT <= 0) { spinT = 50; kv *= .5; sfx.spin(); buzz([40, 30, 40]); s.dead = true }
       }
       for (const sg of segs) for (const s of sg.sprites) if (s.k === 'box' && s.hide > 0) s.hide--;
-      // laps
+      // each lap is a checkpoint: extra time
       const nl = M.floor(M.max(0, pRace()) / TRACKLEN);
-      if (nl > lap) {
-        lap = nl;
-        if (lap >= LAPS && race.phase === 'race') { race.phase = 'finished'; race.t = 0; finishPlace = place; score = [0, 1000, 700, 500, 350, 250, 150][finishPlace] + M.max(0, 3000 - M.round(raceTime / 6)) + starPts; sfx.fanfare(); buzz([60, 40, 60, 40, 120]) }
-        else if (race.phase === 'race') { sfx.lap(); popup(W / 2, 140 - T, lap === LAPS - 1 ? 'Dernier tour !' : 'Tour ' + (lap + 1), '#ffe066') }
-      }
-      // opponents
+      if (nl > lap && race.phase === 'race') { lap = nl; cpBonus = M.max(12, 21 - lap); timeLeft += cpBonus * 60; cpFlash = 120; sfx.lap(); buzz([30, 30, 30]) }
+      // endless traffic
+      const me = pRace();
       for (const c of cars) {
-        if (c.spin > 0) { c.spin--; c.v *= .94 } else {
-          const gap = c.dist - pRace();                 // rubber band: keep the pack together
-          const want = c.top * (gap > 2500 ? .9 : gap < -2500 ? 1.08 : 1) * (c.done ? .6 : 1);
-          c.v += (want - c.v) * .02;
-        }
+        if (c.spin > 0) { c.spin--; c.v *= .94 } else { c.v += (c.top - c.v) * .02 }
         c.dist += c.v;
-        if (M.random() < .004) c.tgt = rnd(-.7, .7);
-        c.off += (c.tgt - c.off) * .02 - segAt(c.dist + PZ).curve * .0006 * (c.v / MAXV);
+        if (M.random() < .004) c.tgt = rnd(-.75, .75);
+        c.off += (c.tgt - c.off) * .02 - segAt(c.dist).curve * .0006 * (c.v / MAXV);
         c.off = M.max(-.85, M.min(.85, c.off));
-        if (c.dist >= LAPS * TRACKLEN) c.done = true;
-        // confetti dropped on the road makes them spin
-        for (const s of segAt(c.dist).sprites) if (s.k === 'confetti' && M.abs(c.off - s.off) < .3 && c.spin <= 0) { c.spin = 60; s.dead = true }
-        // bumping into the player
-        const d = c.dist - pRace();
+        if (--c.dropT <= 0) { c.dropT = rnd(500, 1100); if (c.dist > me && c.dist - me < 6000) segAt(c.dist - 3 * SEG).sprites.push({ k: 'confetti', off: c.off }) }
+        for (const s of segAt(c.dist).sprites) if (s.k === 'confetti' && M.abs(c.off - s.off) < .3 && c.spin <= 0 && c.dist - me > 4 * SEG) { c.spin = 60; s.dead = true }
+        const d = c.dist - me;
         if (d > -60 && d < 220 && M.abs(c.off - pX) < .3 && jumpT <= 0) {
           if (invT > 0) { if (c.spin <= 0) { c.spin = 70; sfx.smash(); buzz(25) } }
           else if (bumpT <= 0 && kv > c.v) { kv = c.v * .8; pX += pX > c.off ? .12 : -.12; bumpT = 20; shake = 4; sfx.bump(); buzz(30) }
         }
+        // slipstream: right behind a kart you go a bit faster
+        if (d > 250 && d < 900 && M.abs(c.off - pX) < .25 && kv > MAXV * .7) { draftT = 8; if (++c.drafted === 45) popup(W / 2, 200 - T, 'Aspiration !', '#9fe0ff') } else c.drafted = 0;
+        // overtakes
+        // each kart counts once as an overtake (until it comes back as a new kart)
+        if (c.ahead && d < -40) { c.ahead = false; if (race.phase === 'race' && !c.counted) { c.counted = true; passes++; starPts += 30; sfx.pass(); popup(W / 2, 230 - T, 'Dépassement ! +30', '#ffe066') } }
+        else if (!c.ahead && d > 40) c.ahead = true;
+        // karts left far behind come back further ahead
+        if (d < -2500) Object.assign(c, newCar(me + rnd(12000, 22000), c.num));
       }
       for (const sg of segs) sg.sprites = sg.sprites.filter(s => !s.dead);
-      if (race.phase === 'race') place = 1 + cars.filter(c => c.dist > pRace()).length;
-      if (race.phase === 'finished' && race.t > 170) gameOver();
+      if (race.phase === 'race') score = M.floor(M.max(0, me) / 100) + starPts;
+      if (race.phase === 'timeout' && race.t > 120) gameOver();
     }
+    for (const f of kartFx) { f.x += f.vx * .004; f.y += f.vy; f.l-- }
+    kartFx = kartFx.filter(f => f.l > 0);
   }
   for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g || .05; p.l-- }
   for (const q of popups) { q.y -= .7; q.l-- } popups = popups.filter(q => q.l > 0);
@@ -1639,7 +1653,7 @@ function gameOver() {
 
   if (score > best) { best = score; saveBest() }
   // La Loge: stars collected + a tip from the audience go to the wallet
-  tip = M.max(0, 7 - finishPlace) * 2; earned = M.ceil(stars / 3) + tip;   // 3 stars on the track = 1 star for the Loge
+  tip = M.floor(lap * 2 + passes / 4); earned = stars + tip;
   PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars;
   saveProf(); checkUnlocks(); updateWdBtn();
   lastRank = -1;
@@ -1711,24 +1725,24 @@ function render() {
   if (state === 'title') {
     if (LAND) {
       const mx = W * .47;
-      X.save(); X.translate(W * .16, G + 8); X.scale(1.1, 1.1); drawKart(0, 0, 110, LOOK, KCOL[0], 0, 1, true); X.restore();
+      X.save(); X.translate(W * .16, G + 8); X.scale(1.1, 1.1); drawKart(0, 0, 110, LOOK, KCOL[0], 0, 1, true, false); X.restore();
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('Le Grand Prix', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Bouton de droite : accélérer', mx, 166, 13, '#ddd', 'center', false);
-      txt('Joystick à gauche : tourner', mx, 184, 13, '#ddd', 'center', false);
-      txt('📦 Boîtes = bonus  ·  ★ = étoiles pour la Loge', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('GAZ à droite · joystick et bonus à gauche', mx, 166, 13, '#ddd', 'center', false);
+      txt('Chaque tour bouclé rajoute du temps !', mx, 184, 13, '#ddd', 'center', false);
+      txt('Dépasse les karts · flèches jaunes = turbo', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
     const ty = M.max(-T + 70, 46 - T * .6);
-    X.save(); X.translate(W / 2, G - 10); X.scale(1.25, 1.25); drawKart(0, 0, 120, LOOK, KCOL[0], 0, 1, true); X.restore();
+    X.save(); X.translate(W / 2, G - 10); X.scale(1.25, 1.25); drawKart(0, 0, 120, LOOK, KCOL[0], 0, 1, true, false); X.restore();
     txt('LES POLICHINELLES', W / 2, ty, W < 400 ? 26 : 34, COL.yellow);
     txt('Le Grand Prix', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Bouton de droite : accélérer', W / 2, G + 62, 13, '#ddd', 'center', false);
-    txt('Joystick à gauche : tourner', W / 2, G + 80, 13, '#ddd', 'center', false);
-    if (T > 80) txt('📦 Boîtes = bonus  ·  ★ = étoiles pour la Loge', W / 2, G + 106, 13, '#ffe9a0', 'center', false);
+    txt('GAZ à droite · joystick et bonus à gauche', W / 2, G + 62, 13, '#ddd', 'center', false);
+    txt('Chaque tour bouclé rajoute du temps !', W / 2, G + 80, 13, '#ddd', 'center', false);
+    if (T > 80) txt('Dépasse les karts · flèches jaunes = turbo', W / 2, G + 106, 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -1739,7 +1753,8 @@ function render() {
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
     X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 146, 12); X.fill(); X.stroke();
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
-    txt(placeText(finishPlace) + (finishPlace === 1 ? ' 🏆' : ''), ox, oy, 38, finishPlace <= 3 ? COL.yellow : COL.red);
+    txt('Temps écoulé !', ox, oy - 4, 28, COL.red);
+    txt(`${lap} tour${lap > 1 ? 's' : ''} · ${passes} dépassement${passes > 1 ? 's' : ''}`, ox, oy + 20, 13, '#ddd', 'center', false);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
     else txt('Ton record : ' + best, ox, oy + 70, 16, '#ddd');
@@ -1749,24 +1764,22 @@ function render() {
 }
 
 
-let keyAcc = false;
 function onKey() {}
-function placeText(p) { return p === 1 ? '1er' : p + 'e' }
-function fmtTime(f) { const s = f / 60; return M.floor(s / 60) + ':' + (s % 60).toFixed(1).padStart(4, '0') }
-// ---------- controls: joystick (left), accelerator and bonus buttons (right) ----------
+function fmtTime(f) { const s = M.max(0, f) / 60; return s >= 60 ? M.floor(s / 60) + ':' + (s % 60).toFixed(1).padStart(4, '0') : s.toFixed(1) }
+// ---------- controls: joystick + bonus button on the left, accelerator on the right ----------
 function ctrl() {
   const big = LAND ? M.min(38, H * .11) : 44;
-  const c = { jx: 22 + big * 1.4, jy: H - 22 - big * 1.4, jr: big * 1.15, ax: W - 22 - big * 1.3, ay: H - 22 - big * 1.3, ar: big * 1.2, ir: big * .8 };
-  if (LAND) { c.ix = c.ax - c.ar - c.ir - 16; c.iy = c.ay + c.ar - c.ir } else { c.ix = c.ax; c.iy = H - 40 - big * 3.5 }
+  const c = { jx: 22 + big * 1.4, jy: H - 22 - big * 1.4, jr: big * 1.15, ax: W - 22 - big * 1.3, ay: H - 22 - big * 1.3, ar: big * 1.2, ir: big * .78 };
+  if (LAND) { c.ix = c.jx + c.jr + c.ir + 22; c.iy = c.jy + c.jr - c.ir } else { c.ix = c.jx; c.iy = c.jy - c.jr - c.ir - 30 }
   return c;
 }
 function onPointerDown(e) {
   if (state !== 'play') return;
   const x = e.clientX / S, y = e.clientY / S, c = ctrl();
-  if ((x - c.ix) ** 2 + (y - c.iy) ** 2 < (c.ir + 12) ** 2) { useItem(); return }
+  if ((x - c.ix) ** 2 + (y - c.iy) ** 2 < (c.ir + 14) ** 2) { useItem(); return }
   if (x < W / 2) { joyId = e.pointerId; setJoy(x) } else { accId = e.pointerId; accelOn = true }
 }
-function setJoy(x) { const c = ctrl(); steer = M.max(-1, M.min(1, (x - c.jx) / c.jr)); if (M.abs(steer) < .12) steer = 0 }
+function setJoy(x) { const c = ctrl(); steer = M.max(-1, M.min(1, (x - c.jx) / c.jr)); if (M.abs(steer) < .1) steer = 0 }
 addEventListener('pointermove', e => { if (e.pointerId === joyId) setJoy(e.clientX / S) });
 function kartUp(e) { if (e.pointerId === joyId) { joyId = null; steer = 0 } if (e.pointerId === accId) { accId = null; accelOn = false } }
 addEventListener('pointerup', kartUp); addEventListener('pointercancel', kartUp);
@@ -1781,44 +1794,69 @@ addEventListener('keyup', e => {
 function useItem() {
   if (!item || state !== 'play' || race.phase !== 'race') return;
   if (item === 'turbo') { boost = 100; sfx.turbo(); buzz(40) }
-  else if (item === 'confetti') { segAt(pos + PZ - 4 * SEG).sprites.push({ k: 'confetti', off: pX }); sfx.duck() }
+  else if (item === 'confetti') { segAt(pRace() - 4 * SEG).sprites.push({ k: 'confetti', off: pX }); sfx.duck() }
   else if (item === 'ressort') { jumpT = 55; sfx.boing(); buzz(25) }
   else if (item === 'masque') { invT = 260; sfx.power(); buzz([30, 40, 30]) }
   item = null;
 }
-// ---------- drawing: a little kart with a polichinelle inside ----------
-function drawKart(x, y, w, look, col, tilt, bounce, front) {
-  // x, y = bottom centre on screen, w = width in pixels
-  const s = w / 100;
-  X.save(); X.translate(x, y); X.scale(s, s); X.rotate(tilt * .08);
-  X.fillStyle = 'rgba(0,0,0,.3)'; X.beginPath(); X.ellipse(0, -2, 52, 8, 0, 0, 6.29); X.fill();
-  // the driver (upper body shows above the kart)
+// ---------- the kart, seen from behind ----------
+function drawKart(x, y, w, look, col, tilt, bounce, front, flames) {
+  const s = w / 100, wr = t * .5 * (kv / MAXV + .2);
+  X.save(); X.translate(x, y); X.scale(s, s); X.rotate(tilt * .06);
+  X.fillStyle = 'rgba(0,0,0,.35)'; X.beginPath(); X.ellipse(0, -1, 56, 9, 0, 0, 6.29); X.fill();
+  // driver
   X.save(); X.translate(0, -30 - bounce * 1.5); X.scale(.62, .62); X.translate(0, 20);
   drawPoli({ run: t * .2, idle: true }, look); X.restore();
-  // kart body
-  X.fillStyle = '#1d1d24'; for (const wx of [-40, 40]) { X.beginPath(); X.roundRect(wx - 11, -24, 22, 24, 6); X.fill() }
-  X.fillStyle = col; X.beginPath(); X.roundRect(-38, -40, 76, 26, 10); X.fill();
-  X.fillStyle = 'rgba(255,255,255,.25)'; X.beginPath(); X.roundRect(-34, -38, 68, 6, 3); X.fill();
-  X.fillStyle = COL.yellow; X.fillRect(-38, -20, 76, 4);
-  if (!front) { X.fillStyle = '#555'; X.fillRect(-26, -16, 8, 6); X.fillRect(18, -16, 8, 6) }
-  else { X.fillStyle = '#fff'; circ('#fff8c0', -24, -28, 5); circ('#fff8c0', 24, -28, 5) }
+  // rear wheels with spinning tread
+  for (const wx of [-41, 41]) {
+    X.fillStyle = '#16161c'; X.beginPath(); X.roundRect(wx - 12, -26, 24, 26, 6); X.fill();
+    X.fillStyle = '#3a3a44'; for (let k = 0; k < 3; k++) X.fillRect(wx - 10, -24 + ((k * 8 + wr * 6) % 24), 20, 3);
+    circ('#9a9aa8', wx, -13, 4);
+  }
+  // body
+  X.fillStyle = col; X.beginPath(); X.moveTo(-40, -16); X.lineTo(-36, -42); X.quadraticCurveTo(0, -50, 36, -42); X.lineTo(40, -16); X.closePath(); X.fill();
+  X.fillStyle = 'rgba(255,255,255,.28)'; X.beginPath(); X.moveTo(-32, -40); X.quadraticCurveTo(0, -47, 32, -40); X.lineTo(30, -36); X.quadraticCurveTo(0, -42, -30, -36); X.fill();
+  X.fillStyle = 'rgba(0,0,0,.18)'; X.fillRect(-40, -22, 80, 6);
+  X.fillStyle = COL.yellow; X.fillRect(-40, -18, 80, 4);
+  // spoiler + number plate
+  X.fillStyle = '#1d1d24'; X.fillRect(-30, -54, 60, 5); X.fillRect(-26, -50, 4, 8); X.fillRect(22, -50, 4, 8);
+  X.fillStyle = '#f4f0e8'; X.beginPath(); X.roundRect(-10, -33, 20, 10, 2); X.fill();
+  if (front) { circ('#fff8c0', -24, -30, 5); circ('#fff8c0', 24, -30, 5) }
+  else { X.fillStyle = '#555'; X.fillRect(-24, -14, 8, 6); X.fillRect(16, -14, 8, 6); circ('#ff4f4f', -32, -28, 3); circ('#ff4f4f', 32, -28, 3) }
+  if (flames) for (const ex of [-20, 20]) { const fl = 10 + M.random() * 12; poly('#ffb030', [ex - 4, -9, ex + 4, -9, ex, -9 + fl]); poly('#fff3b0', [ex - 2, -9, ex + 2, -9, ex, -9 + fl * .5]) }
   X.restore();
 }
-function drawSprite(s, x, y, pw, clipY) {
-  // procedural roadside props; x,y = bottom centre, pw = pixels per road half-width unit
-  X.save(); X.beginPath(); X.rect(-50, -50, W + 100, clipY + 50); X.clip(); X.translate(x, y);
-  const u = pw / 1000;   // 1 world unit in pixels
-  X.scale(u, u);
+// fog: road colours fade into the night haze towards the horizon
+const FOG = [74, 52, 104];
+function fogc(hex, f) { const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16); return `rgb(${M.round(r + (FOG[0] - r) * f)},${M.round(g + (FOG[1] - g) * f)},${M.round(b + (FOG[2] - b) * f)})` }
+function drawSprite(s, x, y, pw, clipY, roadHalf, f) {
+  X.save(); X.beginPath(); X.rect(-50, -50, W + 100, clipY + 50); X.clip();
+  if (s.k === 'garland') {
+    // string of light bulbs across the road
+    const hw = roadHalf * 1.35, top = y - pw * 1.6, sag = pw * .35;
+    X.strokeStyle = `rgba(40,30,50,${1 - f})`; X.lineWidth = M.max(1, pw * .012); X.beginPath(); X.moveTo(x - hw, top); X.quadraticCurveTo(x, top + sag * 2, x + hw, top); X.stroke();
+    for (let i = 0; i <= 12; i++) {
+      const p = i / 12, bx = x - hw + p * hw * 2, by = top + 4 * sag * p * (1 - p);
+      X.globalAlpha = 1 - f * .7; circ(KCOL[i % 8], bx, by + pw * .04, M.max(1.2, pw * .035));
+      if (M.floor(t / 15 + i) % 3 === 0) { X.globalAlpha = (1 - f) * .35; circ('#fff6c0', bx, by + pw * .04, M.max(2, pw * .09)) }
+    }
+    X.restore(); return;
+  }
+  X.translate(x, y);
+  const u = pw / 1000; X.scale(u, u);
+  X.globalAlpha = 1 - f * .55;
   switch (s.k) {
-    case 'lamp':
-      X.fillStyle = '#3a3a44'; X.fillRect(-25, -1400, 50, 1400);
-      circ('#fff3b0', 0, -1450, 120); X.save(); X.globalAlpha = .3; circ('#fff3b0', 0, -1450, 260); X.restore(); break;
+    case 'lamp': {
+      const dir = s.off > 0 ? -300 : 300;
+      X.fillStyle = '#3a3a44'; X.fillRect(-25, -1400, 50, 1400); X.fillRect(dir > 0 ? 0 : dir, -1430, M.abs(dir), 40);
+      circ('#fff3b0', dir, -1450, 110); X.globalAlpha *= .3; circ('#fff3b0', dir, -1450, 280); break;
+    }
     case 'flag':
       X.fillStyle = '#777'; X.fillRect(-15, -1300, 30, 1300);
-      poly(KCOL[(s.off * 10 | 0) & 3 ? 0 : 1], [15, -1300, 520, -1180, 15, -1060]); break;
+      poly(s.off > 0 ? '#3070d0' : '#d8402c', [15, -1300, 520 + M.sin(t * .2) * 40, -1180, 15, -1060]); break;
     case 'tent':
       poly('#d8402c', [-800, 0, 0, -1400, 800, 0]); poly('#f4f0e8', [-400, 0, 0, -1400, 0, 0]); poly('#f4f0e8', [400, 0, 0, -1400, 600, 0]);
-      poly('#e6b830', [-60, -1400, 60, -1400, 0, -1650]); break;
+      poly('#e6b830', [-60, -1400, 60, -1400, 0, -1650]); X.fillStyle = '#2a0a12'; X.fillRect(-160, -420, 320, 420); break;
     case 'mask':
       X.fillStyle = '#5a3a22'; X.fillRect(-20, -900, 40, 900);
       X.fillStyle = '#f4f0e8'; X.beginPath(); X.ellipse(0, -1150, 330, 380, 0, 0, 6.29); X.fill();
@@ -1826,32 +1864,43 @@ function drawSprite(s, x, y, pw, clipY) {
       X.strokeStyle = '#1d1d24'; X.lineWidth = 50; X.beginPath(); X.arc(0, -1080, 150, .3, M.PI - .3); X.stroke(); break;
     case 'stand':
       X.fillStyle = '#5e0f18'; X.fillRect(-900, -900, 1800, 900);
-      for (let r = 0; r < 3; r++) for (let i = -4; i <= 4; i++) circ(['#2a2230', '#3a3050', '#1d1d24'][(i + r) & 1 ? 0 : 2], i * 200 + (r % 2) * 100, -820 + r * 260, 85);
+      for (let r = 0; r < 3; r++) for (let i = -4; i <= 4; i++) { const jmp = M.max(0, M.sin(t * .2 + i + r)) * 40; circ(['#2a2230', '#1d1d24'][(i + r) & 1], i * 200 + (r % 2) * 100, -820 + r * 260 - jmp, 85) }
       X.fillStyle = COL.yellow; X.fillRect(-900, -920, 1800, 40); break;
     case 'balloons':
-      for (let i = 0; i < 3; i++) { line('#aaa', 12, [0, 0, -200 + i * 200, -1100]); X.fillStyle = KCOL[i + 3]; X.beginPath(); X.ellipse(-200 + i * 200, -1250, 160, 200, 0, 0, 6.29); X.fill() }
+      for (let i = 0; i < 3; i++) { line('#aaa', 12, [0, 0, -200 + i * 200, -1100]); X.fillStyle = KCOL[i + 3]; X.beginPath(); X.ellipse(-200 + i * 200, -1250 + M.sin(t * .05 + i) * 30, 160, 200, 0, 0, 6.29); X.fill() }
       break;
+    case 'carousel':
+      X.fillStyle = '#e6b830'; X.fillRect(-60, -1500, 120, 1500);
+      poly('#d8402c', [-900, -1300, 0, -1800, 900, -1300]); X.fillStyle = '#f4f0e8'; X.fillRect(-900, -1320, 1800, 80);
+      for (let i = 0; i < 4; i++) {
+        const a = t * .03 + i * 1.57, hx = M.cos(a) * 650; if (M.sin(a) < 0) continue;
+        X.fillStyle = '#5a3a22'; X.fillRect(hx - 10, -1240, 20, 700);
+        X.fillStyle = ['#f4f0e8', '#f27ab0', '#9fe0ff', '#f2c230'][i]; X.beginPath(); X.ellipse(hx, -620 + M.sin(t * .1 + i) * 60, 200, 110, 0, 0, 6.29); X.fill();
+      }
+      X.fillStyle = '#7a1822'; X.fillRect(-950, -80, 1900, 80); break;
     case 'arch':
       X.fillStyle = '#8a1f2a'; X.fillRect(-2600, -2200, 180, 2200); X.fillRect(2420, -2200, 180, 2200); X.fillRect(-2600, -2400, 5200, 300);
       X.fillStyle = COL.yellow; X.fillRect(-2600, -2120, 5200, 40);
+      for (let i = 0; i < 14; i++) circ(M.floor(t / 10 + i) % 2 ? '#fff6c0' : '#e6b830', -2450 + i * 375, -2420, 40);
       X.font = 'bold 200px Georgia,serif'; X.textAlign = 'center'; X.textBaseline = 'middle'; X.fillStyle = '#ffe9a0'; X.fillText('GRAND PRIX DES POLICHINELLES', 0, -2250); break;
     case 'box':
       if (s.hide > 0) break;
       X.save(); X.translate(0, -260 + M.sin(t * .1 + s.off) * 40); X.rotate(M.sin(t * .05) * .2);
-      X.fillStyle = 'rgba(159,224,255,.75)'; X.beginPath(); X.roundRect(-200, -200, 400, 400, 60); X.fill();
+      X.globalAlpha = .35; circ('#bfe6ff', 0, 0, 330); X.globalAlpha = 1;
+      X.fillStyle = 'rgba(159,224,255,.8)'; X.beginPath(); X.roundRect(-200, -200, 400, 400, 60); X.fill();
       X.strokeStyle = '#fff'; X.lineWidth = 30; X.stroke();
       X.fillStyle = '#fff'; X.font = 'bold 300px Georgia,serif'; X.textAlign = 'center'; X.textBaseline = 'middle'; X.fillText('?', 0, 15);
       X.restore(); break;
     case 'star':
       if (s.got === lap) break;
+      X.save(); X.globalAlpha = .3; circ('#fff6c0', 0, -300, 260); X.restore();
       star(0, -300 + M.sin(t * .12 + s.off * 3) * 30, 170, t * .05); break;
     case 'confetti':
-      for (let i = 0; i < 14; i++) { X.fillStyle = KCOL[i % 6]; X.fillRect(-300 + (i * 97) % 600, -40 - (i * 53) % 60, 60, 30) }
+      for (let i = 0; i < 14; i++) { X.fillStyle = KCOL[i % 8]; X.fillRect(-300 + (i * 97) % 600, -40 - (i * 53) % 60, 60, 30) }
       break;
   }
   X.restore();
 }
-// ---------- the road (pseudo-3D projection, back to front) ----------
 function project(p, cx, cy, cz, SH) {
   p.c.x = -cx; p.c.y = p.w.y - cy; p.c.z = p.w.z - cz;
   p.s.scale = CDEPTH / p.c.z;
@@ -1860,58 +1909,82 @@ function project(p, cx, cy, cz, SH) {
   p.s.w = p.s.scale * ROADW * W / 2;
 }
 function quad(k, x1, y1, w1, x2, y2, w2) { poly(k, [x1 - w1, y1, x2 - w2, y2, x2 + w2, y2, x1 + w1, y1]) }
+function drawSky(SH) {
+  const g = X.createLinearGradient(0, 0, 0, SH * .55); g.addColorStop(0, '#0b1028'); g.addColorStop(.7, '#3a2a62'); g.addColorStop(1, 'rgb(74,52,104)');
+  X.fillStyle = g; X.fillRect(0, 0, W, SH);
+  for (let i = 0; i < 50; i++) { X.globalAlpha = .4 + (M.sin(t * .05 + i) + 1) * .3; circ('#fff', ((i * 97 - skyX * 200) % W + W) % W, (i * 53) % (SH * .38), (i % 3) * .5 + .5) }
+  X.globalAlpha = 1;
+  const mx = ((W * .3 - skyX * 150) % (W + 80) + W + 80) % (W + 80) - 40, my = SH * (LAND ? .2 : .24);
+  circ('rgba(255,248,224,.15)', mx, my, 30); circ('#fff8e0', mx, my, 15);
+  // far skyline: tents and a ferris wheel, two parallax layers
+  const hy = SH * .5;
+  for (const [layer, col, sp] of [[0, '#2c1e48', 500], [1, '#22163a', 900]]) {
+    const ox = ((-skyX * sp) % (W * 1.5) + W * 1.5) % (W * 1.5);
+    for (let k = -1; k < 3; k++) {
+      const bx = ox + k * W * 1.5 - W * .2;
+      X.fillStyle = col;
+      if (layer === 0) { poly(col, [bx, hy, bx + 70, hy - 60, bx + 140, hy]); poly(col, [bx + 260, hy, bx + 300, hy - 40, bx + 340, hy]); X.fillRect(bx + 420, hy - 30, 90, 30) }
+      else {
+        poly(col, [bx + 120, hy, bx + 200, hy - 100, bx + 280, hy]);
+        X.strokeStyle = col; X.lineWidth = 3; X.beginPath(); X.arc(bx + 520, hy - 62, 58, 0, 6.29); X.stroke();
+        for (let i = 0; i < 10; i++) { const a = i / 10 * 6.28 + t * .004; line(col, 1.5, [bx + 520, hy - 62, bx + 520 + M.cos(a) * 58, hy - 62 + M.sin(a) * 58]); circ(M.floor(t / 20 + i) % 2 ? '#ffe680' : '#ff9a6a', bx + 520 + M.cos(a) * 58, hy - 62 + M.sin(a) * 58, 2.2) }
+        X.fillStyle = col; X.fillRect(bx + 505, hy - 62, 30, 62);
+      }
+    }
+  }
+}
 function drawStage() {
   if (!segs.length) { X.fillStyle = '#1c1838'; X.fillRect(0, -T, W, H); return }
-  const SH = H;                                                     // draw in full-screen coordinates
+  const SH = H;
   X.save(); X.translate(0, -T);
-  // sky: deep blue night with a big circus tent and a ferris wheel, parallax with the bends
-  const g = X.createLinearGradient(0, 0, 0, SH * .55); g.addColorStop(0, '#0d1430'); g.addColorStop(1, '#5b3a7a');
-  X.fillStyle = g; X.fillRect(0, 0, W, SH);
-  for (let i = 0; i < 40; i++) circ('rgba(255,255,255,.7)', ((i * 97 - skyX * 300) % W + W) % W, (i * 53) % (SH * .35), (i % 3) * .5 + .5);
-  const hx = ((-skyX * 900) % (W * 2) + W * 2) % (W * 2) - W * .3, hy = SH * .5;
-  X.fillStyle = '#2a1a3a'; X.beginPath(); X.moveTo(hx - 120, hy); X.lineTo(hx, hy - 110); X.lineTo(hx + 120, hy); X.fill();
-  X.strokeStyle = '#3a2a4e'; X.lineWidth = 3; X.beginPath(); X.arc(hx + W * .6, hy - 60, 55, 0, 6.29); X.stroke();
-  for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28 + t * .005; line('#3a2a4e', 2, [hx + W * .6, hy - 60, hx + W * .6 + M.cos(a) * 55, hy - 60 + M.sin(a) * 55]); circ('#ffe680', hx + W * .6 + M.cos(a) * 55, hy - 60 + M.sin(a) * 55, 2.5) }
-  // road segments
-  const base = segAt(pos), baseP = (pos % SEG) / SEG, ps = segAt(pos + PZ), pp = ((pos + PZ) % SEG) / SEG;
-  const pY = ps.p1.w.y + (ps.p2.w.y - ps.p1.w.y) * pp;
+  drawSky(SH);
+  const base = segAt(pos), baseP = (pos % SEG) / SEG, ps = segAt(pRace()), pp = (pRace() % SEG) / SEG;
+  const pY = ps.p1.w.y + (ps.p2.w.y - ps.p1.w.y) * pp, jh = jumpT > 0 ? M.sin(jumpT / 55 * M.PI) * 500 : 0;
   let maxy = SH, x = 0, dx = -(base.curve * baseP);
   const N = segs.length, list = [];
   for (let n = 0; n < DRAWD; n++) {
     const sg = segs[(base.i + n) % N], loop = sg.i < base.i ? TRACKLEN : 0;
-    project(sg.p1, pX * ROADW - x, pY + CAMH + (jumpT > 0 ? M.sin(jumpT / 55 * M.PI) * 500 : 0), pos - loop, SH);
-    project(sg.p2, pX * ROADW - x - dx, pY + CAMH + (jumpT > 0 ? M.sin(jumpT / 55 * M.PI) * 500 : 0), pos - loop, SH);
+    project(sg.p1, pX * ROADW - x, pY + CAMH + jh, pos - loop, SH);
+    project(sg.p2, pX * ROADW - x - dx, pY + CAMH + jh, pos - loop, SH);
     x += dx; dx += sg.curve;
-    sg.clip = maxy; list.push(sg);
+    sg.clip = maxy; sg.fog = M.min(1, M.pow(n / DRAWD, 1.6) * 1.1); list.push(sg);
     if (sg.p1.c.z <= CDEPTH || sg.p2.s.y >= sg.p1.s.y || sg.p2.s.y >= maxy) continue;
-    const a = sg.p1.s, b = sg.p2.s, dark = sg.dark;
-    X.fillStyle = dark ? '#6a1520' : '#7a1822'; X.fillRect(0, b.y, W, a.y - b.y + 1);                 // velvet carpet
-    quad(dark ? '#d8402c' : '#f4f0e8', a.x, a.y, a.w * 1.12, b.x, b.y, b.w * 1.12);                    // rumble strips
-    quad(dark ? '#35304a' : '#3a3550', a.x, a.y, a.w, b.x, b.y, b.w);                                   // road
-    if (sg.i < 3) { for (let k = -4; k < 4; k++) quad((k + sg.i) & 1 ? '#fff' : '#111', a.x + (k + .5) * a.w / 4, a.y, a.w / 8, b.x + (k + .5) * b.w / 4, b.y, b.w / 8) }
-    else if (!dark) { for (const l of [-1 / 3, 1 / 3]) quad(COL.yellow, a.x + l * a.w * 2, a.y, a.w * .02, b.x + l * b.w * 2, b.y, b.w * .02) }
+    const a = sg.p1.s, b = sg.p2.s, d = sg.dark, f = sg.fog;
+    X.fillStyle = fogc(d ? '#6a1520' : '#7a1822', f); X.fillRect(0, b.y, W, a.y - b.y + 1);
+    quad(fogc(d ? '#d8402c' : '#f4f0e8', f), a.x, a.y, a.w * 1.12, b.x, b.y, b.w * 1.12);
+    quad(fogc(d ? '#34304a' : '#3b3652', f), a.x, a.y, a.w, b.x, b.y, b.w);
+    if (sg.i < 3) { for (let k = -4; k < 4; k++) quad((k + sg.i) & 1 ? '#ffffff' : '#111111', a.x + (k + .5) * a.w / 4, a.y, a.w / 8, b.x + (k + .5) * b.w / 4, b.y, b.w / 8) }
+    else if (!d) { for (const l of [-1 / 3, 1 / 3]) quad(fogc('#e6b830', f), a.x + l * a.w * 2, a.y, a.w * .02, b.x + l * b.w * 2, b.y, b.w * .02) }
+    if (sg.pad !== null) quad(fogc((M.floor(t / 6) + sg.i) % 2 ? '#ffe066' : '#f08a1c', f), a.x + sg.pad * a.w, a.y, a.w * .14, b.x + sg.pad * b.w, b.y, b.w * .02);
     maxy = b.y;
   }
-  // sprites and karts, far to near
   for (let n = list.length - 1; n >= 0; n--) {
     const sg = list[n]; if (sg.p1.c.z <= CDEPTH) continue;
-    const sc = sg.p1.s.scale, half = sc * ROADW * W / 2;
-    for (const s of sg.sprites) drawSprite(s, sg.p1.s.x + half * s.off, sg.p1.s.y, half * 2 / ROADW * 1000, sg.clip);
+    const half = sg.p1.s.scale * ROADW * W / 2;
+    for (const s of sg.sprites) drawSprite(s, sg.p1.s.x + half * s.off, sg.p1.s.y, half * 2 / ROADW * 1000, sg.clip, half, sg.fog);
     for (const c of cars) {
       if (segAt(c.dist) !== sg || c.dist < pRace() - 40) continue;
       const cp = ((c.dist % SEG) + SEG) % SEG / SEG;
       const cx = sg.p1.s.x + (sg.p2.s.x - sg.p1.s.x) * cp + half * c.off, cy = sg.p1.s.y + (sg.p2.s.y - sg.p1.s.y) * cp;
-      X.save(); X.beginPath(); X.rect(0, 0, W, sg.clip); X.clip();
-      drawKart(cx, cy, half * .55, c.look, c.col, c.spin > 0 ? M.sin(c.spin) * 3 : 0, M.abs(M.sin(t * .3 + c.num)), false);
+      X.save(); X.beginPath(); X.rect(0, 0, W, sg.clip); X.clip(); X.globalAlpha = 1 - sg.fog * .5;
+      drawKart(cx, cy, half * .55, c.look, c.col, c.spin > 0 ? M.sin(c.spin) * 3 : (c.tgt - c.off) * 4, M.abs(M.sin(t * .3 + c.num)), false, false);
       X.restore();
     }
   }
+  // speed lines
+  const spd = kv / MAXV;
+  if (spd > .85 || boost > 0) {
+    X.save(); X.globalAlpha = boost > 0 ? .5 : (spd - .85) * 2.5; X.strokeStyle = '#fff'; X.lineWidth = 1.5;
+    for (let i = 0; i < 14; i++) { const a = (i * 2.4 + t * .1) % 6.28, r1 = 60 + ((t * 9 + i * 37) % 120), cx = W / 2, cy = SH * .48; X.beginPath(); X.moveTo(cx + M.cos(a) * r1 * 2, cy + M.sin(a) * r1); X.lineTo(cx + M.cos(a) * (r1 * 2 + 70), cy + M.sin(a) * (r1 + 35)); X.stroke() }
+    X.restore();
+  }
   // the player's kart
   const kw = M.min(W * .34, 170), ky = SH - (LAND ? 18 : SH * .2) - (jumpT > 0 ? M.sin(jumpT / 55 * M.PI) * 40 : 0);
-  if (invT > 0 && !(invT < 60 && M.floor(t / 5) % 2)) { X.save(); X.globalAlpha = .35; circ('#ffe680', W / 2, ky - kw * .45, kw * .6); X.restore() }
-  if (boost > 0) for (let i = 0; i < 3; i++) circ(['#ffe680', '#ff9a3a', '#fff'][i], W / 2 + rnd(-kw * .3, kw * .3), ky + rnd(-4, 4), rnd(3, 7));
-  drawKart(W / 2, ky, kw, LOOK, KCOL[0], (spinT > 0 ? M.sin(spinT * .6) * 6 : M.max(-1, M.min(1, steer + keySteer))), M.abs(M.sin(t * .4)) * (kv / MAXV), false);
-  if (M.abs(pX) > 1 && jumpT <= 0 && kv > 20 && t % 3 === 0) { X.fillStyle = 'rgba(120,30,40,.6)'; circ(X.fillStyle, W / 2 + rnd(-kw / 2, kw / 2), ky - 2, 4) }
+  if (invT > 0 && !(invT < 60 && M.floor(t / 5) % 2)) { X.save(); X.globalAlpha = .3; circ('#ffe680', W / 2, ky - kw * .45, kw * .6); X.restore() }
+  if (draftT > 0) { X.save(); X.globalAlpha = .4; X.strokeStyle = '#9fe0ff'; X.lineWidth = 2; for (let i = 0; i < 4; i++) { const yy = ky - kw * .9 - i * 12; X.beginPath(); X.moveTo(W / 2 - kw * .4, yy); X.lineTo(W / 2 + kw * .4, yy); X.stroke() } X.restore() }
+  drawKart(W / 2, ky, kw, LOOK, KCOL[0], spinT > 0 ? M.sin(spinT * .6) * 6 : M.max(-1, M.min(1, steer + keySteer)), M.abs(M.sin(t * .4)) * spd, false, boost > 0);
+  for (const f of kartFx) { X.globalAlpha = f.l / 25; circ(f.k, W / 2 + f.x * kw * 3, ky - 4 + f.y, 4) }
+  X.globalAlpha = 1;
   X.restore();
 }
 function drawCrowd() {}
@@ -1921,14 +1994,14 @@ function drawGame() {}
 function drawHud() {
   X.save(); X.translate(0, -T);
   const c = ctrl(), SH = H;
-  // race info
   if (race) {
-    const py = LAND ? 118 : 100;
-    txt(placeText(place), 16, py, 34, place <= 3 ? COL.yellow : '#fff', 'left');
-    txt('/6', 16 + (place === 1 ? 52 : 44), py + 6, 16, '#fff', 'left');
-    const ty = LAND ? 146 : 118;
-    txt('Tour ' + M.min(LAPS, lap + 1) + '/' + LAPS, W - 14, ty, 15, '#fff', 'right');
-    txt(fmtTime(raceTime), W - 14, ty + 22, 14, '#ddd', 'right');
+    const low = timeLeft < 600, ty = LAND ? 46 : 104;
+    txt('TEMPS', W / 2, ty - 24, 11, '#ddd', 'center', false);
+    txt(fmtTime(timeLeft), W / 2, ty, 34, low ? (M.floor(t / 10) % 2 ? '#ff4f4f' : '#fff') : '#fff');
+    if (cpFlash > 0) { X.save(); X.globalAlpha = M.min(1, cpFlash / 30); txt(`Tour ${lap} ! +${cpBonus} s`, W / 2, ty + 34, 20, '#7dff8a'); X.restore() }
+    const ly = LAND ? 116 : 104;
+    txt('Tour ' + (lap + 1), 16, ly, 15, '#fff', 'left');
+    txt('⚑ ' + passes, 16, ly + 22, 14, '#ffe9a0', 'left');
   }
   // joystick
   X.save(); X.globalAlpha = .45; circ('#1c1838', c.jx, c.jy, c.jr + 8); X.globalAlpha = .9;
@@ -1936,21 +2009,30 @@ function drawHud() {
   txt('◀', c.jx - c.jr + 4, c.jy, 14, '#fff', 'center', false); txt('▶', c.jx + c.jr - 4, c.jy, 14, '#fff', 'center', false);
   circ(joyId !== null || keySteer ? '#ffe680' : '#e6b830', c.jx + M.max(-1, M.min(1, steer + keySteer)) * c.jr * .8, c.jy, c.jr * .45);
   X.restore();
-  // accelerator
+  // bonus button, next to the joystick
+  X.save(); X.globalAlpha = item ? .95 : .45;
+  if (item) { X.save(); X.globalAlpha = .35 + M.sin(t * .2) * .2; circ('#9fe0ff', c.ix, c.iy, c.ir + 8); X.restore() }
+  circ('#1c1838', c.ix, c.iy, c.ir); X.strokeStyle = item ? '#9fe0ff' : '#888'; X.lineWidth = 3; X.beginPath(); X.arc(c.ix, c.iy, c.ir, 0, 6.29); X.stroke();
+  txt(item ? { turbo: '💨', confetti: '🎉', ressort: '🌀', masque: '🎭' }[item] : '📦', c.ix, c.iy + 1, c.ir * .9, '#fff', 'center', false);
+  X.restore();
+  // accelerator + speed gauge
   X.save(); X.globalAlpha = accelOn || keyAcc ? .95 : .7;
   circ(accelOn || keyAcc ? '#3a8f5a' : '#2e6a46', c.ax, c.ay, c.ar); X.strokeStyle = COL.yellow; X.lineWidth = 3; X.beginPath(); X.arc(c.ax, c.ay, c.ar, 0, 6.29); X.stroke();
   txt('GAZ', c.ax, c.ay + 2, 18, '#fff'); X.restore();
-  // bonus slot
-  X.save(); X.globalAlpha = item ? .95 : .45; circ('#1c1838', c.ix, c.iy, c.ir); X.strokeStyle = item ? '#9fe0ff' : '#888'; X.lineWidth = 3; X.beginPath(); X.arc(c.ix, c.iy, c.ir, 0, 6.29); X.stroke();
-  txt(item ? { turbo: '💨', confetti: '🎉', ressort: '🌀', masque: '🎭' }[item] : '📦', c.ix, c.iy + 1, c.ir * .9, '#fff', 'center', false);
-  X.restore();
-  if (item && M.floor(t / 20) % 2) txt('Touche !', c.ix, c.iy - c.ir - 10, 12, '#9fe0ff', 'center', false);
-  // speed
-  txt(M.round(kv / MAXV * 120) + ' km/h', W / 2, SH - 14, 13, '#fff', 'center', false);
-  // countdown / finish
-  if (race && race.phase === 'count') { const n = 3 - M.floor(race.t / 60); txt(String(n), W / 2, SH * .35, 70, COL.yellow) }
-  if (race && race.phase === 'race' && race.t < 50) txt('PARTEZ !', W / 2, SH * .35, 50, '#7dff8a');
-  if (race && race.phase === 'finished') { txt('ARRIVÉE !', W / 2, SH * .3, 44, COL.yellow); txt(placeText(finishPlace) + ' / 6', W / 2, SH * .3 + 46, 30, '#fff') }
+  X.save(); X.strokeStyle = boost > 0 ? '#ffb030' : '#7dff8a'; X.lineWidth = 4; X.beginPath(); X.arc(c.ax, c.ay, c.ar + 7, M.PI * .75, M.PI * .75 + M.PI * 1.5 * M.min(1, kv / MAXV)); X.stroke(); X.restore();
+  // start lights
+  const bx = W / 2 - 48, by = SH * .3;
+  if (race && race.phase === 'count') {
+    const lit = M.floor(race.t / 50);
+    X.fillStyle = '#1d1d24'; X.beginPath(); X.roundRect(bx - 12, by - 26, 120, 52, 12); X.fill();
+    for (let i = 0; i < 3; i++) circ(i < lit ? '#ff3b3b' : '#4a1a1a', bx + 12 + i * 36, by, 14);
+  }
+  if (race && race.phase === 'race' && race.t < 50) {
+    X.fillStyle = '#1d1d24'; X.beginPath(); X.roundRect(bx - 12, by - 26, 120, 52, 12); X.fill();
+    for (let i = 0; i < 3; i++) circ('#3bff6a', bx + 12 + i * 36, by, 14);
+    txt('PARTEZ !', W / 2, by + 52, 34, '#7dff8a');
+  }
+  if (race && race.phase === 'timeout') txt('TEMPS ÉCOULÉ !', W / 2, SH * .32, 34, '#ff6a6a');
   if (spinT > 0) txt('Oups !', W / 2, SH * .45, 26, '#ff9a9a');
   X.restore();
 }
