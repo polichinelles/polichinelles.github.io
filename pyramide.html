@@ -169,6 +169,7 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
   <div class="row"><button type="button" class="skip" id="entrySkip">Passer</button><button type="submit" class="ok">Enregistrer</button></div>
   <div class="err" id="entryErr"></div>
 </form></div>
+<script src="pass.js"></script>
 <script>
 "use strict";
 const c = document.getElementById('c'), MAINX = c.getContext('2d');
@@ -505,6 +506,7 @@ function statusOf(it) {
   if (PROF.eq[it.cat] === it.id) return 'Porté';
   if (PROF.owned.includes(it.id)) return 'Possédé';
   if (it.price) return '⭐ ' + it.price;
+  if (it.pass) return '🎟️ Niv. ' + it.pass;
   return '🔒 Défi';
 }
 function renderTabs() {
@@ -535,6 +537,8 @@ function renderBar() {
   else if (it.price) {
     const miss = it.price - PROF.wallet;
     wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
+  } else if (it.pass) {
+    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme de la saison, niveau ${it.pass}</small></div>`;
   } else {
     const a = ACH[it.ach], v = M.min(statVal(a.stat), a.goal);
     wdBar.innerHTML = `<div class="info">🔒 ${it.name}<small>Défi : ${a.text} (${v} / ${a.goal})</small><div class="prog"><i style="width:${v / a.goal * 100}%"></i></div></div>`;
@@ -738,7 +742,7 @@ addEventListener('contextmenu', e => e.preventDefault());
 function dust(x, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rnd(-10, 10), y: G - 2, vx: rnd(-2, -.5) - speed * .2, vy: rnd(-1.5, -.3), l: 25, k: '#5a5070', s: rnd(2, 4) }) }
 function burst(x, y, n, cols, sp = 4) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(1, sp); parts.push({ x, y: G + y, vx: M.cos(a) * v, vy: M.sin(a) * v - 1, l: rnd(30, 60), k: cols[i % cols.length], s: rnd(2, 4), g: .12 }) } }
 
-const TRAILK = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a', bubble: '#bfe9ff', snow: '#fff', leaf: '#6ac04a', flame: '#f08a1c', rainbow: '#fff' };
+const TRAILK = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a', bubble: '#bfe9ff', snow: '#fff', leaf: '#6ac04a', flame: '#f08a1c', rainbow: '#fff', glitter: '#f2c230' };
 function spawnTrail(type) {
   const k = TRAILK[type] || ['#d8402c', '#2e9a4c', '#3070d0', '#e6b830', '#f27ab0'][M.random() * 5 | 0];
   parts.push({ x: PX - 12 + rnd(-4, 4), y: G - P.y - rnd(14, 70), vx: -speed * .45 - rnd(.2, 1), vy: rnd(-.7, .2), l: 42, k, s: type === 'confetti' ? rnd(2.5, 4) : rnd(4, 6), g: type === 'confetti' ? .05 : -.01, shape: type, r: rnd(0, 6) });
@@ -755,6 +759,7 @@ function drawPart(p) {
     case 'snow': X.strokeStyle = '#fff'; X.lineWidth = 1.2; X.save(); X.translate(p.x, p.y); X.rotate(p.l * .05); for (let i = 0; i < 3; i++) { X.rotate(1.047); X.beginPath(); X.moveTo(-p.s * .6, 0); X.lineTo(p.s * .6, 0); X.stroke() } X.restore(); break;
     case 'leaf': X.save(); X.translate(p.x, p.y); X.rotate(p.r + p.l * .08); X.fillStyle = ['#6ac04a', '#f2a030', '#d8602c'][M.floor(p.r) % 3]; X.beginPath(); X.ellipse(0, 0, p.s * .6, p.s * .3, 0, 0, 6.29); X.fill(); X.restore(); break;
     case 'flame': X.fillStyle = '#f08a1c'; X.beginPath(); X.moveTo(p.x, p.y - p.s); X.quadraticCurveTo(p.x + p.s * .6, p.y, p.x, p.y + p.s * .5); X.quadraticCurveTo(p.x - p.s * .6, p.y, p.x, p.y - p.s); X.fill(); circ('#f2c230', p.x, p.y + p.s * .1, p.s * .25); break;
+    case 'glitter': { X.fillStyle = ['#f2c230', '#fff3c0', '#f27ab0'][M.floor(p.r) % 3]; const s = p.s * .7; X.save(); X.translate(p.x, p.y); X.rotate(p.l * .1); X.beginPath(); X.moveTo(0, -s); X.lineTo(s * .25, -s * .25); X.lineTo(s, 0); X.lineTo(s * .25, s * .25); X.lineTo(0, s); X.lineTo(-s * .25, s * .25); X.lineTo(-s, 0); X.lineTo(-s * .25, -s * .25); X.fill(); X.restore(); break }
     case 'rainbow': circ(`hsl(${(p.r * 60 + p.l * 6) % 360},90%,62%)`, p.x, p.y, p.s * .45); break;
     default: X.fillRect(p.x, p.y, p.s, p.s);
   }
@@ -804,7 +809,12 @@ const WARD = {
     { id: 'c_clown', name: 'Clown', price: 110, v: { stripes: ['#f2c230', '#d8402c', '#3070d0'], sleeves: ['#d8402c', '#3070d0'], trim: '#ffffff', motif: 'pois', belly: 1.25 } },
     { id: 'c_diamant', name: 'Diamant', price: 250, v: { stripes: ['#bfe9ff', '#ffffff', '#9fd8f0'], sleeves: ['#ffffff', '#bfe9ff'], trim: '#9fe0ff', motif: 'arlequin' } },
     { id: 'c_ruby', name: 'Rubis', ach: 'games100', v: { stripes: ['#8a0a1a', '#ff4f6a', '#f2d27a'], sleeves: ['#8a0a1a', '#f2d27a'], trim: '#fff3c0', motif: 'arlequin' } },
-    { id: 'c_soleil', name: 'Soleil', ach: 'stars1000', v: { stripes: ['#f2c230', '#f08a1c', '#fff3c0'], sleeves: ['#f08a1c', '#f2c230'], trim: '#d8402c', motif: 'zigzag' } }
+    { id: 'c_soleil', name: 'Soleil', ach: 'stars1000', v: { stripes: ['#f2c230', '#f08a1c', '#fff3c0'], sleeves: ['#f08a1c', '#f2c230'], trim: '#d8402c', motif: 'zigzag' } },
+    { id: 'c_carnaval', name: 'Carnaval', pass: 10, v: { stripes: ['#8a4a9a', '#f2c230', '#2bb3c0'], sleeves: ['#f27ab0', '#2bb3c0'], trim: '#f2c230', motif: 'arlequin' } },
+    { id: 'c_paillettes', name: 'Paillettes', pass: 22, v: { stripes: ['#d8402c', '#f2d27a', '#fff3c0'], sleeves: ['#d8402c', '#f2d27a'], trim: '#fff3c0', motif: 'etoiles' } },
+    { id: 'c_venise', name: 'Venise', pass: 30, v: { stripes: ['#5b2a86', '#c99a2e', '#1d1d24'], sleeves: ['#5b2a86', '#c99a2e'], trim: '#f2d27a', motif: 'damier' } },
+    { id: 'c_minuit', name: 'Carnaval de minuit', pass: 33, v: { stripes: ['#0d1430', '#9fe0ff', '#f27ab0'], sleeves: ['#1d2a6b', '#0d1430'], trim: '#9fe0ff', motif: 'lunes' } },
+    { id: 'c_legende', name: 'Légende du Carnaval', pass: 40, v: { stripes: ['#f2c230', '#ffffff', '#f27ab0'], sleeves: ['#f2c230', '#9fe0ff'], trim: '#ffffff', motif: 'rayures' } }
   ] },
   hat: { label: 'Chapeau', items: [
     { id: 'h_classic', name: 'Rouge', free: 1, v: { hat: '#d8402c', knob: 'ball', pattern: 0 } },
@@ -843,7 +853,11 @@ const WARD = {
     { id: 'h_chat', name: 'Oreilles de chat', price: 120, v: { hat: '#2a2230', pattern: '#f27ab0', knob: 'ball', hatShape: 'cat' } },
     { id: 'h_cornes', name: 'Petites cornes', price: 140, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'horns' } },
     { id: 'h_aureole', name: 'Auréole', ach: 'stars1000', v: { hat: '#f2d27a', pattern: 0, knob: 'ball', hatShape: 'halo' } },
-    { id: 'h_licorne', name: 'Licorne', ach: 'act10', v: { hat: '#f4f0e8', pattern: '#f27ab0', knob: 'ball', hatShape: 'unicorn' } }
+    { id: 'h_licorne', name: 'Licorne', ach: 'act10', v: { hat: '#f4f0e8', pattern: '#f27ab0', knob: 'ball', hatShape: 'unicorn' } },
+    { id: 'h_carnaval', name: 'Bouffon du Carnaval', pass: 2, v: { hat: '#8a4a9a', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } },
+    { id: 'h_venise', name: 'Bicorne de Venise', pass: 14, v: { hat: '#5b2a86', pattern: '#f2d27a', knob: 'ball', hatShape: 'pirate' } },
+    { id: 'h_plumes', name: 'Chapeau à plumes', pass: 24, v: { hat: '#d8402c', pattern: '#f27ab0', knob: 'ball', hatShape: 'plume' } },
+    { id: 'h_licorne_or', name: 'Licorne dorée', pass: 38, v: { hat: '#f2d27a', pattern: '#9fe0ff', knob: 'ball', hatShape: 'unicorn' } }
   ] },
   collar: { label: 'Col', items: [
     { id: 'k_aucun', name: 'Aucun', free: 1, v: { collar: 'none' } },
@@ -864,7 +878,9 @@ const WARD = {
     { id: 'k_bandana_b', name: 'Bandana bleu', price: 55, v: { collar: 'bandana', collarColor: '#3070d0' } },
     { id: 'k_perles', name: 'Collier de perles', price: 80, v: { collar: 'pearls' } },
     { id: 'k_jabot', name: 'Jabot de dentelle', price: 90, v: { collar: 'jabot' } },
-    { id: 'k_medaille', name: 'Médaille', ach: 'games100', v: { collar: 'medal', collarColor: '#3070d0' } }
+    { id: 'k_medaille', name: 'Médaille', ach: 'games100', v: { collar: 'medal', collarColor: '#3070d0' } },
+    { id: 'k_cravate_or', name: 'Cravate dorée', pass: 9, v: { collar: 'tie', collarColor: '#e6b830' } },
+    { id: 'k_jabot_or', name: 'Médaille du Carnaval', pass: 36, v: { collar: 'medal', collarColor: '#8a4a9a' } }
   ] },
   legs: { label: 'Jambes', items: [
     { id: 'l_classic', name: 'Menthe', free: 1, v: { legs: '#9ed8c8', socks: '#2a62c8', shoes: '#6b4430' } },
@@ -890,7 +906,9 @@ const WARD = {
     { id: 'l_baskets', name: 'Baskets', price: 70, v: { legs: '#9ed8c8', socks: '#f4f0e8', shoes: '#d8402c', shoeStyle: 'sneakers' } },
     { id: 'l_sabots', name: 'Sabots', price: 70, v: { legs: '#f4f0e8', socks: '#d8402c', shoes: '#c8955a', shoeStyle: 'clogs' } },
     { id: 'l_patins', name: 'Patins à roulettes', price: 120, v: { legs: '#f6a8c8', socks: '#f4f0e8', shoes: '#f4f0e8', shoeStyle: 'skates' } },
-    { id: 'l_bottes_n', name: 'Bottes noires', price: 70, v: { legs: '#d8402c', socks: '#1d1d24', shoes: '#1d1d24', shoeStyle: 'boots' } }
+    { id: 'l_bottes_n', name: 'Bottes noires', price: 70, v: { legs: '#d8402c', socks: '#1d1d24', shoes: '#1d1d24', shoeStyle: 'boots' } },
+    { id: 'l_carnaval', name: 'Carnaval', pass: 4, v: { legs: '#8a4a9a', legs2: '#f2c230', legPattern: 'stripes', socks: '#2bb3c0', shoes: '#f2c230', shoeStyle: 'curly' } },
+    { id: 'l_paillettes', name: 'Paillettes', pass: 16, v: { legs: '#1d1d24', legs2: '#f2d27a', legPattern: 'dots', socks: '#f2d27a', shoes: '#d8402c' } }
   ] },
   face: { label: 'Visage', items: [
     { id: 'f_barbe', name: 'Barbe', free: 1, v: { face: 'beard' } },
@@ -904,7 +922,9 @@ const WARD = {
     { id: 'f_taches', name: 'Taches de rousseur', price: 30, v: { face: 'freckles' } },
     { id: 'f_etoile', name: 'Étoile sur la joue', price: 55, v: { face: 'starcheek' } },
     { id: 'f_coeur', name: 'Cœur sur la joue', price: 55, v: { face: 'heartcheek' } },
-    { id: 'f_larme', name: 'Larme de Pierrot', price: 65, v: { face: 'tear' } }
+    { id: 'f_larme', name: 'Larme de Pierrot', price: 65, v: { face: 'tear' } },
+    { id: 'f_carnaval', name: 'Masque du Carnaval', pass: 5, v: { face: 'carnival' } },
+    { id: 'f_goldmask', name: 'Masque d’or', pass: 18, v: { face: 'goldmask' } }
   ] },
   prop: { label: 'Objet', items: [
     { id: 'p_canne', name: 'Canne', free: 1, v: { prop: 'cane' } },
@@ -922,7 +942,9 @@ const WARD = {
     { id: 'p_trompette', name: 'Trompette', price: 80, v: { prop: 'trumpet' } },
     { id: 'p_torche', name: 'Torche', price: 90, v: { prop: 'torch' } },
     { id: 'p_ballon', name: 'Ballon cœur', price: 60, v: { prop: 'heartballoon' } },
-    { id: 'p_sceptre', name: 'Sceptre', ach: 'act10', v: { prop: 'scepter' } }
+    { id: 'p_sceptre', name: 'Sceptre', ach: 'act10', v: { prop: 'scepter' } },
+    { id: 'p_serpentin', name: 'Serpentin', pass: 7, v: { prop: 'streamer' } },
+    { id: 'p_goldfan', name: 'Éventail doré', pass: 26, v: { prop: 'goldfan' } }
   ] },
   back: { label: 'Dos', items: [
     { id: 'b_aucun', name: 'Rien', free: 1, v: { back: 'none' } },
@@ -937,7 +959,9 @@ const WARD = {
     { id: 'b_dragon', name: 'Ailes de dragon', price: 160, v: { back: 'dragon' } },
     { id: 'b_phenix', name: 'Ailes de phénix', ach: 'stars1000', v: { back: 'phoenix' } },
     { id: 'b_ballons', name: 'Grappe de ballons', price: 90, v: { back: 'balloons' } },
-    { id: 'b_fusee', name: 'Fusée', price: 180, v: { back: 'jetpack' } }
+    { id: 'b_fusee', name: 'Fusée', price: 180, v: { back: 'jetpack' } },
+    { id: 'b_plumes', name: 'Roue de plumes', pass: 20, v: { back: 'plumes' } },
+    { id: 'b_cape_or', name: 'Cape dorée', pass: 28, v: { back: 'cape', capeColor: '#c99a2e', capeIn: '#5b2a86', capeStars: 1 } }
   ] },
   trail: { label: 'Effet', items: [
     { id: 't_aucun', name: 'Aucun', free: 1, v: { trail: 'none' } },
@@ -950,7 +974,8 @@ const WARD = {
     { id: 't_flocons', name: 'Flocons', price: 70, v: { trail: 'snow' } },
     { id: 't_feuilles', name: 'Feuilles', price: 70, v: { trail: 'leaf' } },
     { id: 't_flammes', name: 'Flammes', price: 100, v: { trail: 'flame' } },
-    { id: 't_arcenciel', name: 'Arc-en-ciel', price: 130, v: { trail: 'rainbow' } }
+    { id: 't_arcenciel', name: 'Arc-en-ciel', price: 130, v: { trail: 'rainbow' } },
+    { id: 't_glitter', name: 'Paillettes dorées', pass: 12, v: { trail: 'glitter' } }
   ] }
 };
 const ACH = {
@@ -1096,6 +1121,8 @@ function drawProp(type, t0) {
   if (type === 'trumpet') { line('#c99a2e', 2.6, [0, -18, 0, 20]); poly('#e6b830', [-7, -34, 7, -34, 2, -20, -2, -20]); X.fillStyle = '#a07818'; X.beginPath(); X.ellipse(0, -34, 7, 2, 0, 0, 6.29); X.fill(); for (const y of [-4, 0, 4]) { X.fillStyle = '#c99a2e'; X.fillRect(1.5, y, 4, 2) } return }
   if (type === 'torch') { line('#6b4430', 3.4, [0, -24, 0, 24]); X.fillStyle = '#5a3a1c'; X.fillRect(-3, -26, 6, 4); const fl = M.sin(t0 * .4) * 1.5; poly('#f08a1c', [-5, -26, 5, -26, 2 + fl, -42, 0, -36, -2 + fl, -40]); poly('#f2c230', [-2.5, -26, 2.5, -26, fl * .5, -35]); X.save(); X.globalAlpha = .25; circ('#ffb040', 0, -32, 10); X.restore(); return }
   if (type === 'heartballoon') { const b = M.sin(t0 * .06) * 2; line('#888', 1, [0, 20, 0, -18 + b]); const r = 6, y = -30 + b; X.fillStyle = '#ff4f6a'; X.beginPath(); X.arc(-r, y, r, M.PI, 0); X.arc(r, y, r, M.PI, 0); X.lineTo(0, y + r * 2.2); X.closePath(); X.fill(); circ('rgba(255,255,255,.6)', -6, y - 2, 1.6); return }
+  if (type === 'streamer') { line('#f4f0e8', 2, [0, 0, 0, 24]); poly('#d8402c', [-2.5, 0, 2.5, 0, 1.5, -6, -1.5, -6]); const cols = ['#f2c230', '#2bb3c0', '#f27ab0', '#8a4a9a']; for (let i = 0; i < 16; i++) { const y0 = -6 - i * 2.4, x0 = M.sin(i * .8 + t0 * .15) * (2 + i * .5), x1 = M.sin((i + 1) * .8 + t0 * .15) * (2 + (i + 1) * .5); line(cols[i % 4], 2.2, [x0, y0, x1, y0 - 2.4]) } return }
+  if (type === 'goldfan') { line('#8a4a9a', 2, [0, -12, 0, 24]); for (let i = 0; i < 7; i++) { const a0 = -M.PI * .88 + i * .25; X.fillStyle = i & 1 ? '#f2d27a' : '#8a4a9a'; X.beginPath(); X.moveTo(0, -12); X.arc(0, -12, 18, a0, a0 + .25); X.closePath(); X.fill() } X.strokeStyle = '#fff3c0'; X.lineWidth = 1.2; X.beginPath(); X.arc(0, -12, 18, -M.PI * .88, -M.PI * .88 + 1.75); X.stroke(); for (let i = 0; i < 4; i++) star(M.cos(-2.5 + i * .4) * 13, -12 + M.sin(-2.5 + i * .4) * 13, 1.4, 0, '#fff'); return }
   if (type === 'scepter') { line('#c99a2e', 3, [0, -26, 0, 24]); circ('#a07818', 0, 24, 2.6); circ('#c99a2e', 0, -28, 5); circ('#d8402c', 0, -29, 3.2); circ('rgba(255,255,255,.7)', -1, -30, 1); for (const a of [0, 1.57, 3.14, 4.71]) circ('#f2d27a', M.cos(a) * 5, -28 + M.sin(a) * 5, 1.1); return }
 }
 function drawHat(flop) {
@@ -1333,6 +1360,14 @@ function drawFaceExtra(f) {
   else if (f === 'freckles') { for (const [x, y] of [[-5, -39.5], [-4, -38.3], [-6, -38.4], [5, -39.5], [4, -38.3], [6, -38.4]]) circ('#b0703c', x, y, .5) }
   else if (f === 'starcheek') star(-4.8, -39, 2.2, .2, '#f2c230');
   else if (f === 'heartcheek') { const x = 4.8, y = -39.6, r = 1.1; X.fillStyle = '#ff4f6a'; X.beginPath(); X.arc(x - r, y, r, M.PI, 0); X.arc(x + r, y, r, M.PI, 0); X.lineTo(x, y + r * 2.3); X.closePath(); X.fill() }
+  else if (f === 'carnival' || f === 'goldmask') {
+    const gold = f === 'goldmask';
+    X.fillStyle = gold ? '#e6b830' : '#8a4a9a'; X.beginPath(); X.moveTo(-8.5, -43); X.quadraticCurveTo(-5, -47.5, 0, -44.3); X.quadraticCurveTo(5, -47.5, 8.5, -43); X.quadraticCurveTo(5, -38.6, 0, -41); X.quadraticCurveTo(-5, -38.6, -8.5, -43); X.fill();
+    X.strokeStyle = gold ? '#fff3c0' : '#f2c230'; X.lineWidth = .8; X.stroke();
+    circ('#2a2230', -3, -42.6, 1.2); circ('#2a2230', 3, -42.6, 1.2);
+    if (gold) { circ('#d8402c', 0, -45, .9); star(-6, -44.5, 1, 0, '#fff') }
+    else { poly('#f27ab0', [7, -44, 14, -53, 10, -43]); poly('#2bb3c0', [7.5, -43, 15, -48, 10.5, -42]); poly('#f2c230', [7, -45, 10, -55, 8.5, -44]) }
+  }
   else if (f === 'tear') { X.fillStyle = '#4a8ad0'; X.beginPath(); X.moveTo(-3, -40); X.quadraticCurveTo(-4.4, -37.6, -3, -36.8); X.quadraticCurveTo(-1.6, -37.6, -3, -40); X.fill() }
 }
 
@@ -1343,6 +1378,11 @@ function drawBackExtra(type) {
     X.fillStyle = DL.capeColor || '#b0102a'; X.beginPath(); X.moveTo(-13, -33); X.lineTo(13, -33); X.quadraticCurveTo(28, -8, 30 + w, 22); X.quadraticCurveTo(0, 28 + w, -30 - w, 22); X.quadraticCurveTo(-28, -8, -13, -33); X.fill();
     X.strokeStyle = DL.capeIn || '#f2c230'; X.lineWidth = 1.6; X.stroke();
     if (DL.capeStars) for (const [x, y] of [[-22, 6], [22, 10], [20, -8], [-18, 16], [-21, -10], [24, 18]]) star(x, y, 2.4, 0, '#f2d27a');
+    return true;
+  }
+  if (type === 'plumes') {
+    const cols = ['#f27ab0', '#8a4a9a', '#2bb3c0', '#f2c230', '#d8402c', '#2bb3c0', '#8a4a9a', '#f27ab0', '#f2c230'];
+    for (let i = 0; i < 9; i++) { const a = -2.75 + i * .26 + M.sin(t * .05 + i) * .03; X.save(); X.translate(0, -30); X.rotate(a); X.fillStyle = cols[i]; X.beginPath(); X.ellipse(20, 0, 20, 4.5, 0, 0, 6.29); X.fill(); circ('#1d2a6b', 34, 0, 2.2); circ('#f2d27a', 34, 0, 1) ; X.restore() }
     return true;
   }
   if (type === 'balloons') {
@@ -1825,7 +1865,7 @@ function gameOver() {
   if (score > best) { best = score; saveBest() }
   // La Loge: stars collected + a tip from the audience go to the wallet
   tip = M.floor(placed / 4); earned = stars + tip;
-  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars;
+  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars; try { passResult = passAward(GAME, earned, score); if (passResult.after.level > passResult.before) setTimeout(() => sfx.star(), 700) } catch (e) { passResult = null }
   saveProf(); checkUnlocks(); updateWdBtn();
   lastRank = -1;
   if (qualifies(score)) setTimeout(() => { if (state === 'over') openEntry() }, 700);
@@ -1922,7 +1962,8 @@ function render() {
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
     const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
-    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 146, 12); X.fill(); X.stroke();
+    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 180, 12); X.fill(); X.stroke();
+    drawXpLine(ox, oy + 122);
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
     txt('RIDEAU !', ox, oy, 40, COL.red);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');

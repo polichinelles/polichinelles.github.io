@@ -34,6 +34,16 @@
   .wallet span{color:#c9c2d8;font-weight:400;font-size:12px}
   .logeBtn{display:inline-flex;align-items:center;gap:8px;margin:10px 0 0 8px;background:linear-gradient(#f2c230,#c99a2e);color:#3a1a0a;border-radius:22px;padding:8px 16px;font-weight:700;text-decoration:none;box-shadow:0 4px 10px rgba(0,0,0,.4);border:2px solid #fff3c0}
   .logeBtn:active{transform:scale(.96)}
+  .pass{max-width:760px;margin:14px auto 0;padding:0 14px}
+  .pass a{display:block;text-decoration:none;color:#fff;background:linear-gradient(135deg,#5b2a86,#8a1f2a);border:3px solid #e6b830;border-radius:16px;padding:12px 14px;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+  .pass .row1{display:flex;align-items:center;gap:12px}
+  .pass .lv{width:56px;height:56px;border-radius:50%;flex:none;background:radial-gradient(#f2d27a,#c99a2e);color:#3a1a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700}
+  .pass .lv small{font-size:9px}.pass .lv b{font-size:22px;line-height:1}
+  .pass .mid{flex:1;min-width:0}.pass .mid h3{margin:0;font-size:17px;color:#e6b830}.pass .mid .s{font-size:12px;color:#ffe9a0}
+  .pass .bar{height:9px;border-radius:5px;background:rgba(0,0,0,.35);overflow:hidden;margin-top:6px}.pass .bar i{display:block;height:100%;background:linear-gradient(90deg,#9fe0ff,#f27ab0)}
+  .pass .go{flex:none;background:#f2c230;color:#3a1a0a;border-radius:16px;padding:6px 10px;font-weight:700;font-size:13px;position:relative}
+  .pass .go .dot{position:absolute;top:-8px;right:-8px;background:#d8402c;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;border:2px solid #fff}
+  .pass ul{list-style:none;margin:10px 0 0;padding:0;font-size:13px;font-weight:400}.pass li{display:flex;gap:8px;align-items:center;padding:3px 0;color:#ece6f6}.pass li .p{margin-left:auto;color:#9fe0ff;font-weight:700}
   .gen{max-width:760px;margin:16px auto 0;padding:0 14px}
   .gen .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.45);overflow:hidden}
   .gen h2{margin:0;padding:12px 14px 4px;font-size:20px;color:#e6b830;text-align:center}
@@ -84,6 +94,7 @@
   <div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles pour la Loge</span></div><a class="logeBtn" href="loge.html">🎩 La Loge</a>
 </header>
 
+<section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><ul id="mDaily"></ul></a></section>
 <section class="gen"><div class="box">
   <h2>🏆 Classement général</h2>
   <div class="sub">Tous les jeux du Théâtre réunis</div>
@@ -100,6 +111,7 @@
 
 <div id="inst" role="dialog" aria-modal="true"><div class="box"><h2>📲 Installer le Théâtre</h2><div id="instBody"></div><button>J’ai compris</button></div></div>
 
+<script src="pass.js"></script>
 <script>
 "use strict";
 const GAMES = [
@@ -223,6 +235,16 @@ async function loadGeneral() {
   list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><span class="nm">${esc(r.name)}</span><span class="gm">${r.games.join('')}</span><span class="pt">${r.pts} pts</span></li>`).join('');
 }
 loadGeneral();
+function showPass() {
+  try {
+    const p = ensureDaily(loadPass()); savePass(p); const L = levelInfo(p.xp), un = passUnclaimed(p);
+    document.getElementById('mLv').textContent = L.level; document.getElementById('mSe').textContent = `${PASS_SEASON} · ${L.into} / ${L.need} XP`;
+    document.getElementById('mBar').style.width = (L.into / L.need * 100) + '%';
+    const d = document.getElementById('mDot'); d.hidden = !un; d.textContent = un;
+    document.getElementById('mDaily').innerHTML = p.daily.map(c => `<li>${c.done ? '✅' : '🎯'} ${c.text}<span class="p">${c.done ? '+150 XP' : c.prog + ' / ' + c.goal}</span></li>`).join('');
+  } catch (e) {}
+}
+showPass(); addEventListener('pageshow', showPass);
 
 // ---------- install (same behaviour as in the games) ----------
 const installBtn = document.getElementById('installBtn'), instEl = document.getElementById('inst'), instBody = document.getElementById('instBody');
