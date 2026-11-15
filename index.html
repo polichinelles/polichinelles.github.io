@@ -101,7 +101,13 @@ const sfx = {
   duck: () => beep(300, 150, .08, 'triangle', .06),
   creak: () => beep(900, 500, .25, 'sawtooth', .025),
   crash: () => { beep(200, 40, .35, 'sawtooth', .12); beep(1800, 600, .2, 'square', .03) },
-  twang: () => beep(140, 220, .3, 'triangle', .08)
+  twang: () => beep(140, 220, .3, 'triangle', .08),
+  power: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, f * 1.01, .12, 'triangle', .1), i * 70)),
+  smash: () => { beep(500, 120, .18, 'square', .08); beep(1500, 900, .1, 'triangle', .05) },
+  fanfare: () => [392, 523, 659, 784, 659, 784].forEach((f, i) => setTimeout(() => beep(f, f, .14, 'square', .05), i * 110)),
+  fall: () => beep(600, 60, .9, 'sine', .12),
+  curtain: () => beep(200, 120, .4, 'triangle', .05),
+  combo: n => beep(660 + n * 110, 990 + n * 110, .12, 'triangle', .09)
 };
 
 // ---------- storage ----------
@@ -213,6 +219,46 @@ for (const el of [lbEl, lbBtn]) for (const ev of ['pointerdown', 'pointerup', 'k
 addEventListener('keydown', e => { if (e.key === 'Escape' && lbEl.classList.contains('on')) closePanel() });
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play' && !lbEl.classList.contains('on')) openPanel() });
 
+// ---------- acts: every 500 points the stage changes colours ----------
+const ACTS = [
+  { name: 'ACTE I',   sub: 'Le lever de rideau',  wall: '#e9dcc6', wallLine: '#dccdb4', mauve: '#b89ab8', apron: '#8a1f2a', apronDark: '#6a1520', floor: '#1c1838', spot: '255,240,180' },
+  { name: 'ACTE II',  sub: 'La nuit tombe',       wall: '#a9bcdd', wallLine: '#97abcf', mauve: '#5b6fa8', apron: '#1f3a7a', apronDark: '#152a5c', floor: '#0d1430', spot: '170,200,255' },
+  { name: 'ACTE III', sub: 'Le grand bal',        wall: '#dcb6dc', wallLine: '#cba2cc', mauve: '#8a4a9a', apron: '#5a1f6e', apronDark: '#42154f', floor: '#1a0f26', spot: '255,170,240' },
+  { name: 'ACTE IV',  sub: 'Le jardin enchanté',  wall: '#c2dcb8', wallLine: '#aecca4', mauve: '#5e9a6a', apron: '#1f5a3a', apronDark: '#15422a', floor: '#0c1f16', spot: '190,255,190' },
+  { name: 'ACTE V',   sub: 'Le soleil couchant',  wall: '#f2c890', wallLine: '#e4b67a', mauve: '#d07a4a', apron: '#a0401a', apronDark: '#7a2e12', floor: '#2a1208', spot: '255,200,120' }
+];
+function roman(n) { let r = ''; for (const [v, k] of [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (n >= v) { r += k; n -= v } return r }
+const hex2 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const AMB = {};
+let act = 0, ambFrom = ACTS[0], ambTo = ACTS[0], ambK = 1, actBanner = 0;
+function mixAmb() {
+  const k = ambK * ambK * (3 - 2 * ambK);
+  for (const key of ['wall', 'wallLine', 'mauve', 'apron', 'apronDark', 'floor']) {
+    const a = hex2(ambFrom[key]), b = hex2(ambTo[key]);
+    AMB[key] = `rgb(${a.map((v, i) => M.round(v + (b[i] - v) * k)).join(',')})`;
+  }
+  const sa = ambFrom.spot.split(',').map(Number), sb = ambTo.spot.split(',').map(Number);
+  AMB.spot = sa.map((v, i) => M.round(v + (sb[i] - v) * k)).join(',');
+}
+mixAmb();
+function setAct(n, instant) {
+  act = n; ambFrom = instant ? ACTS[n % ACTS.length] : { ...ambTo }; ambTo = ACTS[n % ACTS.length]; ambK = instant ? 1 : 0;
+  if (!instant) { actBanner = 170; sfx.fanfare() }
+  mixAmb();
+}
+
+// ---------- power-ups & star combo ----------
+// mask  = invincible 5 s (obstacles are smashed) · cape = triple jump 10 s · clock = slow motion 5 s
+const POWERS = {
+  mask:  { dur: 300, label: 'Invincible' },
+  cape:  { dur: 600, label: 'Triple saut' },
+  clock: { dur: 300, label: 'Ralenti' }
+};
+let fellIn = null, fallY = 0;
+let power = null, slowK = 1, combo = 0, starPts = 0, bonusPts = 0, nextPow = 0, popups = [];
+function popup(x, y, text, k = '#fff') { popups.push({ x, y, text, k, l: 60 }) }
+function maxJumps() { return power && power.type === 'cape' ? 3 : 2 }
+
 // ---------- state ----------
 let state = 'title'; // title | opening | play | over
 let t = 0, stateT = 0, score = 0, stars = 0, speed = 0, dist = 0, nextObs = 0, nextStar = 0, shake = 0, flash = 0;
@@ -227,6 +273,7 @@ for (let i = 0; i < 60; i++) crowd.push({ x: i * 22 + rnd(-6, 6), r: rnd(9, 13),
 
 function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
+  fellIn = null; fallY = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -250,7 +297,7 @@ function jump() {
   P.hold = true;
   if (P.duck) return;                       // can't jump while crouched
   if (P.y === 0 && P.jumps === 0) { P.vy = 10.5; P.jumps = 1; sfx.jump(); dust(PX, 5) }
-  else if (P.jumps === 1) { P.vy = 9.5; P.jumps = 2; sfx.jump2(); burst(PX, -P.y - 40, 8, [COL.yellow, COL.red, '#fff'], 3) }
+  else if (P.jumps >= 1 && P.jumps < maxJumps()) { P.vy = 9.5; P.jumps++; sfx.jump2(); burst(PX, -P.y - 40, 8, P.jumps === 3 ? ['#5aa0ff', '#fff', COL.yellow] : [COL.yellow, COL.red, '#fff'], 3) }
 }
 function updateDuck() {
   const d = duckPointers.size > 0 || keyDuck;
@@ -410,7 +457,12 @@ function spawnObstacle() {
   const lvl = M.min(1, dist / 8000);
   const r = M.random();
   let o;
-  if (r < .5 || dist < 600) {
+  const canDrape = dist > 1000, canTrap = dist > 1500;
+  if (canTrap && r < .17) {
+    o = { type: 'trap', x: W + 20, w: M.round(rnd(46, 62)), h: 0 };
+  } else if (canDrape && r < .32) {
+    o = { type: 'drape', x: W + 20, w: 58, h: 0, bot: BATTEN + 6, dropped: false, landed: false, sw: rnd(0, 6.28) };
+  } else if (r < .66 || dist < 600) {
     const n = M.random() < .25 + lvl * .4 ? (M.random() < .35 + lvl * .3 ? 3 : 2) : 1;
     o = { type: 'seat', x: W + 20, n, w: n * 26, h: 40 };
   } else {
@@ -424,6 +476,14 @@ function spawnObstacle() {
 }
 function updateObstacle(o) {
   o.x -= speed;
+  if (o.type === 'drape') {
+    // half curtain: slides down from the bar and stops above the floor -> duck under
+    const target = G - HANG_GAP;
+    if (!o.dropped && o.x - PX < speed * 66) { o.dropped = true; sfx.curtain() }
+    if (o.dropped && !o.landed) { o.bot += (target - o.bot) * .16 + 1; if (o.bot >= target) { o.bot = target; o.landed = true } }
+    o.sw += .06;
+    return;
+  }
   if (o.type !== 'spot') return;
   o.sw += .08;
   const target = o.mode === 'hang' ? G - HANG_GAP : G;
@@ -491,11 +551,46 @@ function drawSpot(o) {
   // sparks where the cable broke
   if (o.cut && o.dropped && !o.landed && t % 2 === 0) parts.push({ x: bx, y: BATTEN + 18, vx: rnd(-1.5, 1.5), vy: rnd(-1, 1), l: 18, k: '#ffd060', s: 2, g: .15 });
 }
+function drawDrape(o) {
+  const x = o.x, top = BATTEN, bot = o.bot, w = o.w, wave = M.sin(o.sw) * 1.5;
+  // rod
+  X.fillStyle = '#c99a2e'; X.fillRect(x - 4, top - 2, w + 8, 5);
+  // velvet panel with pleats
+  const gr = X.createLinearGradient(x, 0, x + w, 0);
+  gr.addColorStop(0, '#5e0f18'); gr.addColorStop(.5, '#a3283a'); gr.addColorStop(1, '#5e0f18');
+  X.fillStyle = gr; X.beginPath(); X.moveTo(x, top);
+  X.lineTo(x + w, top); X.lineTo(x + w + wave, bot);
+  for (let i = 4; i >= 0; i--) X.quadraticCurveTo(x + i * w / 5 + w / 10 + wave, bot + 7, x + i * w / 5 + wave, bot);
+  X.closePath(); X.fill();
+  X.fillStyle = 'rgba(0,0,0,.22)'; for (let i = 1; i < 5; i++) X.fillRect(x + i * w / 5 - 2, top, 4, bot - top);
+  // gold fringe + tassels
+  X.fillStyle = COL.yellow; X.fillRect(x + wave, bot - 5, w, 4);
+  for (let i = 0; i <= 5; i++) { circ(COL.yellow, x + i * w / 5 + wave, bot + 3, 2.6) }
+}
+function drawTrap(o) {
+  const x = o.x, w = o.w;
+  // the open hole in the stage
+  X.fillStyle = '#050309'; X.fillRect(x, G, w, H);
+  const gr = X.createLinearGradient(0, G, 0, G + 30); gr.addColorStop(0, 'rgba(255,255,255,.08)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  X.fillStyle = gr; X.fillRect(x, G, w, 30);
+  // hatch door hanging down inside the hole
+  X.save(); X.translate(x + w, G); X.rotate(.35);
+  X.fillStyle = '#4a3020'; X.fillRect(-6, 0, 6, w * .8); X.fillStyle = '#6b4430'; X.fillRect(-6, 0, 2, w * .8); X.restore();
+  // yellow / black warning edges
+  for (const ex of [x - 4, x + w]) {
+    X.fillStyle = COL.yellow; X.fillRect(ex, G - 1, 4, 5);
+    X.fillStyle = '#111'; X.fillRect(ex, G + 1, 4, 1.5);
+  }
+}
 function drawObstacle(o) {
   if (o.type === 'seat') for (let i = 0; i < o.n; i++) drawSeat(o.x + i * 26, G);
+  else if (o.type === 'drape') drawDrape(o);
+  else if (o.type === 'trap') drawTrap(o);
   else drawSpot(o);
 }
 function obstacleBox(o) {
+  if (o.type === 'trap') return null;                     // handled separately (falling)
+  if (o.type === 'drape') return [o.x + 2, BATTEN, o.w - 4, o.bot - BATTEN];
   if (o.type === 'seat') return [o.x + 2, G - 38, o.w - 4, 38];
   if (o.mode === 'fall' && o.landed) return [o.x + 2, G - 18, o.w - 4, 18];
   return [o.x + 3, o.bot - o.h, o.w - 6, o.h];   // the lamp only (cable is harmless)
@@ -511,8 +606,8 @@ function drawBatten() {
 // ---------- background ----------
 function drawStage() {
   // wall + panels (slow parallax)
-  X.fillStyle = COL.wall; X.fillRect(0, -T, W, G + T);
-  X.strokeStyle = COL.wallLine; X.lineWidth = 2;
+  X.fillStyle = AMB.wall; X.fillRect(0, -T, W, G + T);
+  X.strokeStyle = AMB.wallLine; X.lineWidth = 2;
   const off = -(dist * .15) % 80;
   for (let x = off; x < W + 80; x += 80) { X.beginPath(); X.moveTo(x, -T); X.lineTo(x, G - 112); X.stroke() }
   // hanging sign: the logo arc
@@ -533,20 +628,20 @@ function drawStage() {
     const sx = i ? W * .85 : W * .15, a = M.sin(t * .012 + i * 2) * .35;
     X.save(); X.translate(sx, -T); X.rotate(a);
     const len = G + T + 20, gr = X.createLinearGradient(0, 0, 0, len);
-    gr.addColorStop(0, 'rgba(255,240,180,.28)'); gr.addColorStop(1, 'rgba(255,240,180,0)');
+    gr.addColorStop(0, `rgba(${AMB.spot},.3)`); gr.addColorStop(1, `rgba(${AMB.spot},0)`);
     X.fillStyle = gr; X.beginPath(); X.moveTo(-6, 0); X.lineTo(6, 0); X.lineTo(70, len); X.lineTo(-70, len); X.fill(); X.restore();
   }
   X.restore();
   // mauve band + red apron
-  X.fillStyle = COL.mauve; X.fillRect(0, G - 112, W, 16);
+  X.fillStyle = AMB.mauve; X.fillRect(0, G - 112, W, 16);
   X.fillStyle = 'rgba(255,255,255,.18)'; X.fillRect(0, G - 112, W, 3);
-  X.fillStyle = COL.apron; X.fillRect(0, G - 96, W, 96);
+  X.fillStyle = AMB.apron; X.fillRect(0, G - 96, W, 96);
   // apron fringe / pleats (move with the floor)
-  X.fillStyle = COL.apronDark; const po = -(dist * .5) % 24;
+  X.fillStyle = AMB.apronDark; const po = -(dist * .5) % 24;
   for (let x = po; x < W + 24; x += 24) X.fillRect(x, G - 96, 5, 96);
   X.fillStyle = '#5a5070'; X.fillRect(0, G - 98, W, 3);
   // floor line
-  X.fillStyle = COL.floor; X.fillRect(0, G, W, H);
+  X.fillStyle = AMB.floor; X.fillRect(0, G, W, H);
   X.fillStyle = '#2c2650'; X.fillRect(0, G, W, 3);
   // floor boards
   X.strokeStyle = '#26214a'; X.lineWidth = 1; const fo = -dist % 60;
@@ -625,6 +720,40 @@ function star(x, y, r, rot = 0, k = COL.yellow) {
   X.closePath(); X.fill(); X.strokeStyle = '#a07818'; X.lineWidth = 1.2; X.stroke(); X.restore();
 }
 
+// ---------- power-up icons ----------
+function drawPowerIcon(type, x, y, sc) {
+  X.save(); X.translate(x, y); X.scale(sc, sc);
+  X.globalAlpha = .4; circ('#bfe6ff', 0, 0, 16 + M.sin(t * .2) * 2); X.globalAlpha = 1;
+  circ('#1c1838', 0, 0, 13); X.strokeStyle = '#9fe0ff'; X.lineWidth = 2; X.beginPath(); X.arc(0, 0, 13, 0, 6.29); X.stroke();
+  if (type === 'mask') {
+    // comedy theatre mask
+    X.fillStyle = '#f4f0e8'; X.beginPath(); X.moveTo(-9, -7); X.quadraticCurveTo(0, -11, 9, -7); X.quadraticCurveTo(10, 6, 0, 10); X.quadraticCurveTo(-10, 6, -9, -7); X.fill();
+    X.fillStyle = '#1c1838'; X.beginPath(); X.ellipse(-4, -2, 2.6, 1.8, -.3, 0, 6.29); X.fill(); X.beginPath(); X.ellipse(4, -2, 2.6, 1.8, .3, 0, 6.29); X.fill();
+    X.strokeStyle = '#1c1838'; X.lineWidth = 1.6; X.beginPath(); X.arc(0, 2, 4, .2, M.PI - .2); X.stroke();
+    X.strokeStyle = COL.yellow; X.lineWidth = 1.2; X.beginPath(); X.moveTo(-9, -6); X.lineTo(-12, -9); X.moveTo(9, -6); X.lineTo(12, -9); X.stroke();
+  } else if (type === 'cape') {
+    X.fillStyle = '#3a6fd8'; X.beginPath(); X.moveTo(-4, -8); X.lineTo(4, -8); X.lineTo(10, 9); X.quadraticCurveTo(0, 6, -10, 9); X.closePath(); X.fill();
+    X.fillStyle = COL.yellow; X.fillRect(-5, -9, 10, 3);
+    X.strokeStyle = COL.yellow; X.lineWidth = 1; X.beginPath(); X.moveTo(10, 9); X.quadraticCurveTo(0, 6, -10, 9); X.stroke();
+  } else {
+    // clock
+    X.fillStyle = '#fff8ec'; X.beginPath(); X.arc(0, 1, 9, 0, 6.29); X.fill();
+    X.fillStyle = COL.yellow; X.fillRect(-2, -11, 4, 3);
+    X.strokeStyle = '#1c1838'; X.lineWidth = 1.6; X.beginPath(); X.moveTo(0, 1); X.lineTo(0, -5); X.moveTo(0, 1); X.lineTo(4, 3); X.stroke();
+  }
+  X.restore();
+}
+function drawCape() {
+  // flowing blue cape behind the polichinelle while the triple jump is active
+  const blink = power.t < 90 && M.floor(t / 5) % 2; if (blink) return;
+  const lean = P.duckK * .45, f = M.sin(t * .35) * 4, hy = -33 + P.duckK * 19;
+  X.save(); X.translate(0, hy); X.rotate(lean);
+  X.fillStyle = '#3a6fd8'; X.beginPath(); X.moveTo(-12, -28); X.lineTo(10, -28);
+  X.quadraticCurveTo(-6, -10, -30 + f, 6); X.quadraticCurveTo(-34, -14, -12, -28); X.fill();
+  X.strokeStyle = COL.yellow; X.lineWidth = 1.5; X.beginPath(); X.moveTo(-30 + f, 6); X.quadraticCurveTo(-34, -14, -12, -28); X.stroke();
+  X.restore();
+}
+
 // ---------- update ----------
 function playerBox() {
   // hitbox follows the drawing, hat included (a bit forgiving on the edges)
@@ -636,8 +765,16 @@ function update() {
   if (state === 'opening') { curtain = M.max(0, 1 - stateT / 45); if (curtain === 0) { state = 'play'; stateT = 0 } }
   if (state === 'title') { curtain = 1; P.run += .06 }
   if (state === 'play') {
-    speed = M.min(12.5, 5 + dist / 1500);
-    dist += speed; score = M.floor(dist / 10) + stars * 25;
+    // slow motion from the clock power-up
+    slowK += ((power && power.type === 'clock' ? .55 : 1) - slowK) * .06;
+    speed = M.min(12.5, 5 + dist / 1500) * slowK;
+    dist += speed; score = M.floor(dist / 10) + starPts + bonusPts;
+    // acts: colours change every 500 points of distance
+    const a = M.floor(M.floor(dist / 10) / 500);
+    if (a !== act) setAct(a, false);
+    if (ambK < 1) { ambK = M.min(1, ambK + 1 / 120); mixAmb() }
+    if (actBanner > 0) actBanner--;
+    if (power && --power.t <= 0) { power = null; sfx.duck() }
     // physics
     const wasAir = P.y > 0;
     let g = (P.hold && P.vy > 0) ? .42 : .8;
@@ -654,32 +791,62 @@ function update() {
     if ((nextStar -= speed) <= 0) {
       // keep stars away from obstacles so they are always reachable
       const last = obs[obs.length - 1];
-      if (!last || last.x < W - 90) { items.push({ x: W + 20, y: rnd(70, 140), r: 0 }); nextStar = rnd(400, 800) } else nextStar = 30;
+      if (!last || last.x < W - 90) { items.push({ type: 'star', x: W + 20, y: rnd(70, 140), r: 0 }); nextStar = rnd(400, 800) } else nextStar = 30;
+    }
+    if ((nextPow -= speed) <= 0) {
+      const last = obs[obs.length - 1];
+      if (!last || last.x < W - 120) {
+        const types = ['mask', 'cape', 'clock'];
+        items.push({ type: types[M.random() * 3 | 0], x: W + 20, y: rnd(80, 130), r: 0 }); nextPow = rnd(2200, 3600);
+      } else nextPow = 40;
     }
     for (const o of obs) updateObstacle(o);
     obs = obs.filter(o => o.x > -90);
     for (const s of items) { s.x -= speed; s.r += .08 }
     // collisions
     const [px, py, pw, ph] = playerBox();
+    const inv = power && power.type === 'mask';
     for (const o of obs) {
+      if (o.type === 'trap') {
+        // falls in if standing on the open trapdoor
+        if (!inv && P.y === 0 && PX > o.x + 7 && PX < o.x + o.w - 7) { fellIn = o; gameOver(); break }
+        continue;
+      }
       const [ox, oy, ow, oh] = obstacleBox(o);
-      if (px < ox + ow && px + pw > ox && py < oy + oh && py + ph > oy) { gameOver(); break }
+      if (px < ox + ow && px + pw > ox && py < oy + oh && py + ph > oy) {
+        if (inv) { o.dead = true; bonusPts += 10; sfx.smash(); shake = 4; burst(o.x + o.w / 2, oy + oh / 2 - G, 16, ['#fff', COL.yellow, '#ccc'], 5); popup(o.x + o.w / 2, oy - 6, '+10', COL.yellow) }
+        else { gameOver(); break }
+      }
     }
+    obs = obs.filter(o => !o.dead);
     items = items.filter(s => {
-      if (s.x < -20) return false;
+      if (s.x < -20) { if (s.type === 'star' && combo) { combo = 0 } return false }
       const sx = s.x - 11, sy = G - s.y - 11;
       if (px - 4 < sx + 22 && px + pw + 4 > sx && py < sy + 22 && py + ph > sy) {
-        stars++; sfx.star(); burst(s.x, -s.y, 14, [COL.yellow, '#fff', COL.red], 4); flash = 6; return false
+        if (s.type === 'star') {
+          stars++; combo = M.min(5, combo + 1); const pts = 25 * combo; starPts += pts;
+          combo > 1 ? sfx.combo(combo) : sfx.star();
+          popup(s.x, G - s.y - 18, combo > 1 ? `+${pts}  ×${combo}` : `+${pts}`, combo > 1 ? '#ffe066' : '#fff');
+          burst(s.x, -s.y, 14, [COL.yellow, '#fff', COL.red], 4); flash = 6;
+        } else {
+          power = { type: s.type, t: POWERS[s.type].dur, max: POWERS[s.type].dur };
+          sfx.power(); flash = 10; burst(s.x, -s.y, 24, ['#fff', COL.yellow, '#5aa0ff'], 5);
+          popup(s.x, G - s.y - 20, POWERS[s.type].label + ' !', '#9fe0ff');
+        }
+        return false
       }
       return true;
     });
   }
   for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g || .05; p.l-- }
+  for (const q of popups) { q.y -= .7; q.l-- } popups = popups.filter(q => q.l > 0);
+  if (state === 'over' && fellIn) fallY = M.min(fallY + 4 + fallY * .08, 140);
   parts = parts.filter(p => p.l > 0);
   shake *= .85; if (flash > 0) flash--;
 }
 function gameOver() {
-  state = 'over'; stateT = 0; shake = 10; sfx.hit();
+  state = 'over'; stateT = 0; shake = 10; fallY = 0; if (fellIn) sfx.fall(); else sfx.hit();
+  power = null; slowK = 1;
   P.duck = false; P.duckK = 0; P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false;
   burst(PX, -P.y - 50, 30, [COL.red, COL.green, COL.blue, COL.yellow], 6);
   if (score > best) { best = score; saveBest() }
@@ -693,16 +860,27 @@ function render() {
   if (shake > .5) X.translate(rnd(-shake, shake), rnd(-shake, shake));
   drawStage();
   for (const s of items) {
-    X.save(); X.globalAlpha = .35; circ('#fff6c0', s.x, G - s.y, 14 + M.sin(t * .2) * 2); X.restore();
-    star(s.x, G - s.y, 11, s.r);
+    if (s.type === 'star') { X.save(); X.globalAlpha = .35; circ('#fff6c0', s.x, G - s.y, 14 + M.sin(t * .2) * 2); X.restore(); star(s.x, G - s.y, 11, s.r) }
+    else drawPowerIcon(s.type, s.x, G - s.y + M.sin(t * .1 + s.x) * 3, 1);
   }
   drawBatten();
   for (const o of obs) drawObstacle(o);
   // player shadow
   X.fillStyle = 'rgba(0,0,0,.3)'; X.beginPath(); X.ellipse(PX, G - 1, M.max(6, 18 - P.y / 8), 3, 0, 0, 6.29); X.fill();
-  X.save(); X.translate(PX, G - P.y); drawPoli({ run: P.run, air: P.y > 0, sq: P.squash, dead: state === 'over', duck: P.duckK }); X.restore();
+  X.save();
+  if (fellIn && state === 'over') { X.beginPath(); X.rect(-50, -T - 50, W + 100, G + T + 50); X.rect(fellIn.x, G - 1, fellIn.w, H); X.clip() }
+  X.translate(PX, G - P.y + (fellIn && state === 'over' ? fallY : 0));
+  if (power && power.type === 'cape') drawCape();
+  if (power && power.type === 'mask') {
+    const blink = power.t < 90 && M.floor(t / 5) % 2;
+    if (!blink) { X.save(); X.globalAlpha = .35 + M.sin(t * .3) * .12; circ('#ffe680', 0, -48 + P.duckK * 20, 52 - P.duckK * 14); X.restore() }
+  }
+  drawPoli({ run: P.run, air: P.y > 0, sq: P.squash, dead: state === 'over', duck: P.duckK });
+  X.restore();
+  if (power && power.type === 'clock') { X.fillStyle = 'rgba(90,140,255,.10)'; X.fillRect(0, -T, W, H) }
   for (const p of parts) { X.globalAlpha = M.min(1, p.l / 20); X.fillStyle = p.k; X.fillRect(p.x, p.y, p.s, p.s) }
   X.globalAlpha = 1;
+  for (const q of popups) { X.globalAlpha = M.min(1, q.l / 20); txt(q.text, q.x, q.y, 14, q.k); X.globalAlpha = 1 }
   drawCrowd();
   drawValance();
   drawCurtains(curtain);
@@ -713,9 +891,26 @@ function render() {
     const hy = T > 60 ? -T + 64 : 46;
     txt(String(score).padStart(5, '0'), W - 12, hy, 20, '#fff', 'right');
     star(W - 22, hy + 26, 8); txt('× ' + stars, W - 34, hy + 27, 14, '#fff', 'right');
+    if (combo > 1 && state === 'play') txt('COMBO ×' + combo, W - 12, hy + 50, 13, '#ffe066', 'right');
+    if (power && state === 'play') {
+      const cx = 66, cy = hy + 30, k = power.t / power.max;
+      drawPowerIcon(power.type, cx, cy, .8);
+      X.fillStyle = 'rgba(20,16,40,.7)'; X.beginPath(); X.roundRect(cx + 16, cy - 6, 74, 12, 6); X.fill();
+      X.fillStyle = power.t < 90 && M.floor(t / 6) % 2 ? '#fff' : '#9fe0ff'; X.beginPath(); X.roundRect(cx + 18, cy - 4, 70 * k, 8, 4); X.fill();
+      txt(POWERS[power.type].label, cx + 18, cy + 17, 11, '#fff', 'left', false);
+    }
     txt('Record ' + best, 52, hy, 14, '#fff', 'left');
   }
   if (state === 'play' || state === 'opening') drawControls();
+  if (actBanner > 0 && state === 'play') {
+    const a = M.min(1, actBanner / 25, (170 - actBanner) / 15), A = ACTS[act % ACTS.length];
+    X.save(); X.globalAlpha = a;
+    X.fillStyle = 'rgba(20,16,40,.7)'; X.beginPath(); X.roundRect(W / 2 - 120, 100, 240, 70, 12); X.fill();
+    X.strokeStyle = COL.yellow; X.lineWidth = 2; X.stroke();
+    txt('ACTE ' + roman(act + 1), W / 2, 124, 26, COL.yellow);
+    txt(A.sub, W / 2, 153, 14, '#fff', 'center', false);
+    X.restore();
+  }
   if (state === 'play' && (paused || resumeT > 0)) {
     X.fillStyle = 'rgba(20,16,40,.45)'; X.fillRect(0, -T, W, H);
     txt(paused ? 'PAUSE' : String(M.ceil(resumeT / 30)), W / 2, 150, paused ? 34 : 56, COL.yellow);
@@ -728,7 +923,8 @@ function render() {
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
     txt('Droite : sauter (2× = double saut)', W / 2, G + 62, 13, '#ddd', 'center', false);
     txt('Gauche : se baisser (garder appuyé)', W / 2, G + 80, 13, '#ddd', 'center', false);
-    if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 104, 14, COL.yellow); drawBoard(W / 2, G + 124, 10, false) }
+    if (T > 80) { drawPowerIcon('mask', W / 2 - 60, G + 108, .7); drawPowerIcon('cape', W / 2, G + 108, .7); drawPowerIcon('clock', W / 2 + 60, G + 108, .7) }
+    if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); drawBoard(W / 2, G + 152, 5, false) }
     else { drawBoard(W - 100, 150, 5, true); if (best) txt('Ton record : ' + best, 92, 80, 14, COL.yellow) }
   }
   if (state === 'over') {
