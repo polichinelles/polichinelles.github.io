@@ -103,7 +103,7 @@
 const GAMES = [
   { id: 'course', name: 'La Course', href: 'course.html', best: 'polichinelles_best', desc: 'Cours sur la scène, saute les sièges, baisse-toi sous les projecteurs et évite les trappes.', art: 'course', bg: ['#e9dcc6', '#8a1f2a'] },
   { id: 'envol', name: 'L’Envol', href: 'envol.html', best: 'polichinelles_best_envol', desc: 'Accroché à ton ballon, passe entre les rideaux et les piles de coffres.', art: 'envol', bg: ['#a9bcdd', '#1f3a7a'] },
-  { id: 'kart', name: 'Le Grand Prix', href: 'kart.html', best: 'polichinelles_best_kart', desc: 'Course de karts en 3D contre la montre : dérapages, turbos, tartes à la crème… boucle les tours pour gagner du temps !', art: 'kart', bg: ['#5b3a7a', '#3a3550'], fresh: true },
+  // { id: 'kart', name: 'Le Grand Prix', href: 'kart.html', best: 'polichinelles_best_kart', desc: 'Course de karts en 3D contre la montre : dérapages, turbos, tartes à la crème… boucle les tours pour gagner du temps !', art: 'kart', bg: ['#5b3a7a', '#3a3550'], fresh: true },
   { id: 'tape', name: 'Tape-Polichinelle', href: 'tape.html', best: 'polichinelles_best_tape', fresh: true, desc: 'Ils surgissent des trappes : tape-les vite… mais pas le directeur !', emoji: '🔨', bg: ['#dcb6dc', '#5a1f6e'] },
   { id: 'pyramide', name: 'La Pyramide', href: 'pyramide.html', best: 'polichinelles_best_pyramide', fresh: true, desc: 'Lâche les polichinelles au bon moment pour bâtir la plus haute pyramide.', emoji: '🏛️', bg: ['#c2dcb8', '#1f5a3a'] },
   { id: 'jongleur', name: 'Le Jongleur', href: 'jongleur.html', best: 'polichinelles_best_jongleur', fresh: true, desc: 'Garde les quilles et les balles en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] }
@@ -179,11 +179,11 @@ function drawArt(cv, kind) {
 
 // ---------- general leaderboard: ranking points from every game ----------
 const FB = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
-const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_kart', '🏎️'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹']];
+const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹']];
 async function topOf(coll) {
   const r = await fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents:runQuery?key=${FB.apiKey}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 60 } })
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: coll }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: 12 } })
   });
   if (!r.ok) throw new Error(r.status);
   const rows = await r.json();
@@ -193,7 +193,13 @@ const esc = t => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '
 const norm = n => n.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 async function loadGeneral() {
   const list = document.getElementById('genList');
-  const res = await Promise.allSettled(BOARDS.map(([c]) => topOf(c)));
+  // cached for 3 minutes so that coming back to the menu costs no database reads
+  let res = null;
+  try { const c = JSON.parse(localStorage.getItem('polichinelles_gen')); if (c && Date.now() - c.t < 180000 && c.v === BOARDS.length) res = c.r } catch (e) {}
+  if (!res) {
+    res = (await Promise.allSettled(BOARDS.map(([c]) => topOf(c)))).map(r => r.status === 'fulfilled' ? { status: 'fulfilled', value: r.value } : { status: 'rejected' });
+    if (res.some(r => r.status === 'fulfilled')) try { localStorage.setItem('polichinelles_gen', JSON.stringify({ t: Date.now(), v: BOARDS.length, r: res })) } catch (e) {}
+  }
   const tot = new Map();
   let ok = 0;
   res.forEach((r, gi) => {
@@ -205,7 +211,7 @@ async function loadGeneral() {
       e.pts += 10 - i; e.games.push(BOARDS[gi][1]); tot.set(k, e);
     });
   });
-  if (!ok) { list.innerHTML = '<li class="msg">Classement indisponible pour le moment.</li>'; return }
+  if (!ok) { list.innerHTML = '<li class="msg">Classement indisponible pour le moment, réessaie un peu plus tard.</li>'; return }
   const rows = [...tot.values()].sort((a, b) => b.pts - a.pts).slice(0, 10);
   if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; return }
   const medal = ['🥇', '🥈', '🥉'];
