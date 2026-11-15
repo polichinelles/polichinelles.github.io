@@ -1270,20 +1270,31 @@ function drawDrape(o) {
   for (let i = 0; i <= 5; i++) { circ(COL.yellow, x + i * w / 5 + wave, bot + 3, 2.6) }
 }
 function drawTrap(o) {
-  const x = o.x, w = o.w;
-  // the open hole in the stage
+  const x = o.x, w = o.w, blink = M.sin(t * .25) > 0;
+  // dark hole with a visible wooden inner wall
   X.fillStyle = '#050309'; X.fillRect(x, G, w, 40);
-  const pg = X.createLinearGradient(0, G + 24, 0, G + 44); pg.addColorStop(0, 'rgba(5,3,9,1)'); pg.addColorStop(1, 'rgba(5,3,9,0)'); X.fillStyle = pg; X.fillRect(x, G + 24, w, 20);
-  const gr = X.createLinearGradient(0, G, 0, G + 30); gr.addColorStop(0, 'rgba(255,255,255,.08)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-  X.fillStyle = gr; X.fillRect(x, G, w, 30);
+  X.fillStyle = '#5a3a22'; X.fillRect(x, G + 4, w, 9);
+  X.fillStyle = 'rgba(0,0,0,.35)'; for (let i = 6; i < w; i += 10) X.fillRect(x + i, G + 4, 1.5, 9);
+  const pg = X.createLinearGradient(0, G + 13, 0, G + 44); pg.addColorStop(0, 'rgba(5,3,9,1)'); pg.addColorStop(1, 'rgba(5,3,9,0)'); X.fillStyle = pg; X.fillRect(x, G + 13, w, 31);
+  // red glow inside, pulsing
+  X.save(); X.globalAlpha = blink ? .35 : .18; X.fillStyle = '#ff3b2f'; X.fillRect(x + 2, G + 13, w - 4, 5); X.restore();
   // hatch door hanging down inside the hole
-  X.save(); X.translate(x + w, G); X.rotate(.35);
-  X.fillStyle = '#4a3020'; X.fillRect(-6, 0, 6, w * .8); X.fillStyle = '#6b4430'; X.fillRect(-6, 0, 2, w * .8); X.restore();
-  // yellow / black warning edges
-  for (const ex of [x - 4, x + w]) {
-    X.fillStyle = COL.yellow; X.fillRect(ex, G - 1, 4, 5);
-    X.fillStyle = '#111'; X.fillRect(ex, G + 1, 4, 1.5);
+  X.save(); X.translate(x + w, G + 4); X.rotate(.35);
+  X.fillStyle = '#6b4430'; X.fillRect(-7, 0, 7, w * .75); X.fillStyle = '#8a5a3a'; X.fillRect(-7, 0, 2, w * .75); X.restore();
+  // yellow / black hazard frame around the opening
+  for (const [fx, fw] of [[x - 9, 9], [x + w, 9]]) {
+    X.fillStyle = '#f2c230'; X.fillRect(fx, G - 3, fw, 7);
+    X.save(); X.beginPath(); X.rect(fx, G - 3, fw, 7); X.clip(); X.fillStyle = '#111';
+    for (let i = -8; i < fw + 8; i += 6) { X.beginPath(); X.moveTo(fx + i, G + 4); X.lineTo(fx + i + 3, G + 4); X.lineTo(fx + i + 7, G - 3); X.lineTo(fx + i + 4, G - 3); X.fill() }
+    X.restore();
   }
+  X.fillStyle = blink ? '#ffe680' : '#f2c230'; X.fillRect(x - 9, G - 4, w + 18, 1.5);
+  // warning sign standing just before the trap
+  const sx = x - 22;
+  X.fillStyle = '#777'; X.fillRect(sx - 1, G - 24, 2.5, 24);
+  poly('#111', [sx, G - 42, sx - 11, G - 22, sx + 11, G - 22]);
+  poly(blink ? '#ffe066' : '#f2c230', [sx, G - 39, sx - 8.5, G - 24, sx + 8.5, G - 24]);
+  X.fillStyle = '#111'; X.fillRect(sx - 1, G - 35, 2.2, 7); X.fillRect(sx - 1, G - 27, 2.2, 2);
 }
 function drawObstacle(o) {
   if (o.type === 'seat') for (let i = 0; i < o.n; i++) drawSeat(o.x + i * 26, G);
