@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1c1838">
+<title>Les Polichinelles - le jeu</title>
+<style>
+html,body{margin:0;height:100%;background:#1c1838;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas{display:block;width:100vw;height:100vh;height:100dvh}
+#entry{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.55);z-index:5;touch-action:auto}
+#entry.on{display:flex}
+#entry .box{background:#8a1f2a;border:3px solid #e6b830;border-radius:14px;padding:18px 18px 14px;width:min(86vw,340px);text-align:center;color:#fff;font:600 16px Georgia,serif;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#entry h2{margin:0 0 4px;color:#e6b830;font-size:22px}
+#entry p{margin:0 0 12px;font-weight:400}
+#entry input{width:100%;box-sizing:border-box;font:600 20px Georgia,serif;padding:10px 12px;border-radius:8px;border:2px solid #e6b830;background:#fff8ec;color:#2a2230;text-align:center;outline:none}
+#entry .row{display:flex;gap:10px;margin-top:12px}
+#entry button{flex:1;font:700 16px Georgia,serif;padding:11px 8px;border-radius:8px;border:0;cursor:pointer}
+#entry .ok{background:#e6b830;color:#2a2230}#entry .skip{background:#5e0f18;color:#eee}
+#entry .err{color:#ffd2a0;font-size:13px;min-height:16px;margin-top:8px;font-weight:400}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="entry"><form class="box" autocomplete="off">
+  <h2>Bravo !</h2>
+  <p id="entryMsg">Tu entres dans le classement.<br>Ton prénom :</p>
+  <input id="entryName" maxlength="16" enterkeyhint="done" placeholder="Prénom">
+  <div class="row"><button type="button" class="skip" id="entrySkip">Passer</button><button type="submit" class="ok">Enregistrer</button></div>
+  <div class="err" id="entryErr"></div>
+</form></div>
+<script>
+"use strict";
+const c = document.getElementById('c'), X = c.getContext('2d');
+if (!X.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) { this.rect(x, y, w, h) };
+const M = Math, rnd = (a, b) => a + M.random() * (b - a);
+
+// ---------- palette (from the logo) ----------
+const COL = {
+  wall: '#e9dcc6', wallLine: '#dccdb4', mauve: '#b89ab8', apron: '#8a1f2a', apronDark: '#6a1520',
+  floor: '#1c1838', red: '#d8402c', green: '#2e9a4c', blue: '#3070d0', yellow: '#e6b830',
+  mint: '#9ed8c8', sock: '#2a62c8', shoe: '#6b4430', face: '#f1ede6', beard: '#b9b4ad', cane: '#9a9a9a', ink: '#2a2230'
+};
+
+// ---------- layout ----------
+let W, H, T, S, dpr;
+const SCENE = 360, G = 262; // scene band height, ground line inside band
+function resize() {
+  dpr = M.min(window.devicePixelRatio || 1, 2);
+  const iw = innerWidth, ih = innerHeight;
+  W = iw < ih ? 340 : 640;
+  S = iw / W;
+  H = M.max(SCENE, ih / S);
+  T = (H - SCENE) * 0.45;
+  c.width = M.round(iw * dpr); c.height = M.round(ih * dpr);
+}
+addEventListener('resize', resize); resize();
+
+// ---------- audio ----------
+let AC = null;
+function beep(f1, f2, dur, type = 'square', vol = .08) {
+  if (!AC) return;
+  const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+  o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur);
+}
+const sfx = {
+  jump: () => beep(380, 760, .12),
+  jump2: () => beep(560, 1100, .12),
+  star: () => { beep(880, 1320, .08, 'triangle', .1); setTimeout(() => beep(1320, 1760, .1, 'triangle', .1), 70) },
+  hit: () => { beep(300, 60, .45, 'sawtooth', .12) },
+  step: () => beep(120, 80, .03, 'triangle', .025),
+  land: () => beep(160, 70, .06, 'triangle', .06),
+  duck: () => beep(300, 150, .08, 'triangle', .06),
+  creak: () => beep(900, 500, .25, 'sawtooth', .025),
+  crash: () => { beep(200, 40, .35, 'sawtooth', .12); beep(1800, 600, .2, 'square', .03) },
+  twang: () => beep(140, 220, .3, 'triangle', .08)
+};
+
+// ---------- storage ----------
+let best = 0;
+try { best = +localStorage.getItem('polichinelles_best') || 0 } catch (e) {}
+function saveBest() { try { localStorage.setItem('polichinelles_best', best) } catch (e) {} }
+
+// ---------- shared leaderboard (Firebase Firestore, REST, no SDK) ----------
+const FIREBASE = { apiKey: '__API_KEY__', projectId: '__PROJECT_ID__' };
+const LB_SIZE = 10;
+let board = [], boardStatus = FIREBASE.apiKey.startsWith('__') ? 'off' : 'loading', entryOpen = false, lastRank = -1;
+const fsBase = () => `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents`;
+async function loadBoard() {
+  if (boardStatus === 'off') return;
+  try {
+    const r = await fetch(`${fsBase()}:runQuery?key=${FIREBASE.apiKey}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'scores' }], orderBy: [{ field: { fieldPath: 'score' }, direction: 'DESCENDING' }], limit: LB_SIZE } })
+    });
+    if (!r.ok) throw new Error(r.status);
+    const rows = await r.json();
+    board = rows.filter(x => x.document).map(x => ({ name: x.document.fields.name.stringValue, score: +x.document.fields.score.integerValue }));
+    boardStatus = 'ok';
+  } catch (e) { boardStatus = 'err' }
+}
+async function postScore(name, sc) {
+  const r = await fetch(`${fsBase()}/scores?key=${FIREBASE.apiKey}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { name: { stringValue: name }, score: { integerValue: String(sc) } } })
+  });
+  if (!r.ok) throw new Error(r.status);
+}
+function qualifies(sc) { return boardStatus === 'ok' && sc > 0 && (board.length < LB_SIZE || sc > board[board.length - 1].score) }
+function cleanName(n) { return n.replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16) }
+const entryEl = document.getElementById('entry'), entryName = document.getElementById('entryName'), entryErr = document.getElementById('entryErr');
+function openEntry() {
+  entryOpen = true; entryErr.textContent = '';
+  try { entryName.value = localStorage.getItem('polichinelles_name') || '' } catch (e) {}
+  entryEl.classList.add('on'); setTimeout(() => entryName.focus(), 50);
+}
+function closeEntry() { entryOpen = false; entryEl.classList.remove('on'); entryName.blur(); stateT = 46 }
+document.getElementById('entrySkip').onclick = closeEntry;
+entryEl.querySelector('form').onsubmit = async e => {
+  e.preventDefault();
+  const name = cleanName(entryName.value);
+  if (!name) { entryErr.textContent = 'Écris ton prénom'; return }
+  try { localStorage.setItem('polichinelles_name', name) } catch (e) {}
+  entryErr.textContent = 'Enregistrement…';
+  const sc = score;
+  try {
+    await postScore(name, sc);
+    await loadBoard();
+    lastRank = board.findIndex(b => b.name === name && b.score === sc);
+    closeEntry();
+  } catch (err) { entryErr.textContent = 'Pas de connexion, réessaie' }
+};
+for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) entryEl.addEventListener(ev, e => e.stopPropagation());
+loadBoard(); setInterval(() => { if (state !== 'play' && !entryOpen) loadBoard() }, 20000);
+
+function drawBoard(cx, y, n, compact) {
+  if (boardStatus === 'off') return;
+  const w = compact ? 170 : 210;
+  X.fillStyle = 'rgba(20,16,40,.72)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
+  const rows = M.max(1, M.min(n, board.length)), h = 34 + rows * 19;
+  X.beginPath(); X.roundRect(cx - w / 2, y, w, h, 8); X.fill(); X.stroke();
+  txt('MEILLEURS SCORES', cx, y + 16, 13, COL.yellow, 'center', false);
+  if (boardStatus !== 'ok') { txt(boardStatus === 'loading' ? 'Chargement…' : 'Classement indisponible', cx, y + 40, 12, '#ccc', 'center', false); return }
+  if (!board.length) { txt('Sois le premier !', cx, y + 40, 13, '#fff', 'center', false); return }
+  board.slice(0, n).forEach((b, i) => {
+    const yy = y + 40 + i * 19, hl = i === lastRank && state === 'over';
+    const k = hl ? COL.yellow : i === 0 ? '#ffe9a0' : '#fff';
+    txt((i + 1) + '.', cx - w / 2 + 12, yy, 13, k, 'left', false);
+    X.save(); X.beginPath(); X.rect(cx - w / 2 + 34, yy - 10, w - 100, 20); X.clip();
+    txt(b.name, cx - w / 2 + 34, yy, 13, k, 'left', false); X.restore();
+    txt(String(b.score), cx + w / 2 - 12, yy, 13, k, 'right', false);
+  });
+}
+
+// ---------- state ----------
+let state = 'title'; // title | opening | play | over
+let t = 0, stateT = 0, score = 0, stars = 0, speed = 0, dist = 0, nextObs = 0, nextStar = 0, shake = 0, flash = 0;
+let curtain = 1; // 1 closed, 0 open
+const PX = 70;                       // player x
+const BATTEN = 44;                   // lighting bar the spotlights hang from
+const HANG_GAP = 62;                 // free space under a hanging spotlight
+const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
+let obs = [], items = [], parts = [];
+const crowd = [];
+for (let i = 0; i < 60; i++) crowd.push({ x: i * 22 + rnd(-6, 6), r: rnd(9, 13), row: i % 2, b: rnd(0, 6.28) });
+
+function reset() {
+  score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400;
+  obs = []; items = []; parts = []; shake = 0; flash = 0;
+  Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
+  duckPointers.clear(); jumpPointers.clear();
+}
+
+// ---------- input ----------
+// Touch: right part of the screen = jump (tap again in the air = double jump, hold = higher)
+//        left part = duck (hold). Keyboard: Space / Up = jump, Down = duck.
+const duckPointers = new Set(), jumpPointers = new Set();
+let keyDuck = false;
+function wakeAudio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)() } catch (e) {} }
+  if (AC && AC.state === 'suspended') AC.resume();
+}
+function menuPress() {
+  if (state === 'title') { reset(); state = 'opening'; stateT = 0; return true }
+  if (state === 'over') { if (entryOpen) return true; if (stateT > 45) { reset(); state = 'opening'; stateT = 0 } return true }
+  return state !== 'play';
+}
+function jump() {
+  P.hold = true;
+  if (P.duck) return;                       // can't jump while crouched
+  if (P.y === 0 && P.jumps === 0) { P.vy = 10.5; P.jumps = 1; sfx.jump(); dust(PX, 5) }
+  else if (P.jumps === 1) { P.vy = 9.5; P.jumps = 2; sfx.jump2(); burst(PX, -P.y - 40, 8, [COL.yellow, COL.red, '#fff'], 3) }
+}
+function updateDuck() {
+  const d = duckPointers.size > 0 || keyDuck;
+  if (d && !P.duck && P.y === 0) sfx.duck();
+  P.duck = d;
+}
+function isDuckZone(e) { return e.clientX < innerWidth * 0.4 }
+addEventListener('pointerdown', e => {
+  e.preventDefault(); wakeAudio();
+  if (menuPress()) return;
+  if (isDuckZone(e)) { duckPointers.add(e.pointerId); updateDuck() }
+  else { jumpPointers.add(e.pointerId); jump() }
+}, { passive: false });
+function pointerEnd(e) {
+  duckPointers.delete(e.pointerId); jumpPointers.delete(e.pointerId);
+  if (!jumpPointers.size) P.hold = false;
+  updateDuck();
+}
+addEventListener('pointerup', pointerEnd); addEventListener('pointercancel', pointerEnd);
+addEventListener('blur', () => { duckPointers.clear(); jumpPointers.clear(); keyDuck = false; P.hold = false; updateDuck() });
+addEventListener('keydown', e => {
+  const k = e.key;
+  if ([' ', 'ArrowUp', 'ArrowDown', 'Enter', 'w', 's', 'z'].includes(k)) e.preventDefault();
+  if (e.repeat) return;
+  wakeAudio();
+  if ([' ', 'ArrowUp', 'Enter', 'w', 'z'].includes(k)) { if (!menuPress()) jump() }
+  else if (k === 'ArrowDown' || k === 's') { if (state === 'play') { keyDuck = true; updateDuck() } }
+});
+addEventListener('keyup', e => {
+  if (e.key === 'ArrowDown' || e.key === 's') { keyDuck = false; updateDuck() }
+  else P.hold = false;
+});
+addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- particles ----------
+function dust(x, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rnd(-10, 10), y: G - 2, vx: rnd(-2, -.5) - speed * .2, vy: rnd(-1.5, -.3), l: 25, k: '#5a5070', s: rnd(2, 4) }) }
+function burst(x, y, n, cols, sp = 4) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(1, sp); parts.push({ x, y: G + y, vx: M.cos(a) * v, vy: M.sin(a) * v - 1, l: rnd(30, 60), k: cols[i % cols.length], s: rnd(2, 4), g: .12 }) } }
+
+// ---------- drawing helpers ----------
+function poly(k, a) { X.fillStyle = k; X.beginPath(); for (let i = 0; i < a.length; i += 2) X.lineTo(a[i], a[i + 1]); X.closePath(); X.fill() }
+function line(k, w, a, cap = 'round') { X.strokeStyle = k; X.lineWidth = w; X.lineCap = cap; X.lineJoin = 'round'; X.beginPath(); for (let i = 0; i < a.length; i += 2) X.lineTo(a[i], a[i + 1]); X.stroke() }
+function circ(k, x, y, r) { X.fillStyle = k; X.beginPath(); X.arc(x, y, r, 0, 6.29); X.fill() }
+
+// ---------- the polichinelle (redrawn from the logo, skeleton based) ----------
+// pose = { run, air, duck (0..1), sq (landing squash 0..1), dead, idle }
+const THIGH = 17, CALF = 16;
+function ik(hx, hy, fx, fy, out) {
+  // 2-bone IK: returns knee position, knee pushed to the "out" side (-1 left, +1 right)
+  let dx = fx - hx, dy = fy - hy, d = M.hypot(dx, dy);
+  const max = THIGH + CALF - .5; if (d > max) { fx = hx + dx / d * max; fy = hy + dy / d * max; d = max }
+  const base = M.atan2(fy - hy, fx - hx);
+  const al = M.acos(M.max(-1, M.min(1, (THIGH * THIGH + d * d - CALF * CALF) / (2 * THIGH * d))));
+  const ang = base + (out < 0 ? al : -al);
+  return [hx + M.cos(ang) * THIGH, hy + M.sin(ang) * THIGH, fx, fy];
+}
+function dashedTrim(cx, cy, rx, ry, rot, a0, a1, w) {
+  X.beginPath(); X.ellipse(cx, cy, rx, ry, rot, a0, a1);
+  X.lineCap = 'butt'; X.strokeStyle = COL.yellow; X.lineWidth = w; X.stroke();
+  X.setLineDash([2.2, 2.6]); X.strokeStyle = '#1d1d1d'; X.stroke(); X.setLineDash([]);
+  X.strokeStyle = COL.yellow; X.lineWidth = w * .45; X.stroke();
+}
+function drawLeg(hx, hy, fx, fy, out) {
+  const [kx, ky] = ik(hx, hy, fx, fy, out);
+  X.lineCap = 'round'; X.lineJoin = 'round';
+  // thigh (mint tights)
+  X.strokeStyle = COL.mint; X.lineWidth = 10; X.beginPath(); X.moveTo(hx, hy); X.lineTo(kx, ky); X.stroke();
+  // calf: mint top then blue sock
+  const mx = kx + (fx - kx) * .35, my = ky + (fy - ky) * .35;
+  X.lineWidth = 8.5; X.beginPath(); X.moveTo(kx, ky); X.lineTo(mx, my); X.stroke();
+  X.strokeStyle = COL.sock; X.beginPath(); X.moveTo(mx, my); X.lineTo(fx, fy - 2); X.stroke();
+  // shoe, pointing outward
+  X.fillStyle = COL.shoe; X.beginPath(); X.ellipse(fx + out * 3, fy - 2.5, 7.5, 3.6, out * .12, 0, 6.29); X.fill();
+  return [kx, ky];
+}
+function drawPoli(pose) {
+  const { run = 0, air = false, duck = 0, sq = 0, dead = false, idle = false } = pose;
+  X.save();
+  if (dead) X.rotate(-.3);
+  // ---- hips & feet
+  const bob = air || idle ? 0 : M.abs(M.sin(run)) * 2.2;
+  let hipY = -33 + sq * 6 + duck * 19 - bob * (1 - duck);
+  let hipX = duck * 2;
+  let lean = duck * .45;                            // upper body leans forward when crouching
+  if (idle) { hipY += M.sin(run * 2) * 1.5; lean = M.sin(run) * .06 }
+  else if (!air) lean += .08;                        // slight forward lean while running
+  const feet = [];
+  for (const k of [-1, 1]) {
+    let fx, fy;
+    if (air) { fx = k * 9 + (k < 0 ? -2 : 3); fy = hipY + 24 }
+    else if (idle) { fx = k * 14; fy = 0 }
+    else {
+      const ph = run + (k < 0 ? 0 : M.PI);
+      const amp = 7 - duck * 3;
+      fx = k * (12 + duck * 6) + M.cos(ph) * amp;
+      fy = -M.max(0, M.sin(ph)) * (7 - duck * 4);
+    }
+    feet.push([k, fx, fy]);
+  }
+  // ---- cane (behind, held by the left hand)
+  const sh = M.sin(run) * (air || idle ? 0 : .12);
+  X.save(); X.translate(hipX, hipY); X.rotate(lean);
+  X.save(); X.translate(-19, -10); X.rotate(-.42 + sh + (idle ? M.sin(run * 2) * .08 : 0));
+  line(COL.cane, 3.5, [0, -34, 0, 26]); circ('#7d7d7d', 0, -35, 2.6);
+  X.restore();
+  X.restore();
+  // ---- legs (back leg first)
+  drawLeg(hipX - 5, hipY + 2, hipX + feet[0][1], feet[0][2], -1);
+  drawLeg(hipX + 5, hipY + 2, hipX + feet[1][1], feet[1][2], 1);
+  // ---- upper body, rotated around the hips
+  X.save(); X.translate(hipX, hipY); X.rotate(lean);
+  // sleeves + white gloves (hands low, near the knees, like the logo)
+  const hs = air ? -6 : idle ? M.sin(run * 2) * 2 : M.sin(run) * 3;
+  line(COL.red, 6, [-11, -26, -17, -14, -18, -4 + hs]);
+  line(COL.blue, 6, [11, -26, 17, -14, 19, -4 - hs]);
+  circ('#f4f1ea', -18, -2 + hs, 4); circ('#f4f1ea', 19, -2 - hs, 4);
+  // torso: tilted oval with red / green / blue diagonal bands
+  X.save(); X.beginPath(); X.ellipse(0, -18, 17, 21, .3, 0, 6.29); X.clip();
+  X.rotate(.55);
+  X.fillStyle = COL.red; X.fillRect(-60, -80, 49, 120);
+  X.fillStyle = COL.green; X.fillRect(-11, -80, 14, 120);
+  X.fillStyle = COL.blue; X.fillRect(3, -80, 40, 120);
+  X.restore();
+  // yellow trims with black dashes (left edge and upper-right edge)
+  dashedTrim(0, -18, 17, 21, .3, M.PI * .7, M.PI * 1.1, 6);
+  dashedTrim(0, -18, 17, 21, .3, M.PI * 1.68, M.PI * 1.94, 6);
+  X.strokeStyle = 'rgba(0,0,0,.2)'; X.lineWidth = 1.2; X.beginPath(); X.ellipse(0, -18, 17, 21, .3, 0, 6.29); X.stroke();
+  // ---- head group (ruff, face, hat) bows forward when crouching
+  X.save(); X.translate(0, -30); X.rotate(duck * .75); X.translate(0, 30);
+  // white ruff / beard under the face
+  poly('#d9d5ce', [-9, -38, 9, -38, 4, -26, 0, -22, -4, -26]);
+  poly('#f4f1ea', [-7, -38, 7, -38, 2, -29, 0, -27, -2, -29]);
+  // face
+  circ(COL.face, 0, -41, 7.5);
+  if (dead) { for (const ex of [-3, 3]) { line(COL.ink, 1.3, [ex - 1.5, -43.5, ex + 1.5, -40.5]); line(COL.ink, 1.3, [ex + 1.5, -43.5, ex - 1.5, -40.5]) } }
+  else if (duck > .5) { line(COL.ink, 1.3, [-4.3, -42, -1.6, -41.5]); line(COL.ink, 1.3, [1.6, -41.5, 4.3, -42]) }   // eyes squeezed shut
+  else { circ(COL.ink, -2.9, -42.3, 1.15); circ(COL.ink, 2.9, -42.3, 1.15) }
+  circ('#e88', 0, -39.4, 1.3);
+  // red pointed hat: the big "A" (legs of the A rest on the shoulders)
+  const flop = air ? -2 : idle ? 0 : M.sin(run * 2) * .8 * (1 - duck);
+  X.lineCap = 'butt'; X.lineJoin = 'miter';
+  X.strokeStyle = COL.red; X.lineWidth = 8.5; X.beginPath(); X.moveTo(-17, -30); X.lineTo(0, -66 + flop); X.lineTo(17, -30); X.stroke();
+  X.strokeStyle = 'rgba(0,0,0,.18)'; X.lineWidth = 1.2; X.beginPath(); X.moveTo(-12, -30); X.lineTo(0, -57 + flop); X.lineTo(12, -30); X.stroke();
+  circ(COL.ink, 0, -68 + flop, 3.8);
+  X.restore();
+  X.restore();
+  X.restore();
+}
+
+// ---------- obstacles ----------
+// seat  : red velvet theatre seats (1 to 3) -> jump over
+// spot  : spotlight hanging from the lighting bar by a cable.
+//         mode 'fall' : the cable snaps, it crashes to the floor -> jump over
+//         mode 'hang' : it drops but the cable holds it in the air -> duck under
+function spawnObstacle() {
+  const lvl = M.min(1, dist / 8000);
+  const r = M.random();
+  let o;
+  if (r < .5 || dist < 600) {
+    const n = M.random() < .25 + lvl * .4 ? (M.random() < .35 + lvl * .3 ? 3 : 2) : 1;
+    o = { type: 'seat', x: W + 20, n, w: n * 26, h: 40 };
+  } else {
+    const hang = M.random() < .5;
+    o = { type: 'spot', x: W + 20, w: 28, h: 24, mode: hang ? 'hang' : 'fall', bot: BATTEN + 40, vy: 0, dropped: false, landed: false, sw: rnd(0, 6.28), cut: 0 };
+  }
+  obs.push(o);
+  // gap measured in frames so it stays fair at every speed
+  const frames = M.max(48, 85 - dist / 300);
+  nextObs = speed * rnd(frames, frames + 55) + (o.n === 3 ? 40 : 0);
+}
+function updateObstacle(o) {
+  o.x -= speed;
+  if (o.type !== 'spot') return;
+  o.sw += .08;
+  const target = o.mode === 'hang' ? G - HANG_GAP : G;
+  // starts to drop ~ 1 s before reaching the player, so it can be read and reacted to
+  if (!o.dropped && o.x - PX < speed * 62) { o.dropped = true; sfx.creak(); if (o.mode === 'fall') o.cut = 1 }
+  if (o.dropped && !o.landed) {
+    o.vy += .55; o.bot += o.vy;
+    if (o.bot >= target) {
+      o.bot = target; o.landed = true;
+      if (o.mode === 'fall') { shake = 5; sfx.crash(); burst(o.x + 14, 0, 18, ['#ffe680', '#fff', '#888'], 4) }
+      else { o.vy = -2.5; o.bounce = 1; sfx.twang() }
+    }
+  } else if (o.landed && o.mode === 'hang' && o.bounce) {
+    // cable spring: small bounce then rest
+    o.vy += .55 + (target - o.bot) * .02; o.bot += o.vy; o.vy *= .9;
+    if (o.bot > target) { o.bot = target; o.vy *= -.5 }
+    if (M.abs(o.vy) < .05 && target - o.bot < .5) o.bounce = 0;
+  }
+}
+function drawSeat(x, y) {
+  // back
+  X.fillStyle = '#9a1f2c'; X.strokeStyle = '#1a1020'; X.lineWidth = 2.5;
+  X.beginPath(); X.roundRect(x + 3, y - 40, 20, 26, 6); X.stroke(); X.fill();
+  X.fillStyle = '#e6b830'; X.fillRect(x + 5, y - 41, 16, 2.5);
+  X.fillStyle = '#b8323f'; X.beginPath(); X.roundRect(x + 6, y - 37, 14, 20, 4); X.fill();
+  // seat cushion
+  X.fillStyle = '#1a1020'; X.fillRect(x + 1, y - 18, 24, 9);
+  X.fillStyle = '#c23544'; X.fillRect(x + 2, y - 17, 22, 7);
+  // legs + armrests (gold)
+  X.fillStyle = '#c99a2e'; X.fillRect(x, y - 20, 3, 20); X.fillRect(x + 23, y - 20, 3, 20);
+  X.fillRect(x - 1, y - 21, 5, 3); X.fillRect(x + 22, y - 21, 5, 3);
+  X.fillStyle = '#2a2230'; X.fillRect(x + 6, y - 10, 14, 10);
+}
+function drawSpot(o) {
+  const x = o.x, bx = x + 14, top = o.bot - o.h;
+  const swing = o.dropped ? 0 : M.sin(o.sw) * 1.5;
+  // cable
+  X.strokeStyle = '#222'; X.lineWidth = 1.6; X.beginPath();
+  if (o.mode === 'hang' || !o.dropped) { X.moveTo(bx, BATTEN); X.lineTo(bx + swing, top) }
+  else {
+    // snapped cable: a short end left on the bar, the rest falls with the lamp
+    X.moveTo(bx, BATTEN); X.lineTo(bx + 3, BATTEN + 18);
+    X.moveTo(bx, top); X.quadraticCurveTo(bx - 8, top - 14, bx - 3, top - 26);
+  }
+  X.stroke();
+  X.save(); X.translate(bx + swing, top + o.h / 2);
+  if (o.mode === 'fall' && o.landed) X.rotate(-.5);
+  // yoke
+  X.strokeStyle = '#3a3a44'; X.lineWidth = 3; X.beginPath(); X.moveTo(-12, -2); X.lineTo(-12, -12); X.lineTo(12, -12); X.lineTo(12, -2); X.stroke();
+  // body
+  X.fillStyle = '#2b2b33'; X.beginPath(); X.roundRect(-11, -9, 22, 18, 3); X.fill();
+  X.fillStyle = '#44444f'; X.fillRect(-11, -9, 22, 4);
+  // lens
+  const lit = !(o.mode === 'fall' && o.landed);
+  X.fillStyle = lit ? '#fff3b0' : '#5a5a40'; X.beginPath(); X.ellipse(0, 9, 9, 3.5, 0, 0, 6.29); X.fill();
+  X.restore();
+  // light cone on hanging spotlights
+  if (lit) {
+    X.save(); X.globalCompositeOperation = 'lighter';
+    const gr = X.createLinearGradient(0, o.bot, 0, G);
+    gr.addColorStop(0, 'rgba(255,240,170,.35)'); gr.addColorStop(1, 'rgba(255,240,170,0)');
+    X.fillStyle = gr; X.beginPath(); X.moveTo(bx - 8, o.bot); X.lineTo(bx + 8, o.bot); X.lineTo(bx + 26, G); X.lineTo(bx - 26, G); X.fill();
+    X.restore();
+  }
+  // sparks where the cable broke
+  if (o.cut && o.dropped && !o.landed && t % 2 === 0) parts.push({ x: bx, y: BATTEN + 18, vx: rnd(-1.5, 1.5), vy: rnd(-1, 1), l: 18, k: '#ffd060', s: 2, g: .15 });
+}
+function drawObstacle(o) {
+  if (o.type === 'seat') for (let i = 0; i < o.n; i++) drawSeat(o.x + i * 26, G);
+  else drawSpot(o);
+}
+function obstacleBox(o) {
+  if (o.type === 'seat') return [o.x + 2, G - 38, o.w - 4, 38];
+  if (o.mode === 'fall' && o.landed) return [o.x + 2, G - 18, o.w - 4, 18];
+  return [o.x + 3, o.bot - o.h, o.w - 6, o.h];   // the lamp only (cable is harmless)
+}
+
+// lighting bar
+function drawBatten() {
+  X.fillStyle = '#3a3a44'; X.fillRect(0, BATTEN - 3, W, 6);
+  X.fillStyle = '#55555f'; X.fillRect(0, BATTEN - 3, W, 2);
+  line('#3a3a44', 2, [W * .25, -T, W * .25, BATTEN]); line('#3a3a44', 2, [W * .75, -T, W * .75, BATTEN]);
+}
+
+// ---------- background ----------
+function drawStage() {
+  // wall + panels (slow parallax)
+  X.fillStyle = COL.wall; X.fillRect(0, -T, W, G + T);
+  X.strokeStyle = COL.wallLine; X.lineWidth = 2;
+  const off = -(dist * .15) % 80;
+  for (let x = off; x < W + 80; x += 80) { X.beginPath(); X.moveTo(x, -T); X.lineTo(x, G - 112); X.stroke() }
+  // hanging sign: the logo arc
+  const cx = W / 2, cy = 152;
+  line(COL.cane, 2, [cx, -T, cx, cy - 92]);
+  X.strokeStyle = '#cfc8bf'; X.lineWidth = 9; X.beginPath(); X.arc(cx, cy, 80, M.PI * 1.13, M.PI * 1.87); X.stroke();
+  X.strokeStyle = '#a9a39b'; X.lineWidth = 1.5; X.beginPath(); X.arc(cx, cy, 84.5, M.PI * 1.13, M.PI * 1.87); X.stroke();
+  X.beginPath(); X.arc(cx, cy, 75.5, M.PI * 1.13, M.PI * 1.87); X.stroke();
+  X.font = 'bold 15px Georgia,serif'; X.textAlign = 'center'; X.textBaseline = 'middle';
+  const txt = 'LES POLICHINELLES', n = txt.length;
+  for (let i = 0; i < n; i++) {
+    X.save(); X.translate(cx, cy); X.rotate(-1.12 + i * (2.24 / (n - 1))); X.translate(0, -91);
+    X.lineWidth = 3; X.strokeStyle = '#4a4440'; X.strokeText(txt[i], 0, 0); X.fillStyle = '#fff'; X.fillText(txt[i], 0, 0); X.restore();
+  }
+  // spotlights
+  X.save(); X.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 2; i++) {
+    const sx = i ? W * .85 : W * .15, a = M.sin(t * .012 + i * 2) * .35;
+    X.save(); X.translate(sx, -T); X.rotate(a);
+    const len = G + T + 20, gr = X.createLinearGradient(0, 0, 0, len);
+    gr.addColorStop(0, 'rgba(255,240,180,.28)'); gr.addColorStop(1, 'rgba(255,240,180,0)');
+    X.fillStyle = gr; X.beginPath(); X.moveTo(-6, 0); X.lineTo(6, 0); X.lineTo(70, len); X.lineTo(-70, len); X.fill(); X.restore();
+  }
+  X.restore();
+  // mauve band + red apron
+  X.fillStyle = COL.mauve; X.fillRect(0, G - 112, W, 16);
+  X.fillStyle = 'rgba(255,255,255,.18)'; X.fillRect(0, G - 112, W, 3);
+  X.fillStyle = COL.apron; X.fillRect(0, G - 96, W, 96);
+  // apron fringe / pleats (move with the floor)
+  X.fillStyle = COL.apronDark; const po = -(dist * .5) % 24;
+  for (let x = po; x < W + 24; x += 24) X.fillRect(x, G - 96, 5, 96);
+  X.fillStyle = '#5a5070'; X.fillRect(0, G - 98, W, 3);
+  // floor line
+  X.fillStyle = COL.floor; X.fillRect(0, G, W, H);
+  X.fillStyle = '#2c2650'; X.fillRect(0, G, W, 3);
+  // floor boards
+  X.strokeStyle = '#26214a'; X.lineWidth = 1; const fo = -dist % 60;
+  for (let x = fo; x < W + 60; x += 60) { X.beginPath(); X.moveTo(x, G + 3); X.lineTo(x - 30, G + 40); X.stroke() }
+}
+function drawCrowd() {
+  const base = G + 46;
+  for (const row of [1, 0]) {
+    const o = -(dist * (row ? .9 : 1.25)) % (crowd.length * 22);
+    for (const p of crowd) {
+      if (p.row !== row) continue;
+      let x = p.x + o; if (x < -30) x += crowd.length * 22;
+      if (x > W + 30) continue;
+      const y = base + row * -14 + (state === 'over' ? 0 : M.abs(M.sin(t * .08 + p.b)) * -2);
+      X.fillStyle = row ? '#120f26' : '#0b0918';
+      X.beginPath(); X.arc(x, y + 14, p.r + 6, M.PI, 0); X.fill();
+      circ(X.fillStyle, x, y, p.r);
+    }
+  }
+  X.fillStyle = '#0b0918'; X.fillRect(0, base + 14, W, H);
+  // extra rows further down (portrait screens)
+  for (let r = 1; base + 14 + r * 30 < H - T + 20; r++) {
+    const yy = base + 8 + r * 30, o2 = -(dist * (1.25 + r * .2)) % 44;
+    X.fillStyle = r % 2 ? '#070612' : '#0b0918';
+    for (let x = o2 + (r % 2) * 22 - 22; x < W + 30; x += 44) { circ(X.fillStyle, x, yy, 14); X.beginPath(); X.arc(x, yy + 18, 22, M.PI, 0); X.fill() }
+  }
+}
+function drawCurtains(k) {
+  if (k <= 0.001) return;
+  const half = W / 2 * k + 4;
+  for (const side of [0, 1]) {
+    X.save();
+    if (side) { X.translate(W, 0); X.scale(-1, 1) }
+    const gr = X.createLinearGradient(0, 0, half, 0);
+    gr.addColorStop(0, '#5e0f18'); gr.addColorStop(1, '#8a1f2a');
+    X.fillStyle = gr; X.fillRect(0, -T, half, H);
+    X.fillStyle = 'rgba(0,0,0,.22)';
+    for (let x = 10; x < half - 6; x += 22) X.fillRect(x, -T, 7, H);
+    X.fillStyle = COL.yellow; X.fillRect(half - 5, -T, 5, H);
+    X.restore();
+  }
+}
+function drawValance() {
+  const v = -T + 14;
+  X.fillStyle = '#7a1822'; X.fillRect(0, -T, W, 16);
+  for (let x = 0; x < W; x += 40) { X.beginPath(); X.arc(x + 20, v, 20, 0, M.PI); X.fill() }
+  X.fillStyle = COL.yellow; X.fillRect(0, v - 2, W, 3);
+  for (let x = 0; x < W; x += 40) circ(COL.yellow, x + 20, v + 20, 3);
+}
+
+// ---------- touch buttons ----------
+function drawControls() {
+  const portrait = T > 80;
+  const y = portrait ? H - T - 70 : SCENE - 46, r = portrait ? 34 : 24;
+  const lx = W * .2, rx = W * .7;
+  X.save();
+  X.globalAlpha = P.duck ? .55 : .28; circ('#fff', lx, y, r);
+  X.globalAlpha = P.hold ? .55 : .28; circ('#fff', rx, y, r);
+  X.globalAlpha = .9;
+  // down arrow / up arrow
+  poly(COL.ink, [lx - r * .4, y - r * .15, lx + r * .4, y - r * .15, lx, y + r * .35]);
+  poly(COL.ink, [rx - r * .4, y + r * .15, rx + r * .4, y + r * .15, rx, y - r * .35]);
+  X.restore();
+  if (portrait) { txt('SE BAISSER', lx, y + r + 16, 12, '#ccc', 'center', false); txt('SAUTER', rx, y + r + 16, 12, '#ccc', 'center', false) }
+}
+
+// ---------- text ----------
+function txt(s, x, y, size, col = '#fff', align = 'center', outline = true) {
+  X.font = `bold ${size}px Georgia,serif`; X.textAlign = align; X.textBaseline = 'middle';
+  if (outline) { X.lineWidth = M.max(3, size / 5); X.strokeStyle = COL.ink; X.lineJoin = 'round'; X.strokeText(s, x, y) }
+  X.fillStyle = col; X.fillText(s, x, y);
+}
+function star(x, y, r, rot = 0, k = COL.yellow) {
+  X.save(); X.translate(x, y); X.rotate(rot); X.fillStyle = k; X.beginPath();
+  for (let i = 0; i < 10; i++) { const a = i * M.PI / 5 - M.PI / 2, rr = i % 2 ? r * .45 : r; X.lineTo(M.cos(a) * rr, M.sin(a) * rr) }
+  X.closePath(); X.fill(); X.strokeStyle = '#a07818'; X.lineWidth = 1.2; X.stroke(); X.restore();
+}
+
+// ---------- update ----------
+function playerBox() {
+  // hitbox follows the drawing, hat included (a bit forgiving on the edges)
+  if (P.duckK > .6 && P.y === 0) return [PX - 12, G - 54, 56, 52];   // crouched: low and long
+  return [PX - 11, G - P.y - 96, 22, 94];
+}
+function update() {
+  t++; stateT++;
+  if (state === 'opening') { curtain = M.max(0, 1 - stateT / 45); if (curtain === 0) { state = 'play'; stateT = 0 } }
+  if (state === 'title') { curtain = 1; P.run += .06 }
+  if (state === 'play') {
+    speed = M.min(12.5, 5 + dist / 1500);
+    dist += speed; score = M.floor(dist / 10) + stars * 25;
+    // physics
+    const wasAir = P.y > 0;
+    let g = (P.hold && P.vy > 0) ? .42 : .8;
+    if (P.duck && P.y > 0) g = 1.8;           // duck in the air = fast fall
+    P.vy -= g;
+    P.y = M.max(0, P.y + P.vy);
+    if (P.y === 0) { if (wasAir) { P.squash = 1; dust(PX, 6); sfx.land() } P.vy = 0; P.jumps = 0 }
+    P.squash *= .8;
+    P.duckK += ((P.duck && P.y === 0 ? 1 : 0) - P.duckK) * .4;
+    P.run += speed * .045;
+    if (P.y === 0 && M.floor(P.run / M.PI) !== P.lastStep) { P.lastStep = M.floor(P.run / M.PI); sfx.step() }
+    // spawn
+    if ((nextObs -= speed) <= 0) spawnObstacle();
+    if ((nextStar -= speed) <= 0) {
+      // keep stars away from obstacles so they are always reachable
+      const last = obs[obs.length - 1];
+      if (!last || last.x < W - 90) { items.push({ x: W + 20, y: rnd(70, 140), r: 0 }); nextStar = rnd(400, 800) } else nextStar = 30;
+    }
+    for (const o of obs) updateObstacle(o);
+    obs = obs.filter(o => o.x > -90);
+    for (const s of items) { s.x -= speed; s.r += .08 }
+    // collisions
+    const [px, py, pw, ph] = playerBox();
+    for (const o of obs) {
+      const [ox, oy, ow, oh] = obstacleBox(o);
+      if (px < ox + ow && px + pw > ox && py < oy + oh && py + ph > oy) { gameOver(); break }
+    }
+    items = items.filter(s => {
+      if (s.x < -20) return false;
+      const sx = s.x - 11, sy = G - s.y - 11;
+      if (px - 4 < sx + 22 && px + pw + 4 > sx && py < sy + 22 && py + ph > sy) {
+        stars++; sfx.star(); burst(s.x, -s.y, 14, [COL.yellow, '#fff', COL.red], 4); flash = 6; return false
+      }
+      return true;
+    });
+  }
+  for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g || .05; p.l-- }
+  parts = parts.filter(p => p.l > 0);
+  shake *= .85; if (flash > 0) flash--;
+}
+function gameOver() {
+  state = 'over'; stateT = 0; shake = 10; sfx.hit();
+  P.duck = false; P.duckK = 0; P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false;
+  burst(PX, -P.y - 50, 30, [COL.red, COL.green, COL.blue, COL.yellow], 6);
+  if (score > best) { best = score; saveBest() }
+  lastRank = -1;
+  if (qualifies(score)) setTimeout(() => { if (state === 'over') openEntry() }, 700);
+}
+
+// ---------- render ----------
+function render() {
+  X.setTransform(S * dpr, 0, 0, S * dpr, 0, T * S * dpr);
+  if (shake > .5) X.translate(rnd(-shake, shake), rnd(-shake, shake));
+  drawStage();
+  for (const s of items) {
+    X.save(); X.globalAlpha = .35; circ('#fff6c0', s.x, G - s.y, 14 + M.sin(t * .2) * 2); X.restore();
+    star(s.x, G - s.y, 11, s.r);
+  }
+  drawBatten();
+  for (const o of obs) drawObstacle(o);
+  // player shadow
+  X.fillStyle = 'rgba(0,0,0,.3)'; X.beginPath(); X.ellipse(PX, G - 1, M.max(6, 18 - P.y / 8), 3, 0, 0, 6.29); X.fill();
+  X.save(); X.translate(PX, G - P.y); drawPoli({ run: P.run, air: P.y > 0, sq: P.squash, dead: state === 'over', duck: P.duckK }); X.restore();
+  for (const p of parts) { X.globalAlpha = M.min(1, p.l / 20); X.fillStyle = p.k; X.fillRect(p.x, p.y, p.s, p.s) }
+  X.globalAlpha = 1;
+  drawCrowd();
+  drawValance();
+  drawCurtains(curtain);
+  if (flash) { X.fillStyle = `rgba(255,240,180,${flash / 20})`; X.fillRect(0, -T, W, H) }
+
+  // HUD
+  if (state === 'play' || state === 'over') {
+    const hy = T > 60 ? -T + 64 : 46;
+    txt(String(score).padStart(5, '0'), W - 12, hy, 20, '#fff', 'right');
+    star(W - 22, hy + 26, 8); txt('× ' + stars, W - 34, hy + 27, 14, '#fff', 'right');
+    txt('Record ' + best, 12, hy, 14, '#fff', 'left');
+  }
+  if (state === 'play' || state === 'opening') drawControls();
+  if (state === 'title') {
+    const ty = M.max(-T + 70, 46 - T * .6);
+    X.save(); X.translate(W / 2, G - 14); X.scale(1.3, 1.3); drawPoli({ run: P.run, idle: true }); X.restore();
+    txt('LES POLICHINELLES', W / 2, ty, W < 400 ? 26 : 34, COL.yellow);
+    txt('le jeu', W / 2, ty + 32, 18, '#fff');
+    if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
+    txt('Droite : sauter (2× = double saut)', W / 2, G + 62, 13, '#ddd', 'center', false);
+    txt('Gauche : se baisser (garder appuyé)', W / 2, G + 80, 13, '#ddd', 'center', false);
+    if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 104, 14, COL.yellow); drawBoard(W / 2, G + 124, 10, false) }
+    else { drawBoard(W - 100, 150, 5, true); if (best) txt('Ton record : ' + best, 92, 80, 14, COL.yellow) }
+  }
+  if (state === 'over') {
+    const k = M.min(1, stateT / 20);
+    X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
+    const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
+    txt('RIDEAU !', ox, oy, 40, COL.red);
+    txt('Score : ' + score, ox, oy + 42, 22, '#fff');
+    if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
+    else txt('Ton record : ' + best, ox, oy + 70, 16, '#ddd');
+    if (portrait) drawBoard(W / 2, G + 50, 7, false); else drawBoard(W - 110, 70, 7, false);
+    if (stateT > 40 && !entryOpen && M.floor(t / 30) % 2 === 0) txt('Touche pour rejouer', ox, portrait ? G + 250 : G + 34, 17, '#fff');
+  }
+}
+
+// ---------- loop (fixed 60 Hz step) ----------
+let last = performance.now(), acc = 0;
+function loop(now) {
+  acc += M.min(100, now - last); last = now;
+  while (acc >= 1000 / 60) { update(); acc -= 1000 / 60 }
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+document.addEventListener('visibilitychange', () => { last = performance.now() });
+</script>
+</body>
+</html>
