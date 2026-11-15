@@ -191,7 +191,7 @@ function resize() {
   const iw = innerWidth, ih = innerHeight;
   LAND = iw >= ih;
   if (!LAND) {                    // portrait: fit the width, extra room above and below
-    W = 300; S = iw / W; H = M.max(SCENE, ih / S); T = (H - SCENE) * 0.45;
+    W = 300; S = iw / W; H = M.max(SCENE, ih / S); T = (H - SCENE) * 0.62;
   } else {                        // landscape: fit the height so the floor and buttons are always visible
     S = M.min(ih / 322, iw / 560); W = iw / S; H = ih / S; T = 0;
   }
@@ -642,24 +642,33 @@ const PX = 70;                       // player x
 const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
-// ---- Le Tir Forain : shooting gallery against the clock ----
-const RAILS = [128, 192, 252], TIR_TIME = 40 * 60;
-function awnY() { return -T + (LAND ? 58 : 98) }
-function setRails() { const top = awnY() + (LAND ? 108 : 165), bot = H - T - (LAND ? 22 : 150); RAILS[0] = top; RAILS[1] = (top + bot) / 2; RAILS[2] = bot }
-let targets = [], shots = [], timeLeft = 0, hits = 0, misses = 0, rowT = [0, 0, 0], bestCombo = 0;
+// ---- Le Tir Forain, joué sur la scène du théâtre ----
+const TIR_TIME = 40 * 60, TRACK = 206;
+let targets = [], shots = [], timeLeft = 0, hits = 0, misses = 0, rowT = [0, 0, 0], popT = 0, bestCombo = 0, fspots = [{ a: 0 }, { a: 0 }];
 function randomLookT() {
   const eq = {};
   for (const c of CATS) { const its = WARD[c].items; eq[c] = c === 'trail' ? its[0].id : its[M.random() * its.length | 0].id }
   return buildLook(eq);
 }
+function trapX(i) { return W * (i ? .7 : .3) }
 function spawnTarget(row) {
   const lvl = M.min(1, playT / 3600), r = M.random(), dir = row === 1 ? -1 : 1;
-  let kind = row === 0 ? 'cible' : 'poli';
-  if (r < .05) kind = 'gold'; else if (r < .12) kind = 'sablier'; else if (playT > 360 && r < .24 + lvl * .06) kind = 'boss'; else if (row === 2 && r < .45) kind = 'canard';
-  const sp = [1.7, 1.25, .95][row] * (1 + lvl * .9) * rnd(.9, 1.15);
-  targets.push({ row, x: dir > 0 ? -30 : W + 30, vx: sp * dir, kind, k: 1, hit: false, look: kind === 'poli' ? randomLookT() : null, ph: rnd(0, 6) });
+  let kind = row === 0 ? (r < .5 ? 'cible' : 'masque') : row === 1 ? (r < .65 ? 'poli' : 'cible') : 'walk';
+  if (playT > 360 && r > .86 - lvl * .06 && row > 0) kind = 'boss';
+  const sp = [1.6, 1.2, .9][row] * (1 + lvl * .9) * rnd(.9, 1.15);
+  targets.push({ row, x: dir > 0 ? -30 : W + 30, vx: sp * dir, kind, k: 1, hit: false, look: kind === 'poli' || kind === 'walk' ? randomLookT() : null, ph: rnd(0, 6), sw: 0 });
 }
-function tgtPos(o) { const y = RAILS[o.row]; return o.kind === 'poli' || o.kind === 'boss' ? [o.x, y - 32, 21] : o.kind === 'canard' ? [o.x, y - 16 + M.sin(t * .1 + o.ph) * 2, 18] : [o.x, y - 20, o.row === 0 ? 14 : 17] }
+function spawnPop() {
+  const i = M.random() < .5 ? 0 : 1;
+  if (targets.some(o => o.row === 3 && o.trap === i)) return;
+  targets.push({ row: 3, trap: i, x: trapX(i), vx: 0, kind: M.random() < .45 ? 'gold' : 'sablier', k: 0, rise: 1, stay: 100, hit: false, ph: 0 });
+}
+function tgtPos(o) {
+  if (o.row === 0) return [o.x + M.sin(o.sw) * 3, BATTEN + 52, 16];
+  if (o.row === 1) return o.kind === 'cible' ? [o.x, TRACK - 24, 17] : [o.x, TRACK - 32, 20];
+  if (o.row === 2) return [o.x, G - 36, 20];
+  return [o.x, G + 6 - 40 * o.k, 17];
+}
 
 let obs = [], items = [], parts = [];
 const crowd = [];
@@ -670,7 +679,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  targets = []; shots = []; timeLeft = TIR_TIME; hits = 0; misses = 0; rowT = [10, 40, 70]; bestCombo = 0;
+  targets = []; shots = []; timeLeft = TIR_TIME; hits = 0; misses = 0; rowT = [10, 40, 70]; popT = 200; bestCombo = 0;
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
 }
@@ -1512,7 +1521,6 @@ function update() {
   t++; stateT++;
   if (state === 'opening') { curtain = M.max(0, 1 - stateT / 45); if (curtain === 0) { state = 'play'; stateT = 0 } }
   if (state === 'title') { curtain = 1; P.run += .06 }
-  setRails();
   if (state === 'play') {
     playT++;
     if (ambK < 1) { ambK = M.min(1, ambK + 1 / 120); mixAmb() }
@@ -1521,8 +1529,13 @@ function update() {
     timeLeft--;
     if (timeLeft <= 300 && timeLeft > 0 && timeLeft % 60 === 0) sfx.tick();
     for (let r = 0; r < 3; r++) if (--rowT[r] <= 0) { spawnTarget(r); rowT[r] = M.round([70, 85, 100][r] * (1 - lvl * .4) * rnd(.6, 1.3)) }
-    for (const o of targets) { o.x += o.vx; if (o.hit) o.k -= .08 }
-    targets = targets.filter(o => o.x > -50 && o.x < W + 50 && o.k > 0);
+    if (--popT <= 0) { spawnPop(); popT = M.round(rnd(170, 280)) }
+    for (const o of targets) {
+      o.x += o.vx; o.sw += .05;
+      if (o.row === 3 && !o.hit) { if (o.rise) { o.k = M.min(1, o.k + .08); if (o.k === 1 && --o.stay <= 0) o.rise = 0 } else o.k -= .08 }
+      else if (o.hit) o.k -= o.row === 2 ? .04 : .08;
+    }
+    targets = targets.filter(o => o.x > -50 && o.x < W + 50 && (o.row === 3 ? o.k > 0 || o.rise : o.k > 0));
     for (const s of shots) s.l--;
     shots = shots.filter(s => s.l > 0);
     score = hits * 10 + starPts;
@@ -1572,7 +1585,7 @@ function render() {
     if (s.type === 'star') { X.save(); X.globalAlpha = .35; circ('#fff6c0', s.x, G - s.y, 14 + M.sin(t * .2) * 2); X.restore(); star(s.x, G - s.y, 11, s.r) }
     else drawPowerIcon(s.type, s.x, G - s.y + M.sin(t * .1 + s.x) * 3, 1);
   }
-  
+  drawBatten();
   drawGame();
   if (power && power.type === 'clock') { X.fillStyle = 'rgba(90,140,255,.10)'; X.fillRect(0, -T, W, H) }
   for (const p of parts) drawPart(p);
@@ -1619,9 +1632,9 @@ function render() {
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('Le Tir Forain', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Touche les cibles qui défilent avant la fin du temps', mx, 166, 13, '#ddd', 'center', false);
+      txt('Touche les cibles avant le baisser de rideau', mx, 166, 13, '#ddd', 'center', false);
       txt('⏳ Sablier = du temps en plus · pas le directeur !', mx, 184, 13, '#ddd', 'center', false);
-      txt('Enchaîne sans rater pour multiplier les points', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('Les trappes cachent des cibles dorées ★', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
@@ -1630,9 +1643,9 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 330 ? 22 : W < 400 ? 26 : 34, COL.yellow);
     txt('Le Tir Forain', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Touche les cibles qui défilent avant la fin du temps', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Touche les cibles avant le baisser de rideau', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     txt('⏳ Sablier = du temps en plus · pas le directeur !', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    if (T > 80) txt('Enchaîne sans rater pour multiplier les points', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
+    if (T > 80) txt('Les trappes cachent des cibles dorées ★', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -1659,20 +1672,20 @@ function onTap(x, y) {
   if (state !== 'play') return;
   sfx.pop(); shots.push({ x, y, l: 14 });
   let best = null, bd = 1e9;
-  for (const o of targets) { if (o.hit) continue; const [cx, cy, r] = tgtPos(o), d = M.hypot(x - cx, y - cy); if (d < r + 8 && d < bd) { bd = d; best = o } }
+  for (const o of targets) { if (o.hit || (o.row === 3 && o.k < .4)) continue; const [cx, cy, r] = tgtPos(o), d = M.hypot(x - cx, y - cy); if (d < r + 8 && d < bd) { bd = d; best = o } }
   if (!best) { combo = 0; misses++; return }
   const [cx, cy] = tgtPos(best);
-  best.hit = true;
-  if (best.kind === 'boss') { timeLeft = M.max(1, timeLeft - 300); combo = 0; shake = 8; flash = 0; sfx.boss(); buzz([80, 40, 80]); popup(cx, cy - 26, 'Le directeur ! −5 s', '#ff8080'); return }
+  best.hit = true; if (best.row === 3) best.rise = 0;
+  if (best.kind === 'boss') { timeLeft = M.max(1, timeLeft - 300); combo = 0; shake = 8; sfx.boss(); buzz([80, 40, 80]); popup(cx, cy - 30, 'Le directeur ! −5 s', '#ff8080'); return }
   if (best.kind === 'sablier') { timeLeft += 240; sfx.clock(); buzz(20); popup(cx, cy - 26, '+4 s', '#7dff8a'); burst(cx, cy - G, 12, ['#9fe0ff', '#fff'], 3); return }
   hits++; combo = M.min(5, combo + 1); bestCombo = M.max(bestCombo, combo);
-  const base = best.kind === 'gold' ? 50 : [30, 20, 10][best.row] + (best.kind === 'canard' ? 5 : 0), pts = best.kind === 'gold' ? 50 : base * combo;
+  const base = best.kind === 'gold' ? 50 : [30, 20, 10][best.row], pts = best.kind === 'gold' ? 50 : base * combo;
   starPts += pts - 10;
-  if (best.kind === 'gold') { stars++; sfx.star(); flash = 6; burst(cx, cy - G, 20, [COL.yellow, '#fff', '#ffe680'], 5) }
-  else { sfx.ding(); burst(cx, cy - G, 10, ['#fff', COL.yellow, COL.red], 4) }
+  if (best.kind === 'gold') { stars++; sfx.star(); flash = 6; burst(cx, cy - G, 22, [COL.yellow, '#fff', '#ffe680'], 5) }
+  else { sfx.ding(); burst(cx, cy - G, 12, [COL.red, COL.green, COL.blue, COL.yellow], 4) }
   if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() }
   if (combo >= 3) buzz(12);
-  popup(cx, cy - 26, best.kind === 'gold' ? '+50 ★' : combo > 1 ? `+${pts} ×${combo}` : `+${pts}`, best.kind === 'gold' ? '#ffe066' : '#fff');
+  popup(cx, cy - 28, best.kind === 'gold' ? '+50 ★' : combo > 1 ? `+${pts} ×${combo}` : `+${pts}`, best.kind === 'gold' ? '#ffe066' : '#fff');
 }
 function drawDirector(dead) {
   // the grumpy theatre director: black suit, top hat, big grey moustache
@@ -1691,68 +1704,87 @@ function drawDirector(dead) {
   X.fillStyle = '#8a1f2a'; X.fillRect(-9, -93, 18, 4);
 }
 
-function drawStage() {
-  // the booth: dark back wall, wooden frame, striped awning, bulbs
-  X.fillStyle = '#2a0f22'; X.fillRect(0, -T, W, H);
-  X.fillStyle = 'rgba(255,255,255,.03)'; for (let x = 0; x < W; x += 24) X.fillRect(x, -T, 2, H);
-  const g = X.createRadialGradient(W / 2, 170, 20, W / 2, 170, W * .8); g.addColorStop(0, 'rgba(255,220,150,.18)'); g.addColorStop(1, 'rgba(0,0,0,0)'); X.fillStyle = g; X.fillRect(0, -T, W, H);
-  // rails
-  for (let r = 0; r < 3; r++) {
-    const y = RAILS[r];
-    X.fillStyle = '#5a3a1c'; X.fillRect(0, y, W, 10); X.fillStyle = COL.yellow; X.fillRect(0, y, W, 3);
-  }
-  // awning
-  setRails(); const ay = awnY();
-  X.fillStyle = '#7a1822'; X.fillRect(0, -T, W, ay + T + 22);
-  for (let i = 0, n = M.ceil(W / 30); i < n; i++) { X.fillStyle = i % 2 ? '#f4f0e8' : '#d8402c'; X.fillRect(i * 30, ay + 20, 30, 34); X.beginPath(); X.arc(i * 30 + 15, ay + 54, 15, 0, M.PI); X.fill() }
-  X.fillStyle = COL.yellow; X.fillRect(0, ay + 16, W, 5);
-  
-  for (let i = 0; i < 12; i++) circ((M.floor(t / 12) + i) % 2 ? '#fff3b0' : '#e6b830', 12 + i * (W - 24) / 11, ay + 18, 3.5);
-  // side posts
-  X.fillStyle = '#8a1f2a'; X.fillRect(0, ay + 60, 10, H); X.fillRect(W - 10, ay + 60, 10, H);
+function drawCrowdBack() {}
+function drawTrapdoor(i) {
+  const x = trapX(i) - 22, w = 44, open = targets.some(o => o.row === 3 && o.trap === i);
+  X.fillStyle = open ? '#050309' : '#3a2a50'; X.fillRect(x, G, w, 10);
+  if (open) { X.save(); X.globalAlpha = .4 + M.sin(t * .3) * .2; X.fillStyle = '#ffd060'; X.fillRect(x + 2, G + 1, w - 4, 3); X.restore(); X.save(); X.translate(x + w, G); X.rotate(-1.2); X.fillStyle = '#6b4430'; X.fillRect(-w * .6, -4, w * .6, 5); X.restore() }
+  else { X.strokeStyle = '#6b5a8a'; X.lineWidth = 1.5; X.strokeRect(x, G, w, 10); circ('#c99a2e', x + w - 6, G + 5, 1.6) }
 }
-function drawCrowd() {
-  // water in front of the duck rail, then the counter with prizes
-  const y = RAILS[2] + 10;
-  X.fillStyle = '#2a5a9a'; X.fillRect(0, y - 14, W, 14);
-  X.fillStyle = '#4a8ad0'; X.beginPath(); X.moveTo(0, y - 14); for (let x = 0; x <= W; x += 10) X.lineTo(x, y - 14 + M.sin(x * .1 + t * .1) * 3); X.lineTo(W, y); X.lineTo(0, y); X.fill();
-  X.fillStyle = '#8a5a30'; X.fillRect(0, y, W, H); X.fillStyle = '#a8703c'; X.fillRect(0, y, W, 8); X.fillStyle = COL.yellow; X.fillRect(0, y + 8, W, 2);
-}
-function drawValance() {}
-function drawBatten() {}
-function drawTarget(o) {
-  const [x, y, r] = tgtPos(o), rail = RAILS[o.row];
-  X.save(); X.translate(x, rail); X.scale(1, o.k); X.translate(-x, -rail);
-  if (o.kind === 'poli' || o.kind === 'boss') {
-    line('#5a3a1c', 3, [x, rail, x, rail - 12]);
-    X.fillStyle = '#c89a60'; X.beginPath(); X.roundRect(x - 20, rail - 64, 40, 54, 8); X.fill(); X.strokeStyle = '#5a3a1c'; X.lineWidth = 2; X.stroke();
-    X.save(); X.beginPath(); X.roundRect(x - 20, rail - 64, 40, 54, 8); X.clip(); X.translate(x, rail - 6); X.scale(.48, .48);
-    if (o.kind === 'boss') drawDirector(false); else drawPoli({ run: o.ph, idle: true }, o.look);
+function drawFollowSpots() {
+  // two projectors on the batten follow the targets
+  for (let i = 0; i < 2; i++) {
+    const sx = W * (i ? .75 : .25), sy = BATTEN + 6, fs = fspots[i];
+    let tg = null, bd = 1e9;
+    for (const o of targets) { if (o.hit) continue; const [cx] = tgtPos(o), d = M.abs(cx - sx) + (o.kind === 'gold' ? -200 : 0); if (d < bd) { bd = d; tg = o } }
+    const [tx, ty] = tg ? tgtPos(tg) : [sx, G], want = M.atan2(tx - sx, ty - sy);
+    fs.a += (want - fs.a) * .06;
+    const len = G - sy + 10;
+    X.save(); X.translate(sx, sy); X.rotate(-fs.a);
+    X.save(); X.globalCompositeOperation = 'lighter';
+    const gr = X.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, `rgba(${AMB.spot},.38)`); gr.addColorStop(1, `rgba(${AMB.spot},.04)`);
+    X.fillStyle = gr; X.beginPath(); X.moveTo(-7, 6); X.lineTo(7, 6); X.lineTo(38, len); X.lineTo(-38, len); X.fill(); X.restore();
+    X.strokeStyle = '#3a3a44'; X.lineWidth = 3; X.beginPath(); X.moveTo(-12, 4); X.lineTo(-12, -8); X.lineTo(12, -8); X.lineTo(12, 4); X.stroke();
+    X.fillStyle = '#2b2b33'; X.beginPath(); X.roundRect(-10, -6, 20, 14, 3); X.fill(); X.fillStyle = '#fff3b0'; X.beginPath(); X.ellipse(0, 8, 8, 3, 0, 0, 6.29); X.fill();
     X.restore();
-  } else if (o.kind === 'canard') {
-    X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(x, y + 4, 18, 11, 0, 0, 6.29); X.fill(); circ('#f2c230', x + (o.vx > 0 ? 10 : -10), y - 9, 8);
-    poly('#e8702c', o.vx > 0 ? [x + 16, y - 10, x + 25, y - 7, x + 16, y - 5] : [x - 16, y - 10, x - 25, y - 7, x - 16, y - 5]);
-    circ('#111', x + (o.vx > 0 ? 12 : -12), y - 11, 1.8); circ(COL.red, x, y + 4, 6); circ('#fff', x, y + 4, 3);
-  } else if (o.kind === 'sablier') {
-    line('#5a3a1c', 3, [x, rail, x, y + 12]);
-    circ('#1c1838', x, y, r); X.strokeStyle = '#9fe0ff'; X.lineWidth = 3; X.beginPath(); X.arc(x, y, r, 0, 6.29); X.stroke();
-    poly('#ffe9a0', [x - 7, y - 9, x + 7, y - 9, x, y]); poly('#ffe9a0', [x - 7, y + 9, x + 7, y + 9, x, y]); X.fillStyle = '#9fe0ff'; X.fillRect(x - 8, y - 11, 16, 2); X.fillRect(x - 8, y + 9, 16, 2);
+  }
+}
+function drawTrack() {
+  // guide rail across the stage for the middle row of cut-outs
+  X.fillStyle = '#2a2230'; X.fillRect(0, TRACK, W, 6); X.fillStyle = COL.yellow; X.fillRect(0, TRACK, W, 2);
+  for (let x = ((t * 1.2) % 40) - 40; x < W; x += 40) { X.fillStyle = '#4a4058'; X.fillRect(x, TRACK + 2, 3, 4) }
+}
+function drawTarget(o) {
+  const [x, y, r] = tgtPos(o);
+  X.save();
+  if (o.row === 0) {
+    // hanging from the batten on two cables
+    line('#222', 1.5, [o.x - 10, BATTEN, x - 10, y - r + 2]); line('#222', 1.5, [o.x + 10, BATTEN, x + 10, y - r + 2]);
+    X.fillStyle = '#c99a2e'; X.fillRect(o.x - 13, BATTEN - 2, 26, 4);
+    X.translate(x, y); X.scale(1, M.max(.05, o.k)); X.rotate(o.hit ? (1 - o.k) * 2 : M.sin(o.sw) * .05);
+    if (o.kind === 'masque') {
+      X.fillStyle = '#f1ede6'; X.beginPath(); X.ellipse(0, 0, r, r * 1.2, 0, 0, 6.29); X.fill(); X.strokeStyle = COL.yellow; X.lineWidth = 2.5; X.stroke();
+      circ('#2a2230', -6, -4, 3.2); circ('#2a2230', 6, -4, 3.2); X.strokeStyle = '#d8402c'; X.lineWidth = 2.5; X.beginPath(); X.arc(0, 4, 7, .3, M.PI - .3); X.stroke();
+      circ('#f27ab0', -10, 4, 2.5); circ('#f27ab0', 10, 4, 2.5);
+    } else { for (let i = 4; i > 0; i--) circ(i % 2 ? COL.red : '#f4f0e8', 0, 0, r * i / 4); circ(COL.yellow, 0, 0, 2.5) }
+  } else if (o.row === 1) {
+    X.translate(x, TRACK); X.scale(1, M.max(.05, o.k)); X.translate(-x, -TRACK);
+    // little wheeled trolley on the rail
+    X.fillStyle = '#5a3a1c'; X.fillRect(x - 12, TRACK - 6, 24, 6); circ('#222', x - 8, TRACK + 1, 3); circ('#222', x + 8, TRACK + 1, 3);
+    if (o.kind === 'cible') { line('#5a3a1c', 3, [x, TRACK - 6, x, y + r]); for (let i = 4; i > 0; i--) circ(i % 2 ? COL.blue : '#f4f0e8', x, y, r * i / 4); circ(COL.yellow, x, y, 3) }
+    else {
+      X.fillStyle = '#e9dcc6'; X.beginPath(); X.roundRect(x - 21, TRACK - 70, 42, 62, 8); X.fill(); X.strokeStyle = '#c99a2e'; X.lineWidth = 2.5; X.stroke();
+      X.save(); X.beginPath(); X.roundRect(x - 21, TRACK - 70, 42, 62, 8); X.clip(); X.translate(x, TRACK - 8); X.scale(.5, .5);
+      if (o.kind === 'boss') drawDirector(false); else drawPoli({ run: o.ph, idle: true }, o.look);
+      X.restore();
+    }
+  } else if (o.row === 2) {
+    // real performers crossing the stage
+    X.translate(o.x, G); if (o.hit) { X.globalAlpha = M.max(0, o.k); X.rotate((o.vx > 0 ? 1 : -1) * (1 - o.k) * 1.4) }
+    X.scale((o.vx > 0 ? 1 : -1) * .62, .62);
+    if (o.kind === 'boss') drawDirector(o.hit); else drawPoli({ run: t * .18 + o.ph, dead: o.hit }, o.look);
   } else {
-    line('#5a3a1c', 3, [x, rail, x, y + r]);
-    if (o.kind === 'gold') { X.save(); X.globalAlpha = .4 + M.sin(t * .3) * .2; circ('#ffe680', x, y, r + 8); X.restore() }
-    const cols = o.kind === 'gold' ? ['#e6b830', '#fff3b0'] : [COL.red, '#f4f0e8'];
-    for (let i = 4; i > 0; i--) circ(cols[i % 2], x, y, r * i / 4);
-    if (o.kind === 'gold') star(x, y, r * .45, t * .05, '#fff');
+    // pops up from a trapdoor
+    X.beginPath(); X.rect(x - 30, -T - 50, 60, G + T + 50); X.clip();
+    line('#5a3a1c', 3, [x, G + 10, x, y + r]);
+    if (o.kind === 'gold') { X.save(); X.globalAlpha = .4 + M.sin(t * .3) * .2; circ('#ffe680', x, y, r + 9); X.restore(); for (let i = 4; i > 0; i--) circ(i % 2 ? '#e6b830' : '#fff3b0', x, y, r * i / 4); star(x, y, r * .45, t * .05, '#fff') }
+    else { circ('#1c1838', x, y, r); X.strokeStyle = '#9fe0ff'; X.lineWidth = 3; X.beginPath(); X.arc(x, y, r, 0, 6.29); X.stroke(); poly('#ffe9a0', [x - 7, y - 9, x + 7, y - 9, x, y]); poly('#ffe9a0', [x - 7, y + 9, x + 7, y + 9, x, y]); X.fillStyle = '#9fe0ff'; X.fillRect(x - 8, y - 11, 16, 2); X.fillRect(x - 8, y + 9, 16, 2) }
   }
   X.restore();
 }
 function drawGame() {
-  for (const o of targets) drawTarget(o);
+  drawTrack();
+  for (const o of targets) if (o.row === 0) drawTarget(o);
+  for (const o of targets) if (o.row === 1) drawTarget(o);
+  drawTrapdoor(0); drawTrapdoor(1);
+  for (const o of targets) if (o.row === 3) drawTarget(o);
+  for (const o of targets) if (o.row === 2) drawTarget(o);
+  drawFollowSpots();
   for (const s of shots) { X.save(); X.globalAlpha = s.l / 14; X.strokeStyle = '#fff'; X.lineWidth = 2; X.beginPath(); X.arc(s.x, s.y, 16 - s.l * .6, 0, 6.29); X.stroke(); star(s.x, s.y, 5 + (14 - s.l) * .4, s.l * .3, '#ffe680'); X.restore() }
 }
 function drawHud() {
   X.save(); X.translate(0, -T);
-  const low = timeLeft < 300, ty = LAND ? 44 : (T > 60 ? 70 : 60) + T * .0;
+  const low = timeLeft < 300, ty = LAND ? 44 : (T > 60 ? 70 : 60);
   txt(M.ceil(timeLeft / 60) + ' s', W / 2, ty, 28, low ? (M.floor(t / 10) % 2 ? '#ff4f4f' : '#fff') : '#fff');
   X.restore();
 }
