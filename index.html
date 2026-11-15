@@ -82,6 +82,7 @@
 const GAMES = [
   { id: 'course', name: 'La Course', href: 'course.html', best: 'polichinelles_best', desc: 'Cours sur la scène, saute les sièges, baisse-toi sous les projecteurs et évite les trappes.', art: 'course', bg: ['#e9dcc6', '#8a1f2a'] },
   { id: 'envol', name: 'L’Envol', href: 'envol.html', best: 'polichinelles_best_envol', desc: 'Accroché à ton ballon, passe entre les rideaux et les piles de coffres.', art: 'envol', bg: ['#a9bcdd', '#1f3a7a'] },
+  { id: 'kart', name: 'Le Grand Prix', href: 'kart.html', best: 'polichinelles_best_kart', desc: 'Course de karts sur 3 tours contre 5 polichinelles : boîtes à bonus, turbo, confettis et sauts !', art: 'kart', bg: ['#5b3a7a', '#3a3550'], fresh: true },
   { id: 'tape', name: 'Tape-Polichinelle', href: 'tape.html', best: 'polichinelles_best_tape', fresh: true, desc: 'Ils surgissent des trappes : tape-les vite… mais pas le directeur !', emoji: '🔨', bg: ['#dcb6dc', '#5a1f6e'] },
   { id: 'pyramide', name: 'La Pyramide', href: 'pyramide.html', best: 'polichinelles_best_pyramide', fresh: true, desc: 'Lâche les polichinelles au bon moment pour bâtir la plus haute pyramide.', emoji: '🏛️', bg: ['#c2dcb8', '#1f5a3a'] },
   { id: 'jongleur', name: 'Le Jongleur', href: 'jongleur.html', best: 'polichinelles_best_jongleur', fresh: true, desc: 'Garde les quilles et les balles en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] }
@@ -134,6 +135,16 @@ function drawArt(cv, kind) {
     const sx = w * .7; x.fillStyle = '#9a1f2c'; x.fillRect(sx, gy - 34, 22, 24); x.fillStyle = '#c23544'; x.fillRect(sx - 1, gy - 14, 24, 7); x.fillStyle = '#c99a2e'; x.fillRect(sx - 2, gy - 16, 3, 16); x.fillRect(sx + 21, gy - 16, 3, 16);
     poli(w * .38, gy - 8, .62);
     for (let i = 0; i < 4; i++) circ('rgba(255,255,255,.5)', w * .38 - 26 - i * 9, gy - 6 - i * 4, 2.4 - i * .4);
+  } else if (kind === 'kart') {
+    // road in perspective + the red kart
+    x.fillStyle = '#7a1822'; x.fillRect(0, gy - 20, w, h);
+    poly('#f4f0e8', [w * .5 - 8, gy - 30, w * .5 + 8, gy - 30, w * .95, h, w * .05, h]);
+    poly('#3a3550', [w * .5 - 6, gy - 30, w * .5 + 6, gy - 30, w * .9, h, w * .1, h]);
+    x.fillStyle = '#e6b830'; for (let i = 0; i < 4; i++) x.fillRect(w * .5 - 1.5, gy - 25 + i * 14, 3, 7);
+    poli(w * .5, h - 18, .5);
+    x.fillStyle = '#1d1d24'; x.fillRect(w * .5 - 44, h - 30, 18, 20); x.fillRect(w * .5 + 26, h - 30, 18, 20);
+    x.fillStyle = '#d8402c'; x.beginPath(); x.roundRect(w * .5 - 40, h - 44, 80, 24, 9); x.fill();
+    x.fillStyle = '#e6b830'; x.fillRect(w * .5 - 40, h - 26, 80, 4);
   } else {
     // curtain + tower + balloon
     x.fillStyle = '#a3283a'; x.fillRect(w * .72, 0, 30, gy * .38); x.fillStyle = '#e6b830'; x.fillRect(w * .72, gy * .38 - 4, 30, 4);
