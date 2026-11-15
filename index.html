@@ -108,6 +108,18 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #inst b{color:#ffe9a0}
 #inst p{margin:0 0 10px;color:#ffd2a0;font-size:14px}
 #inst button{display:block;margin:4px auto 0;font:700 15px Georgia,serif;padding:10px 24px;border-radius:9px;border:0;background:#e6b830;color:#2a2230;cursor:pointer}
+#setBtn{position:fixed;right:calc(66px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));z-index:4;width:48px;height:48px;border-radius:50%;border:2px solid #e6b830;background:rgba(28,24,56,.82);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent}
+#setBtn[hidden]{display:none}#setBtn:active{transform:scale(.92)}
+#setP{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.6);z-index:8}
+#setP.on{display:flex}
+#setP .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;width:min(84vw,320px);color:#fff;font:600 16px Georgia,serif;padding:14px 16px 16px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
+#setP h2{margin:0 0 10px;color:#e6b830;font-size:20px;text-align:center}
+#setP .row{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;border-bottom:1px solid rgba(255,255,255,.1)}
+#setP .row small{display:block;color:#c9c2d8;font-weight:400;font-size:12px}
+#setP .tg{width:52px;height:30px;border-radius:15px;background:#5a5470;position:relative;flex:none;border:0;cursor:pointer;padding:0}
+#setP .tg::after{content:'';position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .2s}
+#setP .tg.on{background:#e6b830}#setP .tg.on::after{left:25px}
+#setP .ok{display:block;margin:14px auto 0;font:700 15px Georgia,serif;padding:10px 26px;border-radius:9px;border:0;background:#e6b830;color:#2a2230;cursor:pointer}
 #toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9;background:#1c1838;border:2px solid #e6b830;color:#fff;border-radius:14px;padding:10px 16px;font:600 15px Georgia,serif;box-shadow:0 6px 18px rgba(0,0,0,.5);transition:transform .35s;pointer-events:none;max-width:86vw;text-align:center}
 #toast.on{transform:translate(-50%,0)}
 #toast b{color:#e6b830}
@@ -132,6 +144,12 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
   <footer id="wdBar"></footer>
 </div></div>
 <div id="toast"></div>
+<button id="setBtn" aria-label="Réglages" title="Réglages">⚙️</button>
+<div id="setP" role="dialog" aria-modal="true"><div class="box"><h2>⚙️ Réglages</h2>
+  <div class="row"><span>🎵 Musique</span><button class="tg" data-k="music" aria-label="Musique"></button></div>
+  <div class="row"><span>🔊 Bruitages</span><button class="tg" data-k="sfx" aria-label="Bruitages"></button></div>
+  <div class="row"><span>📳 Vibrations<small id="vibNote"></small></span><button class="tg" data-k="vib" aria-label="Vibrations"></button></div>
+  <button class="ok">OK</button></div></div>
 <div id="overBtns"><button class="home">🏠 Accueil</button><button class="again">↻ Rejouer</button></div>
 <button id="installBtn">📲 Ajouter le jeu à l’écran d’accueil</button>
 <div id="inst" role="dialog" aria-modal="true"><div class="box"><h2>📲 Installer le jeu</h2><div id="instBody"></div><button>J’ai compris</button></div></div>
@@ -174,14 +192,93 @@ addEventListener('resize', resize); addEventListener('orientationchange', () => 
 if (window.visualViewport) visualViewport.addEventListener('resize', resize);
 resize();
 
+// ---------- options (music / sounds / vibrations) ----------
+let OPTS = { music: true, sfx: true, vib: true };
+try { Object.assign(OPTS, JSON.parse(localStorage.getItem('polichinelles_opts')) || {}) } catch (e) {}
+function saveOpts() { try { localStorage.setItem('polichinelles_opts', JSON.stringify(OPTS)) } catch (e) {} }
+
 // ---------- audio ----------
 let AC = null;
 function beep(f1, f2, dur, type = 'square', vol = .08) {
-  if (!AC) return;
+  if (!AC || !OPTS.sfx) return;
   const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
   o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
   o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur);
+}
+
+// ---------- music: an original barrel-organ waltz, synthesised live (no audio file) ----------
+const NOTE = n => { const m = /^([A-G])(#?)(\d)$/.exec(n); const k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] ? 1 : 0); return 440 * 2 ** ((k + 12 * (+m[3] + 1) - 69) / 12) };
+// melody: [note, beats] in 3/4, 16 bars
+const MEL = [
+  ['E4', 1], ['G4', 1], ['C5', 1], ['B4', 2], ['G4', 1], ['A4', 1], ['F4', 1], ['A4', 1], ['G4', 3],
+  ['E4', 1], ['G4', 1], ['C5', 1], ['D5', 2], ['C5', 1], ['B4', 1], ['A4', 1], ['B4', 1], ['C5', 3],
+  ['E5', 1], ['D5', 1], ['C5', 1], ['A4', 2], ['C5', 1], ['G4', 1], ['E4', 1], ['G4', 1], ['F4', 2], ['A4', 1],
+  ['G4', 1], ['C5', 1], ['E5', 1], ['D5', 1], ['B4', 1], ['G4', 1], ['C5', 1], ['G4', 1], ['E4', 1], ['C5', 3]
+];
+// one chord per bar: [bass, chord tone 1, chord tone 2]
+const CHORDS = [['C3', 'E4', 'G4'], ['G2', 'D4', 'F4'], ['F2', 'A3', 'C4'], ['C3', 'E4', 'G4'], ['C3', 'E4', 'G4'], ['G2', 'B3', 'D4'], ['G2', 'D4', 'F4'], ['C3', 'E4', 'G4'],
+  ['A2', 'C4', 'E4'], ['F2', 'A3', 'C4'], ['C3', 'E4', 'G4'], ['F2', 'A3', 'C4'], ['C3', 'E4', 'G4'], ['G2', 'B3', 'D4'], ['C3', 'E4', 'G4'], ['C3', 'E4', 'G4']];
+const MELB = []; { let b = 0; for (const [n, d] of MEL) { MELB.push({ b, d, f: NOTE(n) }); b += d } }
+const LOOP = 48;
+let mus = { gain: null, beat: 0, next: 0, timer: null, mi: 0 };
+function voice(f, t0, dur, type, vol, filt) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + .015); g.gain.setValueAtTime(vol, t0 + dur * .7); g.gain.linearRampToValueAtTime(0, t0 + dur);
+  if (filt) { const fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = filt; o.connect(fl).connect(g) } else o.connect(g);
+  g.connect(mus.gain); o.start(t0); o.stop(t0 + dur + .02);
+}
+function musicBpm() { return state === 'play' ? 138 + (speed - 5) * 4 : 120 }
+function musicTick() {
+  if (!AC || !mus.gain) return;
+  while (mus.next < AC.currentTime + .15) {
+    const spb = 60 / musicBpm(), t0 = M.max(mus.next, AC.currentTime), b = mus.beat, bar = M.floor(b / 3), inBar = b % 3, ch = CHORDS[bar];
+    // oom-pah-pah
+    if (inBar === 0) voice(NOTE(ch[0]), t0, spb * .9, 'triangle', .22, 0);
+    else { voice(NOTE(ch[1]), t0, spb * .45, 'square', .035, 1400); voice(NOTE(ch[2]), t0, spb * .45, 'square', .035, 1400) }
+    // melody (organ: square + soft octave)
+    for (const n of MELB) if (n.b === b) { voice(n.f, t0, spb * n.d * .92, 'square', .06, 2200); voice(n.f * 2, t0, spb * n.d * .85, 'triangle', .025, 0) }
+    mus.beat = (b + 1) % LOOP; mus.next = t0 + spb;
+  }
+}
+function musicTarget() { return OPTS.music && !paused && !(state === 'over') && document.visibilityState !== 'hidden' ? (state === 'play' ? .55 : .35) : 0 }
+function startMusic() {
+  if (!AC || mus.gain) return;
+  mus.gain = AC.createGain(); mus.gain.gain.value = 0; mus.gain.connect(AC.destination);
+  mus.next = AC.currentTime + .1; mus.beat = 0;
+  mus.timer = setInterval(() => {
+    const tg = musicTarget();
+    mus.gain.gain.setTargetAtTime(tg, AC.currentTime, .15);
+    if (tg > 0 || mus.gain.gain.value > .01) musicTick(); else mus.next = AC.currentTime + .05;
+  }, 40);
+}
+function restartTune() { if (mus.gain) { mus.beat = 0; mus.next = AC.currentTime + .05 } }
+// a little "curtain falls" tune on game over
+function curtainJingle() {
+  if (!AC || !OPTS.music) return;
+  const g = AC.createGain(); g.gain.value = .5; g.connect(AC.destination);
+  [['G4', 0, .18], ['E4', .2, .18], ['C4', .4, .18], ['G3', .62, .5]].forEach(([n, d, l]) => {
+    const o = AC.createOscillator(), e = AC.createGain(), t0 = AC.currentTime + d;
+    o.type = 'square'; o.frequency.value = NOTE(n); e.gain.setValueAtTime(.08, t0); e.gain.exponentialRampToValueAtTime(.001, t0 + l);
+    o.connect(e).connect(g); o.start(t0); o.stop(t0 + l + .02);
+  });
+}
+
+// ---------- vibrations ----------
+let iosHaptic = null;
+function buzz(pattern) {
+  if (!OPTS.vib) return;
+  if (navigator.vibrate) { try { navigator.vibrate(pattern) } catch (e) {} return }
+  // iPhone (iOS 18+): no vibration API, but toggling a native switch gives a light haptic tick
+  if (/iPhone/.test(navigator.userAgent)) {
+    if (!iosHaptic) {
+      iosHaptic = document.createElement('label'); iosHaptic.style.cssText = 'position:fixed;left:-99px;top:0;opacity:0;pointer-events:none';
+      const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); iosHaptic.appendChild(i); document.body.appendChild(iosHaptic);
+    }
+    const n = Array.isArray(pattern) ? M.ceil(pattern.length / 2) : 1;
+    for (let k = 0; k < n; k++) setTimeout(() => iosHaptic.click(), k * 90);
+  }
 }
 const sfx = {
   jump: () => beep(380, 760, .12),
@@ -335,7 +432,7 @@ function mixAmb() {
 mixAmb();
 function setAct(n, instant) {
   act = n; ambFrom = instant ? ACTS[n % ACTS.length] : { ...ambTo }; ambTo = ACTS[n % ACTS.length]; ambK = instant ? 1 : 0;
-  if (!instant) { actBanner = 170; sfx.fanfare() }
+  if (!instant) { actBanner = 170; sfx.fanfare(); buzz([20, 60, 20]) }
   mixAmb();
 }
 
@@ -493,6 +590,23 @@ for (const el of [installBtn, instEl]) for (const ev of ['pointerdown', 'pointer
 // offline cache + installability
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
+// ---------- settings panel ----------
+const setBtn = document.getElementById('setBtn'), setP = document.getElementById('setP');
+function renderSet() { setP.querySelectorAll('.tg').forEach(b => b.classList.toggle('on', !!OPTS[b.dataset.k])) }
+document.getElementById('vibNote').textContent = navigator.vibrate ? '' : (/iPhone/.test(navigator.userAgent) ? 'iPhone : légères vibrations (iOS 18 et +)' : 'Non disponible sur cet appareil');
+setBtn.onclick = () => { renderSet(); setP.classList.add('on') };
+setP.querySelector('.ok').onclick = () => setP.classList.remove('on');
+setP.addEventListener('click', e => { if (e.target === setP) setP.classList.remove('on') });
+setP.querySelectorAll('.tg').forEach(b => b.onclick = () => {
+  OPTS[b.dataset.k] = !OPTS[b.dataset.k]; saveOpts(); renderSet();
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)() } catch (e) {} }
+  if (AC && AC.state === 'suspended') AC.resume();
+  startMusic();
+  if (b.dataset.k === 'vib' && OPTS.vib) buzz(60);
+  if (b.dataset.k === 'sfx' && OPTS.sfx) sfx.star();
+});
+for (const el of [setBtn, setP]) for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) el.addEventListener(ev, e => e.stopPropagation());
+
 // ---------- state ----------
 let state = 'title'; // title | opening | play | over
 let t = 0, stateT = 0, score = 0, stars = 0, speed = 0, dist = 0, nextObs = 0, nextStar = 0, shake = 0, flash = 0;
@@ -506,6 +620,7 @@ const crowd = [];
 for (let i = 0; i < 60; i++) crowd.push({ x: i * 22 + rnd(-6, 6), r: rnd(9, 13), row: i % 2, b: rnd(0, 6.28) });
 
 function reset() {
+  restartTune();
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
@@ -521,9 +636,10 @@ let keyDuck = false;
 function wakeAudio() {
   if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)() } catch (e) {} }
   if (AC && AC.state === 'suspended') AC.resume();
+  startMusic();
 }
 function menuPress() {
-  if (wdEl.classList.contains('on')) return true;
+  if (wdEl.classList.contains('on') || setP.classList.contains('on')) return true;
   if (state === 'title') { reset(); state = 'opening'; stateT = 0; return true }
   if (state === 'over') { if (entryOpen) return true; if (stateT > 45) { reset(); state = 'opening'; stateT = 0 } return true }
   return state !== 'play';
@@ -1379,7 +1495,7 @@ function update() {
       }
       const [ox, oy, ow, oh] = obstacleBox(o);
       if (px < ox + ow && px + pw > ox && py < oy + oh && py + ph > oy) {
-        if (inv) { o.dead = true; bonusPts += 10; sfx.smash(); shake = 4; burst(o.x + o.w / 2, oy + oh / 2 - G, 16, ['#fff', COL.yellow, '#ccc'], 5); popup(o.x + o.w / 2, oy - 6, '+10', COL.yellow) }
+        if (inv) { o.dead = true; bonusPts += 10; sfx.smash(); buzz(25); shake = 4; burst(o.x + o.w / 2, oy + oh / 2 - G, 16, ['#fff', COL.yellow, '#ccc'], 5); popup(o.x + o.w / 2, oy - 6, '+10', COL.yellow) }
         else { gameOver(); break }
       }
     }
@@ -1391,13 +1507,13 @@ function update() {
         if (s.type === 'star') {
           stars++; combo = M.min(5, combo + 1); const pts = 25 * combo; starPts += pts;
           if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() }
-          combo > 1 ? sfx.combo(combo) : sfx.star();
+          combo > 1 ? sfx.combo(combo) : sfx.star(); if (combo >= 3) buzz(15);
           popup(s.x, G - s.y - 18, combo > 1 ? `+${pts}  ×${combo}` : `+${pts}`, combo > 1 ? '#ffe066' : '#fff');
           burst(s.x, -s.y, 14, [COL.yellow, '#fff', COL.red], 4); flash = 6;
         } else {
           power = { type: s.type, t: POWERS[s.type].dur, max: POWERS[s.type].dur };
           if (s.type === 'mask') { PROF.stats.masks++; checkUnlocks() }
-          sfx.power(); flash = 10; burst(s.x, -s.y, 24, ['#fff', COL.yellow, '#5aa0ff'], 5);
+          sfx.power(); buzz([30, 40, 30]); flash = 10; burst(s.x, -s.y, 24, ['#fff', COL.yellow, '#5aa0ff'], 5);
           popup(s.x, G - s.y - 20, POWERS[s.type].label + ' !', '#9fe0ff');
         }
         return false
@@ -1412,7 +1528,8 @@ function update() {
   shake *= .85; if (flash > 0) flash--;
 }
 function gameOver() {
-  state = 'over'; stateT = 0; shake = 10; fallY = 0; if (fellIn) sfx.fall(); else sfx.hit();
+  state = 'over'; stateT = 0; shake = 10; fallY = 0; if (fellIn) { sfx.fall(); buzz(300) } else { sfx.hit(); buzz([90, 50, 160]) }
+  curtainJingle();
   power = null; slowK = 1;
   P.duck = false; P.duckK = 0; P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false;
   burst(PX, -P.y - 50, 30, [COL.red, COL.green, COL.blue, COL.yellow], 6);
@@ -1429,7 +1546,7 @@ function gameOver() {
 let lastBtnState = '';
 function render() {
   const bs = state === 'title' || (state === 'over' && stateT > 30) ? 'show' : 'hide';
-  if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
+  if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
   const ob = state === 'over' && stateT > 40 && !entryOpen;
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
   const ib = state === 'title' && !STANDALONE;
@@ -1467,7 +1584,7 @@ function render() {
 
   // HUD
   if (state === 'play' || state === 'over') {
-    const hy = T > 60 ? -T + 64 : 66;
+    const hy = T > 60 ? -T + 64 : 78;
     txt(String(score).padStart(5, '0'), W - 12, hy, 20, '#fff', 'right');
     star(W - 22, hy + 26, 8); txt('× ' + stars, W - 34, hy + 27, 14, '#fff', 'right');
     if (combo > 1 && state === 'play') txt('COMBO ×' + combo, W - 12, hy + 50, 13, '#ffe066', 'right');
@@ -1529,7 +1646,7 @@ function render() {
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
     else txt('Ton record : ' + best, ox, oy + 70, 16, '#ddd');
-    if (portrait) drawBoard(W / 2, G + 50, 7, false); else drawBoard(W - 110, 70, 7, false);
+    if (portrait) drawBoard(W / 2, G + 50, 7, false); else drawBoard(W - 110, 132, 5, false);
 
   }
 }
