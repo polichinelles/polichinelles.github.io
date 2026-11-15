@@ -18,10 +18,36 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #entry button{flex:1;font:700 16px Georgia,serif;padding:11px 8px;border-radius:8px;border:0;cursor:pointer}
 #entry .ok{background:#e6b830;color:#2a2230}#entry .skip{background:#5e0f18;color:#eee}
 #entry .err{color:#ffd2a0;font-size:13px;min-height:16px;margin-top:8px;font-weight:400}
+#lbBtn{position:fixed;left:calc(10px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;width:48px;height:48px;border-radius:50%;border:2px solid #e6b830;background:rgba(28,24,56,.82);color:#e6b830;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent}
+#lbBtn:active{transform:scale(.92)}
+#lbBtn[hidden]{display:none}
+#lb{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.6);z-index:6;touch-action:pan-y}
+#lb.on{display:flex}
+#lb .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;width:min(90vw,380px);max-height:86vh;display:flex;flex-direction:column;color:#fff;font:600 16px Georgia,serif;box-shadow:0 12px 34px rgba(0,0,0,.55);overflow:hidden}
+#lb header{background:#8a1f2a;padding:14px 16px 12px;text-align:center;border-bottom:2px solid #e6b830;position:relative}
+#lb h2{margin:0;color:#e6b830;font-size:22px;letter-spacing:.5px}
+#lb header small{display:block;color:#f3dcc0;font-weight:400;font-size:13px;margin-top:2px}
+#lb .close{position:absolute;right:10px;top:10px;width:34px;height:34px;border-radius:50%;border:0;background:#5e0f18;color:#fff;font-size:20px;line-height:34px;padding:0;cursor:pointer}
+#lb ol{list-style:none;margin:0;padding:8px 10px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;max-height:min(56vh,430px)}
+#lb li{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:10px;margin:4px 0;background:rgba(255,255,255,.05);min-height:26px}
+#lb li.me{background:rgba(230,184,48,.22);outline:1px solid #e6b830}
+#lb .rk{width:34px;text-align:center;font-size:18px;color:#e6b830;flex:none}
+#lb .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lb .sc{font-variant-numeric:tabular-nums;color:#ffe9a0;flex:none}
+#lb li.r1{background:rgba(230,184,48,.16)}
+#lb .msg{padding:22px 10px;text-align:center;color:#ccc;font-weight:400;background:none}
+#lb footer{padding:10px 12px 14px;text-align:center}
+#lb footer button{font:700 16px Georgia,serif;padding:11px 26px;border-radius:9px;border:0;background:#e6b830;color:#2a2230;cursor:pointer}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="lbBtn" aria-label="Voir le classement" title="Classement">🏆</button>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Classement"><div class="box">
+  <header><h2>🏆 Classement</h2><small>Top 10 de tous les joueurs</small><button class="close" aria-label="Fermer">✕</button></header>
+  <ol id="lbList"></ol>
+  <footer><button class="back">Retour au jeu</button></footer>
+</div></div>
 <div id="entry"><form class="box" autocomplete="off">
   <h2>Bravo !</h2>
   <p id="entryMsg">Tu entres dans le classement.<br>Ton prénom :</p>
@@ -154,6 +180,39 @@ function drawBoard(cx, y, n, compact) {
   });
 }
 
+// ---------- leaderboard panel (trophy button) ----------
+let paused = false, resumeT = 0;
+const lbEl = document.getElementById('lb'), lbList = document.getElementById('lbList'), lbBtn = document.getElementById('lbBtn');
+if (boardStatus === 'off') lbBtn.hidden = true;
+function esc(t) { return t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) }
+function renderPanel() {
+  let me = ''; try { me = localStorage.getItem('polichinelles_name') || '' } catch (e) {}
+  if (boardStatus === 'loading') { lbList.innerHTML = '<li class="msg">Chargement…</li>'; return }
+  if (boardStatus === 'err') { lbList.innerHTML = '<li class="msg">Classement indisponible.<br>Vérifie ta connexion.</li>'; return }
+  if (!board.length) { lbList.innerHTML = '<li class="msg">Personne pour l’instant.<br>Sois le premier !</li>'; return }
+  const medal = ['🥇', '🥈', '🥉'];
+  lbList.innerHTML = board.slice(0, LB_SIZE).map((b, i) =>
+    `<li class="${i === 0 ? 'r1' : ''}${b.name === me ? ' me' : ''}"><span class="rk">${medal[i] || (i + 1)}</span><span class="nm">${esc(b.name)}</span><span class="sc">${b.score}</span></li>`).join('');
+  lbList.scrollTop = 0;
+}
+async function openPanel() {
+  if (entryOpen) return;
+  if (state === 'play') { paused = true; P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false; P.duck = false }
+  lbEl.classList.add('on'); renderPanel();
+  if (boardStatus !== 'off') { if (!board.length) boardStatus = 'loading'; renderPanel(); await loadBoard(); renderPanel() }
+}
+function closePanel() {
+  lbEl.classList.remove('on');
+  if (paused) { paused = false; resumeT = 90 }     // 3-2-1 before the game goes on
+}
+lbBtn.addEventListener('click', openPanel);
+lbEl.querySelector('.close').onclick = closePanel;
+lbEl.querySelector('.back').onclick = closePanel;
+lbEl.addEventListener('click', e => { if (e.target === lbEl) closePanel() });
+for (const el of [lbEl, lbBtn]) for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) el.addEventListener(ev, e => e.stopPropagation());
+addEventListener('keydown', e => { if (e.key === 'Escape' && lbEl.classList.contains('on')) closePanel() });
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play' && !lbEl.classList.contains('on')) openPanel() });
+
 // ---------- state ----------
 let state = 'title'; // title | opening | play | over
 let t = 0, stateT = 0, score = 0, stars = 0, speed = 0, dist = 0, nextObs = 0, nextStar = 0, shake = 0, flash = 0;
@@ -167,7 +226,7 @@ const crowd = [];
 for (let i = 0; i < 60; i++) crowd.push({ x: i * 22 + rnd(-6, 6), r: rnd(9, 13), row: i % 2, b: rnd(0, 6.28) });
 
 function reset() {
-  score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400;
+  score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -202,6 +261,7 @@ function isDuckZone(e) { return e.clientX < innerWidth * 0.4 }
 addEventListener('pointerdown', e => {
   e.preventDefault(); wakeAudio();
   if (menuPress()) return;
+  if (paused || resumeT > 0) return;
   if (isDuckZone(e)) { duckPointers.add(e.pointerId); updateDuck() }
   else { jumpPointers.add(e.pointerId); jump() }
 }, { passive: false });
@@ -217,6 +277,7 @@ addEventListener('keydown', e => {
   if ([' ', 'ArrowUp', 'ArrowDown', 'Enter', 'w', 's', 'z'].includes(k)) e.preventDefault();
   if (e.repeat) return;
   wakeAudio();
+  if (paused || resumeT > 0) return;
   if ([' ', 'ArrowUp', 'Enter', 'w', 'z'].includes(k)) { if (!menuPress()) jump() }
   else if (k === 'ArrowDown' || k === 's') { if (state === 'play') { keyDuck = true; updateDuck() } }
 });
@@ -652,9 +713,13 @@ function render() {
     const hy = T > 60 ? -T + 64 : 46;
     txt(String(score).padStart(5, '0'), W - 12, hy, 20, '#fff', 'right');
     star(W - 22, hy + 26, 8); txt('× ' + stars, W - 34, hy + 27, 14, '#fff', 'right');
-    txt('Record ' + best, 12, hy, 14, '#fff', 'left');
+    txt('Record ' + best, 52, hy, 14, '#fff', 'left');
   }
   if (state === 'play' || state === 'opening') drawControls();
+  if (state === 'play' && (paused || resumeT > 0)) {
+    X.fillStyle = 'rgba(20,16,40,.45)'; X.fillRect(0, -T, W, H);
+    txt(paused ? 'PAUSE' : String(M.ceil(resumeT / 30)), W / 2, 150, paused ? 34 : 56, COL.yellow);
+  }
   if (state === 'title') {
     const ty = M.max(-T + 70, 46 - T * .6);
     X.save(); X.translate(W / 2, G - 14); X.scale(1.3, 1.3); drawPoli({ run: P.run, idle: true }); X.restore();
@@ -685,7 +750,10 @@ function render() {
 let last = performance.now(), acc = 0;
 function loop(now) {
   acc += M.min(100, now - last); last = now;
-  while (acc >= 1000 / 60) { update(); acc -= 1000 / 60 }
+  while (acc >= 1000 / 60) {
+    if (!paused) { if (resumeT > 0) { resumeT--; t++ } else update() }
+    acc -= 1000 / 60;
+  }
   render();
   requestAnimationFrame(loop);
 }
