@@ -1697,27 +1697,120 @@ function tUp(e) { if (e.pointerId === holdL) holdL = null; if (e.pointerId === h
 addEventListener('pointerup', tUp); addEventListener('pointercancel', tUp);
 addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'q') keyDir = -1; else if (e.key === 'ArrowRight' || e.key === 'd') keyDir = 1 });
 addEventListener('keyup', e => { if ((e.key === 'ArrowLeft' || e.key === 'q') && keyDir < 0 || (e.key === 'ArrowRight' || e.key === 'd') && keyDir > 0) keyDir = 0 });
-function mixHex(a, b, k) { const p = n => [1, 3, 5].map(i => parseInt(n.slice(i, i + 2), 16)), A = p(a), B = p(b); return `rgb(${A.map((v, i) => M.round(v + (B[i] - v) * k)).join(',')})` }
+function hsh(a, b) { const x = M.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - M.floor(x) }
+// ---------- the attic of the theatre: old show decor all around, three parallax layers ----------
+function drawFlat(kind, x, y, s) {
+  // big painted scenery flats leaning against the walls (far layer, muted)
+  X.save(); X.translate(x, y); X.scale(s, s);
+  switch (kind) {
+    case 0: // painted castle
+      X.fillStyle = '#4a3a52'; X.fillRect(-60, -10, 120, 90); for (let i = -60; i < 60; i += 20) X.fillRect(i, -22, 12, 14);
+      X.fillRect(-80, -40, 30, 120); X.fillRect(50, -40, 30, 120); poly('#5a2a3a', [-84, -40, -65, -75, -46, -40]); poly('#5a2a3a', [46, -40, 65, -75, 84, -40]);
+      X.fillStyle = '#2a1e30'; X.beginPath(); X.arc(0, 80, 18, M.PI, 0); X.fill(); X.fillStyle = '#d8b860'; X.fillRect(-40, 20, 8, 12); X.fillRect(32, 20, 8, 12); break;
+    case 1: // painted tree on a wooden frame
+      X.fillStyle = '#4a3020'; X.fillRect(-8, 10, 16, 80); X.fillStyle = '#2e4a36'; X.beginPath(); X.arc(0, -10, 44, 0, 6.29); X.arc(-30, 14, 30, 0, 6.29); X.arc(30, 14, 30, 0, 6.29); X.fill();
+      X.fillStyle = '#3a5a42'; X.beginPath(); X.arc(-12, -22, 20, 0, 6.29); X.fill(); break;
+    case 2: // giant crescent moon cut-out
+      X.fillStyle = '#c8b070'; X.beginPath(); X.arc(0, 0, 50, 0, 6.29); X.fill(); X.fillStyle = '#2a1a14'; X.beginPath(); X.arc(22, -10, 46, 0, 6.29); X.fill();
+      circ('#2a1a14', -22, -4, 4); X.fillStyle = '#5a4030'; X.fillRect(-3, 45, 6, 50); break;
+    case 3: // stacked costume trunks
+      for (let i = 0; i < 3; i++) { const w = 90 - i * 14, yy = 60 - i * 34; X.fillStyle = ['#5a2a22', '#3a3a5a', '#4a3a22'][i]; X.fillRect(-w / 2, yy, w, 32); X.fillStyle = '#b89a50'; X.fillRect(-w / 2, yy + 6, w, 3); X.fillRect(-w / 2 + 8, yy, 5, 32); X.fillRect(w / 2 - 13, yy, 5, 32); circ('#d8b860', 0, yy + 18, 4) }
+      break;
+    case 4: // rolled backdrops leaning
+      for (let i = 0; i < 4; i++) { X.save(); X.translate(-36 + i * 22, 70); X.rotate(-.18 + i * .04); X.fillStyle = ['#6a3a3a', '#3a4a6a', '#6a5a3a', '#4a3a5a'][i]; X.fillRect(-8, -150, 16, 150); X.fillStyle = 'rgba(0,0,0,.25)'; X.fillRect(3, -150, 5, 150); X.restore() }
+      break;
+    case 5: // dressing mirror with bulbs
+      X.fillStyle = '#5a4030'; X.fillRect(-46, -56, 92, 112); X.fillStyle = '#3a4258'; X.fillRect(-36, -46, 72, 92);
+      X.fillStyle = 'rgba(255,255,255,.08)'; poly('rgba(255,255,255,.08)', [-30, -40, -10, -40, -36, 30]);
+      for (let i = 0; i < 5; i++) { circ('#e8d090', -44 + i * 22, -56, 4); circ('#e8d090', -44 + i * 22, 56, 4) } break;
+    case 6: // wagon wheel
+      X.strokeStyle = '#6a4a30'; X.lineWidth = 7; X.beginPath(); X.arc(0, 0, 46, 0, 6.29); X.stroke(); X.lineWidth = 4;
+      for (let i = 0; i < 8; i++) { const a = i * .785; X.beginPath(); X.moveTo(0, 0); X.lineTo(M.cos(a) * 44, M.sin(a) * 44); X.stroke() } circ('#6a4a30', 0, 0, 9); break;
+  }
+  X.restore();
+}
+function drawProp(kind, x, y, sway, seed) {
+  // things hanging from the roof beams (middle layer)
+  X.save(); X.translate(x, y); X.rotate(sway);
+  switch (kind) {
+    case 0: { // comedy & tragedy masks on a ribbon
+      line('#b02a3a', 2, [0, 0, -14, 26]); line('#b02a3a', 2, [0, 0, 14, 26]);
+      for (const [mx, sad, col] of [[-16, 0, '#f1ede6'], [16, 1, '#e6b830']]) {
+        X.fillStyle = col; X.beginPath(); X.ellipse(mx, 42, 14, 17, 0, 0, 6.29); X.fill();
+        circ('#2a1a14', mx - 5, 38, 2.6); circ('#2a1a14', mx + 5, 38, 2.6);
+        X.strokeStyle = '#2a1a14'; X.lineWidth = 2; X.beginPath(); sad ? X.arc(mx, 56, 6, M.PI + .4, -.4) : X.arc(mx, 46, 6, .4, M.PI - .4); X.stroke();
+      } break;
+    }
+    case 1: { // costume on a hanger
+      line('#999', 2, [0, 0, 0, 8]); X.strokeStyle = '#8a6a44'; X.lineWidth = 3; X.beginPath(); X.moveTo(-20, 18); X.lineTo(0, 8); X.lineTo(20, 18); X.stroke();
+      const c = [['#d8402c', '#2e9a4c'], ['#3070d0', '#e6b830'], ['#8a4a9a', '#f4f0e8']][seed % 3];
+      poly(c[0], [-18, 18, 0, 18, 0, 70, -28, 70]); poly(c[1], [0, 18, 18, 18, 28, 70, 0, 70]);
+      X.fillStyle = '#f4f0e8'; for (let i = 0; i < 4; i++) { X.beginPath(); X.arc(-16 + i * 11, 20, 6, 0, M.PI); X.fill() }
+      circ('#e6b830', 0, 34, 2.5); circ('#e6b830', 0, 46, 2.5); break;
+    }
+    case 2: { // little polichinelle marionette on strings
+      X.strokeStyle = 'rgba(220,210,190,.6)'; X.lineWidth = 1; X.beginPath(); X.moveTo(-14, 12); X.lineTo(-8, 52); X.moveTo(14, 12); X.lineTo(8, 52); X.moveTo(0, 12); X.lineTo(0, 30); X.stroke();
+      X.fillStyle = '#6a4a30'; X.fillRect(-16, 9, 32, 5); X.fillRect(-2, 0, 4, 14);
+      X.translate(0, 100); X.scale(.36, .36); drawPoli({ run: t * .04 + seed, air: true }); break;
+    }
+    case 3: { // old lantern, glowing
+      line('#555', 2, [0, 0, 0, 20]); X.save(); X.globalAlpha = .18 + M.sin(t * .05 + seed) * .05; circ('#ffcf70', 0, 34, 34); X.restore();
+      X.fillStyle = '#3a3a44'; X.fillRect(-9, 20, 18, 4); X.fillRect(-9, 44, 18, 4); X.fillStyle = '#ffd88a'; X.fillRect(-7, 24, 14, 20);
+      X.fillStyle = '#3a3a44'; X.fillRect(-1, 24, 2, 20); break;
+    }
+    case 4: { // star garland
+      X.strokeStyle = '#8a7a5a'; X.lineWidth = 1.5; X.beginPath(); X.moveTo(-60, 0); X.quadraticCurveTo(0, 40, 60, 0); X.stroke();
+      for (let i = 1; i < 6; i++) { const p = i / 6, gx = -60 + p * 120, gy = 4 * 20 * p * (1 - p); line('#8a7a5a', 1, [gx, gy, gx, gy + 10]); star(gx, gy + 16, 7, t * .01 + i, ['#e6b830', '#c8c8d8', '#d8402c'][i % 3]) }
+      break;
+    }
+    case 5: { // sandbag counterweight
+      line('#8a7a5a', 2, [0, 0, 0, 30]); X.fillStyle = '#a08a60'; X.beginPath(); X.moveTo(-6, 30); X.quadraticCurveTo(-18, 50, -12, 64); X.lineTo(12, 64); X.quadraticCurveTo(18, 50, 6, 30); X.fill();
+      X.fillStyle = '#7a6a48'; X.fillRect(-7, 30, 14, 4); break;
+    }
+  }
+  X.restore();
+}
 function drawStage() {
   X.save(); X.translate(0, -T);
-  const h = PL ? climbed() : 0, k1 = M.min(1, h / 250), k2 = M.min(1, M.max(0, (h - 250) / 400));
-  const top = k2 > 0 ? mixHex('#1a1446', '#03040f', k2) : mixHex('#3a1420', '#1a1446', k1), bot = k2 > 0 ? mixHex('#4b3570', '#140f30', k2) : mixHex('#6a2030', '#4b3570', k1);
-  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot); X.fillStyle = g; X.fillRect(0, 0, W, H);
+  // wooden wall of the attic
+  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2e1c14'); g.addColorStop(1, '#24150f'); X.fillStyle = g; X.fillRect(0, 0, W, H);
+  X.fillStyle = 'rgba(0,0,0,.22)'; for (let x = 0; x < W; x += 34) X.fillRect(x, 0, 2, H);
+  X.fillStyle = 'rgba(255,220,180,.035)'; for (let x = 17; x < W; x += 34) X.fillRect(x, 0, 1, H);
   const cy = camY;
-  // stars (more and more as you climb)
-  X.fillStyle = '#fff';
-  for (let i = 0; i < 70; i++) { const sy = ((i * 137 - cy * .15) % H + H) % H, sx = (i * 89) % W; X.globalAlpha = (k1 * .4 + k2 * .6) * (.5 + .5 * M.sin(t * .05 + i)); X.fillRect(sx, sy, 2, 2) }
+  // far layer: painted flats, trunks, rolled backdrops
+  { const pf = .25, SEC = 230, base = cy * pf, n0 = M.floor(base / SEC) - 1, n1 = M.floor((base + H) / SEC) + 1;
+    X.save(); X.globalAlpha = .55;
+    for (let n = n0; n <= n1; n++) for (let i = 0; i < 2; i++) { const r = hsh(n, i); if (r < .25) continue; drawFlat(M.floor(hsh(n, i + 7) * 7), (i ? .72 : .26) * W + (hsh(n, i + 3) - .5) * W * .2, n * SEC - base + hsh(n, i + 5) * 80, .8 + hsh(n, i + 9) * .5) }
+    X.restore() }
+  // skylights: round windows with moonlight
+  { const pf = .45, SEC = 700, base = cy * pf, n0 = M.floor(base / SEC) - 1, n1 = M.floor((base + H) / SEC) + 1;
+    for (let n = n0; n <= n1; n++) {
+      const wx = (hsh(n, 41) < .5 ? .22 : .78) * W, wy = n * SEC - base + 120;
+      X.save(); X.globalAlpha = .07; X.fillStyle = '#c8d8ff'; X.beginPath(); X.moveTo(wx - 22, wy); X.lineTo(wx + 22, wy); X.lineTo(wx + 140 * (wx < W / 2 ? 1 : -1) + 60, wy + 420); X.lineTo(wx + 140 * (wx < W / 2 ? 1 : -1) - 60, wy + 420); X.fill(); X.restore();
+      circ('#5a3a24', wx, wy, 30); circ('#1a2448', wx, wy, 25); X.save(); X.beginPath(); X.arc(wx, wy, 25, 0, 6.29); X.clip();
+      for (let i = 0; i < 8; i++) { X.fillStyle = '#fff'; X.fillRect(wx - 20 + hsh(n, i) * 40, wy - 20 + hsh(i, n) * 40, 1.5, 1.5) } circ('#fff6dc', wx + 8, wy - 6, 7); X.restore();
+      X.fillStyle = '#5a3a24'; X.fillRect(wx - 25, wy - 1.5, 50, 3); X.fillRect(wx - 1.5, wy - 25, 3, 50);
+    } }
+  // middle layer: roof beams, trusses and hanging decor
+  { const pf = .55, SEC = 300, base = cy * pf, n0 = M.floor(base / SEC) - 1, n1 = M.floor((base + H) / SEC) + 1;
+    X.save(); X.globalAlpha = .72;
+    for (let n = n0; n <= n1; n++) {
+      const by = n * SEC - base;
+      X.strokeStyle = '#3e2618'; X.lineWidth = 9; X.beginPath(); X.moveTo(0, by + SEC); X.lineTo(W * .5, by + 12); X.lineTo(W, by + SEC); X.stroke();
+      X.fillStyle = '#4e301e'; X.fillRect(0, by, W, 16); X.fillStyle = '#5e3c26'; X.fillRect(0, by, W, 4); X.fillStyle = 'rgba(0,0,0,.35)'; X.fillRect(0, by + 16, W, 5);
+      for (let x = 20; x < W; x += 70) circ('#2a1a10', x, by + 9, 2.2);
+      // cobwebs in the corners
+      X.strokeStyle = 'rgba(220,220,230,.18)'; X.lineWidth = 1; for (const [cx2, dir] of [[0, 1], [W, -1]]) { X.beginPath(); for (let k = 1; k <= 3; k++) { X.moveTo(cx2, by + 16 + k * 10); X.quadraticCurveTo(cx2 + dir * k * 6, by + 16 + k * 6, cx2 + dir * k * 10, by + 16) } X.moveTo(cx2, by + 16); X.lineTo(cx2 + dir * 32, by + 48); X.stroke() }
+      const np = 1 + (hsh(n, 2) > .4 ? 1 : 0) + (W > 400 ? 1 : 0);
+      for (let i = 0; i < np; i++) { const px = (i + .5 + (hsh(n, i + 11) - .5) * .5) / np * W; drawProp(M.floor(hsh(n, i + 13) * 6), px, by + 16, M.sin(t * .02 + n + i) * .05, n + i) }
+    }
+    X.restore() }
+  // dust floating in the air
+  X.fillStyle = '#ffe8c0';
+  for (let i = 0; i < 36; i++) { X.globalAlpha = .12 + .1 * M.sin(t * .03 + i); X.fillRect((i * 97 + M.sin(t * .01 + i) * 24 + W * 2) % W, ((i * 173 - cy * .8 + t * .15) % H + H) % H, 2, 2) }
   X.globalAlpha = 1;
-  if (k1 > .5) { X.globalAlpha = (k1 - .5) * 2; circ('rgba(255,248,224,.15)', W * .78, 90 + cy * .02 % 40, 40); circ('#fff8e0', W * .78, 90 + cy * .02 % 40, 22); X.globalAlpha = 1 }
-  // clouds in the middle heights
-  if (k1 > .2 && k2 < 1) { X.globalAlpha = .25 * (1 - k2); X.fillStyle = '#d8c8f0'; for (let i = 0; i < 6; i++) { const yy = ((i * 211 - cy * .35) % (H + 120) + H + 120) % (H + 120) - 60, xx = (i * 173) % W; X.beginPath(); X.ellipse(xx, yy, 60, 16, 0, 0, 6.29); X.ellipse(xx + 30, yy - 8, 36, 14, 0, 0, 6.29); X.fill() } X.globalAlpha = 1 }
-  // backstage ladders and ropes near the bottom of the climb
-  if (k1 < 1) {
-    X.globalAlpha = 1 - k1;
-    for (const sx of [10, W - 26]) { X.fillStyle = '#4a2a1c'; X.fillRect(sx, 0, 4, H); X.fillRect(sx + 12, 0, 4, H); for (let y = ((-cy * .6) % 26 + 26) % 26; y < H; y += 26) X.fillRect(sx, y, 16, 3) }
-    for (let i = 0; i < 4; i++) { const x = W * (.15 + i * .23); line('#8a6a4a', 2, [x, 0, x, ((i * 97 - cy * .5) % 160 + 160) % 160 + 80]); }
-    X.globalAlpha = 1;
-  }
+  // vignette so that the planks and bats stay readable
+  const v = X.createRadialGradient(W / 2, H * .45, M.min(W, H) * .25, W / 2, H * .45, M.max(W, H) * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); X.fillStyle = v; X.fillRect(0, 0, W, H);
   X.restore();
 }
 function drawCrowd() {}
@@ -1731,7 +1824,7 @@ function drawPlat(q, x, y) {
     X.strokeStyle = '#8a6a44'; X.setLineDash([3, 3]); X.lineWidth = 1.5; X.beginPath(); X.moveTo(x - 8, y); X.lineTo(x - 2, y + 5); X.lineTo(x + 4, y + 9); X.stroke(); X.setLineDash([]); return;
   }
   X.fillStyle = 'rgba(0,0,0,.25)'; X.fillRect(x - q.w / 2 + 3, y + 4, q.w, 9);
-  X.fillStyle = q.kind === 'move' ? q.k : '#a8703c'; X.beginPath(); X.roundRect(x - q.w / 2, y, q.w, 10, 3); X.fill();
+  X.fillStyle = q.kind === 'move' ? q.k : '#e2a65a'; X.beginPath(); X.roundRect(x - q.w / 2, y, q.w, 10, 3); X.fill(); X.strokeStyle = '#fff1d0'; X.lineWidth = 1.5; X.stroke();
   X.fillStyle = 'rgba(255,255,255,.25)'; X.fillRect(x - q.w / 2 + 3, y + 1, q.w - 6, 2);
   if (q.kind === 'move') { txt(q.vx > 0 ? '›' : '‹', x, y + 5, 12, '#fff', 'center', false); X.fillStyle = COL.yellow; X.fillRect(x - q.w / 2, y + 8, q.w, 2) }
   else { circ('#5a3a1c', x - q.w / 2 + 5, y + 5, 1.5); circ('#5a3a1c', x + q.w / 2 - 5, y + 5, 1.5) }
@@ -1742,19 +1835,23 @@ function drawPlat(q, x, y) {
   }
 }
 function drawBat(f, x, y) {
-  const fl = M.sin(t * .4 + f.ph) * 8;
+  const fl = M.sin(t * .4 + f.ph) * 9;
   X.save(); X.translate(x, y); if (f.dead) X.rotate(f.dead * .2);
-  X.fillStyle = '#3a2450';
-  X.beginPath(); X.moveTo(0, 0); X.lineTo(-24, -6 - fl); X.lineTo(-18, 2); X.lineTo(-12, -1); X.lineTo(-6, 6); X.closePath(); X.fill();
-  X.beginPath(); X.moveTo(0, 0); X.lineTo(24, -6 - fl); X.lineTo(18, 2); X.lineTo(12, -1); X.lineTo(6, 6); X.closePath(); X.fill();
-  X.beginPath(); X.ellipse(0, 1, 8, 10, 0, 0, 6.29); X.fill(); poly('#3a2450', [-6, -6, -4, -14, -1, -7]); poly('#3a2450', [6, -6, 4, -14, 1, -7]);
-  circ('#ffe066', -3, -1, 2); circ('#ffe066', 3, -1, 2); circ('#111', -3, -1, .9); circ('#111', 3, -1, .9);
+  if (!f.dead) { X.save(); X.globalAlpha = .38 + M.sin(t * .15 + f.ph) * .12; const gr = X.createRadialGradient(0, 0, 4, 0, 0, 38); gr.addColorStop(0, '#ff5a4a'); gr.addColorStop(1, 'rgba(255,90,74,0)'); X.fillStyle = gr; X.beginPath(); X.arc(0, 0, 38, 0, 6.29); X.fill(); X.restore() }
+  X.scale(1.25, 1.25);
+  const wing = (sx) => { X.beginPath(); X.moveTo(0, 0); X.lineTo(sx * 24, -6 - fl); X.lineTo(sx * 18, 2); X.lineTo(sx * 12, -1); X.lineTo(sx * 6, 6); X.closePath() };
+  X.lineJoin = 'round'; X.strokeStyle = '#f4f0e8'; X.lineWidth = 3;
+  for (const sx of [-1, 1]) { wing(sx); X.stroke(); X.fillStyle = '#7a4aa8'; X.fill() }
+  X.beginPath(); X.ellipse(0, 1, 8, 10, 0, 0, 6.29); X.stroke(); X.fillStyle = '#3a2058'; X.fill();
+  poly('#3a2058', [-6, -6, -4, -14, -1, -7]); poly('#3a2058', [6, -6, 4, -14, 1, -7]);
+  circ('#ffe066', -3, -1, 2.6); circ('#ffe066', 3, -1, 2.6); circ('#111', -3, -1, 1.1); circ('#111', 3, -1, 1.1);
+  poly('#fff', [-2, 5, -1, 8, 0, 5]); poly('#fff', [0, 5, 1, 8, 2, 5]);
   X.restore();
 }
 function drawGame() {
   if (!PL) return;
   const ox = (W - CW * ZM) / 2;
-  if (ox > 1) { X.save(); X.translate(0, -T); for (const sx of [0, W - ox]) { const g = X.createLinearGradient(sx, 0, sx + ox, 0); g.addColorStop(0, '#5e0f18'); g.addColorStop(1, '#8a1f2a'); X.fillStyle = g; X.fillRect(sx, 0, ox, H) } X.restore() }
+  if (ox > 1) { X.save(); X.translate(0, -T); X.fillStyle = 'rgba(10,5,3,.45)'; X.fillRect(0, 0, ox, H); X.fillRect(W - ox, 0, ox, H); for (const px of [ox - 14, W - ox]) { X.fillStyle = '#4e301e'; X.fillRect(px, 0, 14, H); X.fillStyle = '#6a4228'; X.fillRect(px + 2, 0, 3, H) } X.restore() }
   X.save(); X.translate(ox, -T); X.scale(ZM, ZM); X.translate(0, -camY);
   // ground trampoline at the start
   if (y0 - camY < VH + 40) {

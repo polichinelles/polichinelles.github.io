@@ -49,9 +49,9 @@
   main{max-width:760px;margin:18px auto 0;padding:0 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
   .card{position:relative;border-radius:16px;overflow:hidden;border:3px solid #e6b830;background:#1c1838;box-shadow:0 8px 20px rgba(0,0,0,.45);text-decoration:none;color:#fff;display:flex;flex-direction:column;transition:transform .15s}
   .card:active{transform:scale(.97)}
-  .card .art{height:118px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;overflow:hidden}
+  .card .art{height:150px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;overflow:hidden}
   .card .art::after{content:'';position:absolute;inset:auto 0 0 0;height:26px;background:linear-gradient(transparent,rgba(28,24,56,1))}
-  .card .art canvas{width:100%;height:100%;display:block}
+  .card .art canvas,.card .art img{width:100%;height:100%;display:block;object-fit:cover}
   .card .body{padding:10px 14px 14px}
   .card h2{margin:0;font-size:21px;color:#e6b830}
   .card p{margin:4px 0 10px;font-size:13.5px;line-height:1.35;color:#ddd6ea}
@@ -120,11 +120,10 @@ for (const g of GAMES) {
   if (!g.soon) a.href = g.href;
   const rec = g.soon ? '' : `Record : ${+ls(g.best) || 0}`;
   a.innerHTML = `${g.soon ? '<span class="badge">BIENTÔT</span>' : g.fresh ? '<span class="badge">NOUVEAU</span>' : ''}
-    <div class="art" style="background:linear-gradient(${g.bg[0]} 0 62%, ${g.bg[1]} 62% 100%)">${g.art ? '<canvas></canvas>' : g.emoji}</div>
+    <div class="art" style="background:linear-gradient(${g.bg[0]} 0 62%, ${g.bg[1]} 62% 100%)">${g.soon ? g.emoji : `<img src="shots/${g.id}.jpg" alt="${g.name}" loading="lazy">`}</div>
     <div class="body"><h2>${g.name}</h2><p>${g.desc}</p>
     <div class="row"><span class="rec">${rec}</span><span class="play">${g.soon ? 'Bientôt' : 'Jouer ▶'}</span></div></div>`;
   main.appendChild(a);
-  if (g.art) drawArt(a.querySelector('canvas'), g.art);
 }
 
 // small poster illustrations, drawn in code
