@@ -830,7 +830,7 @@ const WARD = {
     { id: 'c_paillettes', name: 'Paillettes', pass: 22, v: { stripes: ['#d8402c', '#f2d27a', '#fff3c0'], sleeves: ['#d8402c', '#f2d27a'], trim: '#fff3c0', motif: 'etoiles' } },
     { id: 'c_venise', name: 'Venise', pass: 30, v: { stripes: ['#5b2a86', '#c99a2e', '#1d1d24'], sleeves: ['#5b2a86', '#c99a2e'], trim: '#f2d27a', motif: 'damier' } },
     { id: 'c_minuit', name: 'Carnaval de minuit', pass: 33, v: { stripes: ['#0d1430', '#9fe0ff', '#f27ab0'], sleeves: ['#1d2a6b', '#0d1430'], trim: '#9fe0ff', motif: 'lunes' } },
-    { id: 'c_legende', name: 'Légende du Carnaval', pass: 40, v: { stripes: ['#f2c230', '#ffffff', '#f27ab0'], sleeves: ['#f2c230', '#9fe0ff'], trim: '#ffffff', motif: 'disco' } },
+    { id: 'c_legende', name: 'Polichinelle d’or chromé', pass: 40, v: { stripes: ['#f2c230', '#ffffff', '#f27ab0'], sleeves: ['#f2c230', '#9fe0ff'], trim: '#ffffff', chrome: 1 } },
     { id: 'c_tigre', name: 'Tigre', pass: 19, v: { stripes: ['#f08a1c', '#1d1d24', '#f4f0e8'], sleeves: ['#f08a1c', '#1d1d24'], trim: '#1d1d24', motif: 'tigre' } },
     { id: 'c_pasteque', name: 'Pastèque', pass: 27, v: { stripes: ['#e8404a', '#1d1d24', '#2e9a4c'], sleeves: ['#2e9a4c', '#9ed86a'], trim: '#2e9a4c', motif: 'pasteque' } }
   ] },
@@ -1508,7 +1508,35 @@ function drawBackExtra(type) {
   return false;
 }
 
+// ---------- legendary outfit: the whole polichinelle in polished chrome gold ----------
+let CHROME_BUSY = false, chromeA = null, chromeB = null;
+function drawPoliChrome(pose, look) {
+  const m = X.getTransform(), sc = M.min(4, M.max(.6, M.hypot(m.a, m.b)));
+  const BW = 180, BH = 180, OX = 90, OY = 140, cw = M.ceil(BW * sc), ch = M.ceil(BH * sc);
+  if (!chromeA) { chromeA = document.createElement('canvas'); chromeB = document.createElement('canvas') }
+  chromeA.width = cw; chromeA.height = ch; chromeB.width = cw; chromeB.height = ch;
+  const ga = chromeA.getContext('2d'), gb = chromeB.getContext('2d');
+  ga.setTransform(sc, 0, 0, sc, OX * sc, OY * sc);
+  CHROME_BUSY = true; try { withCtx(ga, () => drawPoli(pose, look)) } finally { CHROME_BUSY = false }
+  gb.drawImage(chromeA, 0, 0);
+  // gold colour, keeping the light and shadows of the drawing
+  gb.globalCompositeOperation = 'color'; gb.fillStyle = '#d9a520'; gb.fillRect(0, 0, cw, ch);
+  gb.globalCompositeOperation = 'multiply'; let g = gb.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, '#fff3b8'); g.addColorStop(.55, '#ffd256'); g.addColorStop(1, '#b87a08'); gb.fillStyle = g; gb.fillRect(0, 0, cw, ch);
+  // chrome reflections
+  gb.globalCompositeOperation = 'overlay'; gb.globalAlpha = .55; g = gb.createLinearGradient(0, 0, cw * .7, ch);
+  for (const [s, c] of [[0, '#fff'], [.22, '#6a4a00'], [.4, '#fff'], [.52, '#7a5a10'], [.7, '#fff'], [.85, '#5a3a00'], [1, '#fff']]) g.addColorStop(s, c);
+  gb.fillStyle = g; gb.fillRect(0, 0, cw, ch); gb.globalAlpha = 1;
+  // a shine sweeping across now and then
+  const p = (t % 150) / 90 - .3;
+  if (p > -.3 && p < 1.3) { gb.globalCompositeOperation = 'lighter'; g = gb.createLinearGradient(0, 0, cw, ch * .6); g.addColorStop(M.max(0, M.min(1, p - .08)), 'rgba(255,255,255,0)'); g.addColorStop(M.max(0, M.min(1, p)), 'rgba(255,255,240,.75)'); g.addColorStop(M.max(0, M.min(1, p + .08)), 'rgba(255,255,255,0)'); gb.fillStyle = g; gb.fillRect(0, 0, cw, ch) }
+  gb.globalCompositeOperation = 'destination-in'; gb.drawImage(chromeA, 0, 0); gb.globalCompositeOperation = 'source-over';
+  X.drawImage(chromeB, -OX, -OY, BW, BH);
+  // little glints
+  const k = M.floor(t / 25) % 5, gx = [-8, 6, -2, 10, -12][k], gy = [-50, -30, -66, -12, -24][k], a = 1 - (t % 25) / 25;
+  X.save(); X.globalAlpha *= a; star(gx, gy, 3.5 * a + 1, t * .1, '#fff'); X.restore();
+}
 function drawPoli(pose, look) {
+  if ((look || LOOK).chrome && !CHROME_BUSY) { drawPoliChrome(pose, look || LOOK); return }
   const { run = 0, air = false, duck = 0, sq = 0, dead = false, idle = false } = pose;
   DL = look || LOOK;
   X.save();
