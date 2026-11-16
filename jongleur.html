@@ -645,10 +645,15 @@ const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- Le Jongleur ----
 let jugs = [], tosses = 0, nextStarDrop = 0, dropped = null, handT = 0;
-const JCOL = ['#d8402c', '#3070d0', '#2e9a4c', '#e6b830', '#f27ab0'];
+const JCOL = ['#d8402c', '#3070d0', '#2e9a4c', '#e6b830', '#f27ab0', '#8a4a9a', '#2bb3c0', '#f08a1c', '#9ed86a', '#1d2a6b'];
+// what can be juggled: balls and clubs of every colour, flaming clubs... and tools
+const JUG_KINDS = ['ball', 'ball', 'club', 'club', 'fire', 'screwdriver', 'hammer', 'drill'];
+const JUG_NAME = { ball: 'Une balle de plus !', club: 'Une massue de plus !', fire: 'Une massue en feu !', screwdriver: 'Un tournevis !', hammer: 'Un marteau !', drill: 'Une visseuse !' };
+function pickJug() { return JUG_KINDS[M.random() * JUG_KINDS.length | 0] }
 function addJug(kind) {
-  const n = jugs.filter(j => j.kind !== 'star').length;
-  jugs.push({ kind, x: W / 2 + (n % 2 ? 14 : -14), y: G - 64, vx: rnd(-1.2, 1.2), vy: -6.4, rot: 0, vr: kind === 'pin' ? rnd(.12, .2) : 0, k: JCOL[n % JCOL.length] });
+  const n = jugs.filter(j => j.kind !== 'star').length, c = JCOL[M.random() * JCOL.length | 0];
+  let c2 = JCOL[M.random() * JCOL.length | 0]; if (c2 === c) c2 = '#f4f0e8';
+  jugs.push({ kind, x: W / 2 + (n % 2 ? 14 : -14), y: G - 64, vx: rnd(-1.2, 1.2), vy: -6.4, rot: 0, vr: kind === 'ball' ? rnd(-.05, .05) : rnd(.12, .2) * (M.random() < .5 ? -1 : 1), k: c, k2: c2 });
 }
 function jugGrav() { return .12 + .045 * M.min(1, playT / 5400) }
 
@@ -661,7 +666,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  jugs = []; tosses = 0; nextStarDrop = 600; dropped = null; handT = 0; addJug('ball');
+  jugs = []; tosses = 0; nextStarDrop = 600; dropped = null; handT = 0; addJug(pickJug());
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
 }
@@ -2025,7 +2030,7 @@ function render() {
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('Le Jongleur', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Touche balles et quilles pour les relancer', mx, 166, 13, '#ddd', 'center', false);
+      txt('Touche balles, massues et outils pour les relancer', mx, 166, 13, '#ddd', 'center', false);
       txt('Rien ne doit toucher le sol !', mx, 184, 13, '#ddd', 'center', false);
       txt('★ Attrape les étoiles qui tombent du ciel', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
@@ -2036,7 +2041,7 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 330 ? 22 : W < 400 ? 26 : 34, COL.yellow);
     txt('Le Jongleur', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Touche balles et quilles pour les relancer', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Touche balles, massues et outils pour les relancer', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     txt('Rien ne doit toucher le sol !', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     if (T > 80) txt('★ Attrape les étoiles qui tombent du ciel', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
@@ -2084,20 +2089,63 @@ function onTap(x, y) {
   burst(best.x, best.y - G, 6, ['#fff', best.k || '#fff'], 2);
   // one more object every 10 tosses (up to 5)
   const n = jugs.filter(j => j.kind !== 'star').length;
-  if (tosses % 10 === 0 && n < 5) { addJug(n % 2 ? 'pin' : 'ball'); sfx.newObj(); popup(W / 2, G - 120, n % 2 ? 'Une quille de plus !' : 'Une balle de plus !', '#ffe066') }
+  if (tosses % 10 === 0 && n < 5) { const kd = pickJug(); addJug(kd); sfx.newObj(); popup(W / 2, G - 120, JUG_NAME[kd], '#ffe066') }
+}
+function drawClub(j, fire) {
+  // juggling club: knob, thin taped handle, long bulb
+  const body = fire ? '#3a3a44' : j.k;
+  X.fillStyle = body; X.beginPath(); X.moveTo(-1.6, 17); X.lineTo(-1.8, 5); X.quadraticCurveTo(-7.5, -4, -6.5, -14); X.quadraticCurveTo(-5.5, -22, 0, -22); X.quadraticCurveTo(5.5, -22, 6.5, -14); X.quadraticCurveTo(7.5, -4, 1.8, 5); X.lineTo(1.6, 17); X.closePath(); X.fill();
+  X.fillStyle = '#f4f0e8'; X.fillRect(-1.9, 6, 3.8, 9);
+  circ(fire ? '#5a5a66' : j.k2, 0, 18.5, 3);
+  if (!fire) { X.fillStyle = j.k2; X.fillRect(-6.4, -9, 12.8, 3.4); X.fillRect(-4.6, 0, 9.2, 2.2) }
+  X.fillStyle = 'rgba(255,255,255,.35)'; X.beginPath(); X.ellipse(-2.6, -12, 1.6, 6, 0, 0, 6.29); X.fill();
+  if (fire) {
+    // wick wrapped in kevlar, on fire
+    X.fillStyle = '#5a4a3a'; X.beginPath(); X.ellipse(0, -21, 5, 4, 0, 0, 6.29); X.fill();
+    const f = M.sin(t * .6 + j.x) * 1.5, h = 13 + M.sin(t * .9 + j.y) * 3;
+    X.save(); X.globalAlpha = .35; circ('#ffb040', 0, -26, 12); X.restore();
+    poly('#e0401f', [-6, -21, 6, -21, 3 + f, -24 - h * .7, 0, -24 - h, -3 + f, -24 - h * .75]);
+    poly('#f08a1c', [-4.5, -21, 4.5, -21, 1.5 + f, -24 - h * .55, -1.5 + f, -24 - h * .6]);
+    poly('#fff3b0', [-2.5, -21, 2.5, -21, f * .5, -24 - h * .35]);
+  }
 }
 function drawJug(j) {
   if (j.kind === 'star') { X.save(); X.globalAlpha = .35; circ('#fff6c0', j.x, j.y, 15); X.restore(); star(j.x, j.y, 11, j.rot); return }
-  X.save(); X.translate(j.x, j.y); X.rotate(j.rot);
+  X.save(); X.translate(j.x, j.y); X.rotate(j.rot); X.scale(1.2, 1.2);
   if (j.kind === 'ball') {
-    circ(j.k, 0, 0, 10); X.save(); X.beginPath(); X.arc(0, 0, 10, 0, 6.29); X.clip(); X.fillStyle = '#fff'; X.fillRect(-10, -2, 20, 4); X.restore();
-    circ('rgba(255,255,255,.6)', -3.5, -4, 2.6);
-  } else {
-    X.fillStyle = '#f4f0e8'; X.beginPath(); X.ellipse(0, 4, 6, 12, 0, 0, 6.29); X.fill();
-    X.beginPath(); X.ellipse(0, -12, 3.4, 7, 0, 0, 6.29); X.fill();
-    X.fillStyle = j.k; X.fillRect(-5, -5, 10, 3.5); circ(j.k, 0, -19, 3.4);
+    // juggling ball: stitched panels in two colours
+    circ(j.k, 0, 0, 10);
+    X.save(); X.beginPath(); X.arc(0, 0, 10, 0, 6.29); X.clip();
+    X.fillStyle = j.k2; X.beginPath(); X.ellipse(-7, 0, 6, 11, 0, 0, 6.29); X.ellipse(7, 0, 6, 11, 0, 0, 6.29); X.fill();
+    X.strokeStyle = 'rgba(0,0,0,.25)'; X.lineWidth = .8; X.setLineDash([1.5, 1.5]); X.beginPath(); X.ellipse(-7, 0, 6, 11, 0, 0, 6.29); X.ellipse(7, 0, 6, 11, 0, 0, 6.29); X.stroke(); X.setLineDash([]);
+    X.restore();
+    circ('rgba(255,255,255,.55)', -3.5, -4.5, 2.6);
+  } else if (j.kind === 'club' || j.kind === 'pin') drawClub(j, false);
+  else if (j.kind === 'fire') drawClub(j, true);
+  else if (j.kind === 'screwdriver') {
+    X.fillStyle = '#b8b8c8'; X.fillRect(-1.3, -22, 2.6, 18); X.fillStyle = '#8a8a98'; X.fillRect(-2.2, -24, 4.4, 3);
+    X.fillStyle = j.k; X.beginPath(); X.roundRect(-4.5, -5, 9, 22, 4); X.fill();
+    X.fillStyle = 'rgba(0,0,0,.2)'; for (const x of [-2.3, 0, 2.3]) X.fillRect(x - .5, -2, 1, 16);
+    X.fillStyle = '#1d1d24'; X.fillRect(-4.5, -5, 9, 3);
+    X.fillStyle = 'rgba(255,255,255,.35)'; X.fillRect(-3.4, -1, 1.2, 14);
+  } else if (j.kind === 'hammer') {
+    X.fillStyle = '#b07840'; X.beginPath(); X.roundRect(-2.2, -10, 4.4, 30, 2); X.fill();
+    X.fillStyle = j.k; X.beginPath(); X.roundRect(-2.8, 10, 5.6, 10, 2); X.fill();
+    X.fillStyle = '#6a6a78'; X.beginPath(); X.moveTo(-5, -17); X.lineTo(9, -17); X.lineTo(9, -9); X.lineTo(-5, -9); X.lineTo(-7, -11); X.quadraticCurveTo(-13, -12, -15, -18); X.quadraticCurveTo(-11, -15, -7, -15); X.closePath(); X.fill();
+    X.fillStyle = '#9a9aa8'; X.fillRect(-5, -17, 14, 2.5); X.fillStyle = '#4a4a55'; X.fillRect(8, -17, 2.5, 8);
+  } else if (j.kind === 'drill') {
+    // cordless screwdriver / drill
+    X.fillStyle = '#9a9aa8'; X.fillRect(9, -9.5, 9, 2); X.fillStyle = '#4a4a55'; X.fillRect(6, -11.5, 4, 6);
+    X.fillStyle = j.k; X.beginPath(); X.roundRect(-12, -14, 19, 11, 4); X.fill();
+    X.beginPath(); X.moveTo(-6, -4); X.lineTo(1, -4); X.lineTo(0, 10); X.lineTo(-7, 10); X.closePath(); X.fill();
+    X.fillStyle = '#1d1d24'; X.beginPath(); X.roundRect(-9, 9, 12, 7, 2); X.fill(); X.fillRect(-2, -3, 2, 4);
+    X.fillStyle = 'rgba(0,0,0,.25)'; X.fillRect(-11, -11, 4, 6);
+    X.fillStyle = 'rgba(255,255,255,.3)'; X.fillRect(-10, -13, 14, 2);
+    X.fillStyle = '#7dff8a'; X.fillRect(-7, 11.5, 2, 2); X.fillRect(-4, 11.5, 2, 2);
   }
   X.restore();
+  // embers flying off the burning clubs
+  if (j.kind === 'fire' && t % 3 === 0 && state === 'play') parts.push({ x: j.x + M.sin(j.rot) * 26, y: j.y - M.cos(j.rot) * 26, vx: rnd(-.6, .6), vy: rnd(-1.4, -.4), l: 22, k: M.random() < .5 ? '#ffb040' : '#ff6a2a', s: 2, g: -.01 });
 }
 function drawGame() {
   // the juggler: the player's own polichinelle
