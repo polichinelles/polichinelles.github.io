@@ -9,7 +9,9 @@ const SEASONS = [
   { id: 1, name: 'Le Grand Carnaval', icon: '🎭', start: [2026, 11, 16], days: 10,
     items: { 2: 'h_carnaval', 3: 'p_baguette_pain', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 8: 'h_helice', 9: 'k_cravate_or', 10: 'c_carnaval', 11: 'p_poisson', 12: 't_glitter', 13: 'f_3d', 14: 'h_venise', 16: 'l_paillettes', 17: 'h_gateau', 18: 'f_goldmask', 19: 'c_tigre', 20: 'b_plumes', 21: 'p_canard', 22: 'c_paillettes', 23: 'h_theiere', 24: 'h_plumes', 26: 'p_goldfan', 27: 'c_pasteque', 28: 'b_cape_or', 29: 'h_nuage', 30: 'c_venise', 31: 't_bananes', 32: 'b_escargot', 33: 'c_minuit', 34: 'h_poulet', 35: 'h_bocal', 36: 'k_jabot_or', 37: 'p_poele', 38: 'h_licorne_or', 39: 'h_minime', 40: 'c_legende' },
     stars: { 1: 50, 6: 80, 15: 120, 25: 200 } },
-  { id: 2, name: 'La Ferme', icon: '🐮', start: [2026, 11, 26], days: 10, items: null, stars: {} }
+  { id: 2, name: 'La Ferme', icon: '🐮', start: [2026, 11, 26], days: 10,
+    items: { 2: 'h_paille', 3: 'p_carotte', 4: 'l_bottes_vertes', 5: 'f_paille', 7: 't_plumes', 8: 'h_casquette', 9: 'k_cloche', 10: 'c_salopette', 11: 'p_mais', 12: 'f_groin', 13: 'h_tournesol', 14: 'c_carreaux', 16: 'p_fourche', 17: 'h_foin', 18: 'l_bottes_jaunes', 19: 'c_coccinelle', 20: 'b_moulin', 21: 'p_seau', 22: 'k_marguerites', 23: 'h_cochon', 24: 't_abeilles', 26: 'b_sac', 27: 'c_abeille', 28: 'h_nid', 29: 'f_boue', 30: 'c_epouvantail', 31: 'p_poussin', 32: 'l_salopette', 33: 'h_ruche', 34: 'b_poule', 35: 't_fleurs', 36: 'h_vache', 37: 'c_mouton', 38: 'h_citrouille', 39: 'p_arrosoir', 40: 'c_vache_leg' },
+    stars: { 1: 50, 6: 80, 15: 120, 25: 200 } }
 ];
 function seasonStart(se) { return new Date(se.start[0], se.start[1] - 1, se.start[2]) }
 function seasonEnd(se) { const d = seasonStart(se); d.setDate(d.getDate() + se.days); return d }

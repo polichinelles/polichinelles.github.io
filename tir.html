@@ -508,7 +508,7 @@ function statusOf(it) {
   if (PROF.eq[it.cat] === it.id) return 'Porté';
   if (PROF.owned.includes(it.id)) return 'Possédé';
   if (it.price) return '⭐ ' + it.price;
-  if (it.pass) return '🎟️ Niv. ' + it.pass;
+  if (it.pass) return (it.season ? '🐮' : '🎟️') + ' Niv. ' + it.pass;
   return '🔒 Défi';
 }
 function renderTabs() {
@@ -540,7 +540,7 @@ function renderBar() {
     const miss = it.price - PROF.wallet;
     wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
   } else if (it.pass) {
-    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme de la saison, niveau ${it.pass}</small></div>`;
+    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass}</small></div>`;
   } else {
     const a = ACH[it.ach], v = M.min(statVal(a.stat), a.goal);
     wdBar.innerHTML = `<div class="info">🔒 ${it.name}<small>Défi : ${a.text} (${v} / ${a.goal})</small><div class="prog"><i style="width:${v / a.goal * 100}%"></i></div></div>`;
@@ -760,7 +760,7 @@ addEventListener('contextmenu', e => e.preventDefault());
 function dust(x, n) { for (let i = 0; i < n; i++) parts.push({ x: x + rnd(-10, 10), y: G - 2, vx: rnd(-2, -.5) - speed * .2, vy: rnd(-1.5, -.3), l: 25, k: '#5a5070', s: rnd(2, 4) }) }
 function burst(x, y, n, cols, sp = 4) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(1, sp); parts.push({ x, y: G + y, vx: M.cos(a) * v, vy: M.sin(a) * v - 1, l: rnd(30, 60), k: cols[i % cols.length], s: rnd(2, 4), g: .12 }) } }
 
-const TRAILK = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a', bubble: '#bfe9ff', snow: '#fff', leaf: '#6ac04a', flame: '#f08a1c', rainbow: '#fff', glitter: '#f2c230', banana: '#f2c230' };
+const TRAILK = { star: COL.yellow, note: '#fff', spark: '#ffe680', heart: '#ff5a8a', bubble: '#bfe9ff', snow: '#fff', leaf: '#6ac04a', flame: '#f08a1c', rainbow: '#fff', glitter: '#f2c230', banana: '#f2c230', feather: '#fff', bee: '#f2c230', petal: '#f6a8c8' };
 function spawnTrail(type) {
   const k = TRAILK[type] || ['#d8402c', '#2e9a4c', '#3070d0', '#e6b830', '#f27ab0'][M.random() * 5 | 0];
   parts.push({ x: PX - 12 + rnd(-4, 4), y: G - P.y - rnd(14, 70), vx: -speed * .45 - rnd(.2, 1), vy: rnd(-.7, .2), l: 42, k, s: type === 'confetti' ? rnd(2.5, 4) : rnd(4, 6), g: type === 'confetti' ? .05 : -.01, shape: type, r: rnd(0, 6) });
@@ -779,6 +779,9 @@ function drawPart(p) {
     case 'flame': X.fillStyle = '#f08a1c'; X.beginPath(); X.moveTo(p.x, p.y - p.s); X.quadraticCurveTo(p.x + p.s * .6, p.y, p.x, p.y + p.s * .5); X.quadraticCurveTo(p.x - p.s * .6, p.y, p.x, p.y - p.s); X.fill(); circ('#f2c230', p.x, p.y + p.s * .1, p.s * .25); break;
     case 'glitter': { X.fillStyle = ['#f2c230', '#fff3c0', '#f27ab0'][M.floor(p.r) % 3]; const s = p.s * .7; X.save(); X.translate(p.x, p.y); X.rotate(p.l * .1); X.beginPath(); X.moveTo(0, -s); X.lineTo(s * .25, -s * .25); X.lineTo(s, 0); X.lineTo(s * .25, s * .25); X.lineTo(0, s); X.lineTo(-s * .25, s * .25); X.lineTo(-s, 0); X.lineTo(-s * .25, -s * .25); X.fill(); X.restore(); break }
     case 'banana': { X.save(); X.translate(p.x, p.y); X.rotate(p.r + p.l * .08); X.strokeStyle = '#f2c230'; X.lineWidth = p.s * .45; X.lineCap = 'round'; X.beginPath(); X.arc(0, 0, p.s * .6, .3, 2.6); X.stroke(); X.fillStyle = '#6b4430'; X.fillRect(M.cos(.3) * p.s * .6 - .8, M.sin(.3) * p.s * .6 - .8, 1.6, 1.6); X.restore(); break }
+    case 'feather': X.save(); X.translate(p.x, p.y); X.rotate(p.r + M.sin(p.l * .15) * .6); X.fillStyle = '#f4f0e8'; X.beginPath(); X.ellipse(0, 0, p.s * .7, p.s * .25, 0, 0, 6.29); X.fill(); X.strokeStyle = '#c8c0b0'; X.lineWidth = .6; X.beginPath(); X.moveTo(-p.s * .8, 0); X.lineTo(p.s * .7, 0); X.stroke(); X.restore(); break;
+    case 'bee': { const fx = M.sin(p.l * .5) * 2; X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(p.x + fx, p.y, p.s * .45, p.s * .3, 0, 0, 6.29); X.fill(); X.fillStyle = '#1d1d24'; X.fillRect(p.x + fx - .5, p.y - p.s * .3, 1.2, p.s * .6); X.fillStyle = 'rgba(255,255,255,.8)'; X.beginPath(); X.ellipse(p.x + fx, p.y - p.s * .4, p.s * .3, p.s * .18, 0, 0, 6.29); X.fill(); break }
+    case 'petal': X.save(); X.translate(p.x, p.y); X.rotate(p.r + p.l * .1); X.fillStyle = ['#f6a8c8', '#ffffff', '#f2c230'][M.floor(p.r) % 3]; X.beginPath(); X.ellipse(0, 0, p.s * .5, p.s * .28, 0, 0, 6.29); X.fill(); X.restore(); break;
     case 'rainbow': circ(`hsl(${(p.r * 60 + p.l * 6) % 360},90%,62%)`, p.x, p.y, p.s * .45); break;
     default: X.fillRect(p.x, p.y, p.s, p.s);
   }
@@ -835,7 +838,14 @@ const WARD = {
     { id: 'c_minuit', name: 'Carnaval de minuit', pass: 33, v: { stripes: ['#0d1430', '#9fe0ff', '#f27ab0'], sleeves: ['#1d2a6b', '#0d1430'], trim: '#9fe0ff', motif: 'lunes' } },
     { id: 'c_legende', name: 'Polichinelle d’or chromé', pass: 40, v: { stripes: ['#f2c230', '#ffffff', '#f27ab0'], sleeves: ['#f2c230', '#9fe0ff'], trim: '#ffffff', chrome: 1 } },
     { id: 'c_tigre', name: 'Tigre', pass: 19, v: { stripes: ['#f08a1c', '#1d1d24', '#f4f0e8'], sleeves: ['#f08a1c', '#1d1d24'], trim: '#1d1d24', motif: 'tigre' } },
-    { id: 'c_pasteque', name: 'Pastèque', pass: 27, v: { stripes: ['#e8404a', '#1d1d24', '#2e9a4c'], sleeves: ['#2e9a4c', '#9ed86a'], trim: '#2e9a4c', motif: 'pasteque' } }
+    { id: 'c_pasteque', name: 'Pastèque', pass: 27, v: { stripes: ['#e8404a', '#1d1d24', '#2e9a4c'], sleeves: ['#2e9a4c', '#9ed86a'], trim: '#2e9a4c', motif: 'pasteque' } },
+    { id: 'c_salopette', name: 'Salopette de fermier', pass: 10, season: 2, v: { stripes: ['#3a5a9a', '#4a6aaa', '#e6b830'], sleeves: ['#d8402c', '#f4f0e8'], trim: '#e6b830', motif: 'salopette' } },
+    { id: 'c_carreaux', name: 'Chemise à carreaux', pass: 14, season: 2, v: { stripes: ['#c8302a', '#1d1d24', '#f4f0e8'], sleeves: ['#c8302a', '#1d1d24'], trim: '#f4f0e8', motif: 'carreaux' } },
+    { id: 'c_coccinelle', name: 'Coccinelle', pass: 19, season: 2, v: { stripes: ['#e0201a', '#1d1d24', '#1d1d24'], sleeves: ['#1d1d24', '#e0201a'], trim: '#1d1d24', motif: 'pois' } },
+    { id: 'c_abeille', name: 'Abeille', pass: 27, season: 2, v: { stripes: ['#f2c230', '#1d1d24', '#f2c230'], sleeves: ['#1d1d24', '#f2c230'], trim: '#1d1d24', motif: 'abeille' } },
+    { id: 'c_epouvantail', name: 'Épouvantail', pass: 30, season: 2, v: { stripes: ['#a8865a', '#6b5a3a', '#c8a870'], sleeves: ['#7a6a4a', '#a8865a'], trim: '#e6c35a', motif: 'patch' } },
+    { id: 'c_mouton', name: 'Mouton', pass: 37, season: 2, v: { stripes: ['#f4f0e8', '#ffffff', '#d8d4cc'], sleeves: ['#f4f0e8', '#d8d4cc'], trim: '#1d1d24', motif: 'laine', belly: 1.25 } },
+    { id: 'c_vache_leg', name: 'La Vache légendaire', pass: 40, season: 2, v: { stripes: ['#f4f0e8', '#1d1d24', '#f4f0e8'], sleeves: ['#f4f0e8', '#1d1d24'], trim: '#1d1d24', cow: 1 } }
   ] },
   hat: { label: 'Chapeau', items: [
     { id: 'h_classic', name: 'Rouge', free: 1, v: { hat: '#d8402c', knob: 'ball', pattern: 0 } },
@@ -885,7 +895,16 @@ const WARD = {
     { id: 'h_nuage', name: 'Petit nuage de pluie', pass: 29, v: { hat: '#c8c8d8', pattern: 0, knob: 'ball', hatShape: 'nuage' } },
     { id: 'h_poulet', name: 'Poule sur la tête', pass: 34, v: { hat: '#f4f0e8', pattern: '#d8402c', knob: 'ball', hatShape: 'poulet' } },
     { id: 'h_bocal', name: 'Bocal à poisson', pass: 35, v: { hat: '#bfe9ff', pattern: '#f08a1c', knob: 'ball', hatShape: 'bocal' } },
-    { id: 'h_minime', name: 'Mini-polichinelle', pass: 39, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'minime' } }
+    { id: 'h_minime', name: 'Mini-polichinelle', pass: 39, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'minime' } },
+    { id: 'h_paille', name: 'Chapeau de paille', pass: 2, season: 2, v: { hat: '#e6c35a', pattern: '#d8402c', knob: 'ball', hatShape: 'paille' } },
+    { id: 'h_casquette', name: 'Casquette de fermier', pass: 8, season: 2, v: { hat: '#2e7a3a', pattern: '#f4f0e8', knob: 'ball', hatShape: 'casquette' } },
+    { id: 'h_tournesol', name: 'Tournesol', pass: 13, season: 2, v: { hat: '#f2c230', pattern: '#6b4430', knob: 'ball', hatShape: 'tournesol' } },
+    { id: 'h_foin', name: 'Botte de foin', pass: 17, season: 2, v: { hat: '#e6c35a', pattern: '#a8862a', knob: 'ball', hatShape: 'foin' } },
+    { id: 'h_cochon', name: 'Oreilles de cochon', pass: 23, season: 2, v: { hat: '#f6a8c8', pattern: '#e87aa0', knob: 'ball', hatShape: 'cochon' } },
+    { id: 'h_nid', name: 'Nid et poussin', pass: 28, season: 2, v: { hat: '#8a6a40', pattern: '#f2c230', knob: 'ball', hatShape: 'nid' } },
+    { id: 'h_ruche', name: 'Ruche', pass: 33, season: 2, v: { hat: '#e6b830', pattern: '#c8902a', knob: 'ball', hatShape: 'ruche' } },
+    { id: 'h_vache', name: 'Cornes de vache', pass: 36, season: 2, v: { hat: '#f4f0e8', pattern: '#1d1d24', knob: 'ball', hatShape: 'vache' } },
+    { id: 'h_citrouille', name: 'Citrouille', pass: 38, season: 2, v: { hat: '#f08a1c', pattern: '#2e7a3a', knob: 'ball', hatShape: 'citrouille' } }
   ] },
   collar: { label: 'Col', items: [
     { id: 'k_aucun', name: 'Aucun', free: 1, v: { collar: 'none' } },
@@ -908,7 +927,9 @@ const WARD = {
     { id: 'k_jabot', name: 'Jabot de dentelle', price: 90, v: { collar: 'jabot' } },
     { id: 'k_medaille', name: 'Médaille', ach: 'games100', v: { collar: 'medal', collarColor: '#3070d0' } },
     { id: 'k_cravate_or', name: 'Cravate dorée', pass: 9, v: { collar: 'tie', collarColor: '#e6b830' } },
-    { id: 'k_jabot_or', name: 'Médaille du Carnaval', pass: 36, v: { collar: 'medal', collarColor: '#8a4a9a' } }
+    { id: 'k_jabot_or', name: 'Médaille du Carnaval', pass: 36, v: { collar: 'medal', collarColor: '#8a4a9a' } },
+    { id: 'k_cloche', name: 'Cloche de vache', pass: 9, season: 2, v: { collar: 'cowbell', collarColor: '#8a1f2a' } },
+    { id: 'k_marguerites', name: 'Collier de marguerites', pass: 22, season: 2, v: { collar: 'daisies' } }
   ] },
   legs: { label: 'Jambes', items: [
     { id: 'l_classic', name: 'Menthe', free: 1, v: { legs: '#9ed8c8', socks: '#2a62c8', shoes: '#6b4430' } },
@@ -936,7 +957,10 @@ const WARD = {
     { id: 'l_patins', name: 'Patins à roulettes', price: 120, v: { legs: '#f6a8c8', socks: '#f4f0e8', shoes: '#f4f0e8', shoeStyle: 'skates' } },
     { id: 'l_bottes_n', name: 'Bottes noires', price: 70, v: { legs: '#d8402c', socks: '#1d1d24', shoes: '#1d1d24', shoeStyle: 'boots' } },
     { id: 'l_carnaval', name: 'Carnaval', pass: 4, v: { legs: '#8a4a9a', legs2: '#f2c230', legPattern: 'stripes', socks: '#2bb3c0', shoes: '#f2c230', shoeStyle: 'curly' } },
-    { id: 'l_paillettes', name: 'Paillettes', pass: 16, v: { legs: '#1d1d24', legs2: '#f2d27a', legPattern: 'dots', socks: '#f2d27a', shoes: '#d8402c' } }
+    { id: 'l_paillettes', name: 'Paillettes', pass: 16, v: { legs: '#1d1d24', legs2: '#f2d27a', legPattern: 'dots', socks: '#f2d27a', shoes: '#d8402c' } },
+    { id: 'l_bottes_vertes', name: 'Bottes en caoutchouc', pass: 4, season: 2, v: { legs: '#3a5a9a', socks: '#2e7a3a', shoes: '#2e7a3a', shoeStyle: 'boots' } },
+    { id: 'l_bottes_jaunes', name: 'Bottes jaunes', pass: 18, season: 2, v: { legs: '#c8302a', socks: '#f2c230', shoes: '#f2c230', shoeStyle: 'boots' } },
+    { id: 'l_salopette', name: 'Jambes de salopette', pass: 32, season: 2, v: { legs: '#3a5a9a', legs2: '#e6b830', legPattern: 'dots', socks: '#6b4430', shoes: '#6b4430', shoeStyle: 'clogs' } }
   ] },
   face: { label: 'Visage', items: [
     { id: 'f_barbe', name: 'Barbe', free: 1, v: { face: 'beard' } },
@@ -953,7 +977,10 @@ const WARD = {
     { id: 'f_larme', name: 'Larme de Pierrot', price: 65, v: { face: 'tear' } },
     { id: 'f_carnaval', name: 'Masque du Carnaval', pass: 5, v: { face: 'carnival' } },
     { id: 'f_goldmask', name: 'Masque d’or', pass: 18, v: { face: 'goldmask' } },
-    { id: 'f_3d', name: 'Lunettes 3D', pass: 13, v: { face: 'glasses3d' } }
+    { id: 'f_3d', name: 'Lunettes 3D', pass: 13, v: { face: 'glasses3d' } },
+    { id: 'f_paille', name: 'Brin de paille', pass: 5, season: 2, v: { face: 'strawmouth' } },
+    { id: 'f_groin', name: 'Groin de cochon', pass: 12, season: 2, v: { face: 'snout' } },
+    { id: 'f_boue', name: 'Taches de boue', pass: 29, season: 2, v: { face: 'mud' } }
   ] },
   prop: { label: 'Objet', items: [
     { id: 'p_canne', name: 'Canne', free: 1, v: { prop: 'cane' } },
@@ -977,7 +1004,13 @@ const WARD = {
     { id: 'p_baguette_pain', name: 'Baguette de pain', pass: 3, v: { prop: 'bread' } },
     { id: 'p_poisson', name: 'Poisson', pass: 11, v: { prop: 'fish' } },
     { id: 'p_canard', name: 'Canard en plastique', pass: 21, v: { prop: 'duck' } },
-    { id: 'p_poele', name: 'Poêle et son œuf', pass: 37, v: { prop: 'pan' } }
+    { id: 'p_poele', name: 'Poêle et son œuf', pass: 37, v: { prop: 'pan' } },
+    { id: 'p_carotte', name: 'Carotte géante', pass: 3, season: 2, v: { prop: 'carrot' } },
+    { id: 'p_mais', name: 'Épi de maïs', pass: 11, season: 2, v: { prop: 'corn' } },
+    { id: 'p_fourche', name: 'Fourche', pass: 16, season: 2, v: { prop: 'pitchfork' } },
+    { id: 'p_seau', name: 'Seau de lait', pass: 21, season: 2, v: { prop: 'bucket' } },
+    { id: 'p_poussin', name: 'Poussin', pass: 31, season: 2, v: { prop: 'chick' } },
+    { id: 'p_arrosoir', name: 'Arrosoir', pass: 39, season: 2, v: { prop: 'wateringcan' } }
   ] },
   back: { label: 'Dos', items: [
     { id: 'b_aucun', name: 'Rien', free: 1, v: { back: 'none' } },
@@ -995,7 +1028,10 @@ const WARD = {
     { id: 'b_fusee', name: 'Fusée', price: 180, v: { back: 'jetpack' } },
     { id: 'b_plumes', name: 'Roue de plumes', pass: 20, v: { back: 'plumes' } },
     { id: 'b_cape_or', name: 'Cape dorée', pass: 28, v: { back: 'cape', capeColor: '#c99a2e', capeIn: '#5b2a86', capeStars: 1 } },
-    { id: 'b_escargot', name: 'Coquille d’escargot', pass: 32, v: { back: 'snail' } }
+    { id: 'b_escargot', name: 'Coquille d’escargot', pass: 32, v: { back: 'snail' } },
+    { id: 'b_moulin', name: 'Moulin à vent', pass: 20, season: 2, v: { back: 'windmill' } },
+    { id: 'b_sac', name: 'Sac de blé', pass: 26, season: 2, v: { back: 'sack' } },
+    { id: 'b_poule', name: 'Ailes de poule', pass: 34, season: 2, v: { back: 'chickenwings' } }
   ] },
   trail: { label: 'Effet', items: [
     { id: 't_aucun', name: 'Aucun', free: 1, v: { trail: 'none' } },
@@ -1010,7 +1046,10 @@ const WARD = {
     { id: 't_flammes', name: 'Flammes', price: 100, v: { trail: 'flame' } },
     { id: 't_arcenciel', name: 'Arc-en-ciel', price: 130, v: { trail: 'rainbow' } },
     { id: 't_glitter', name: 'Paillettes dorées', pass: 12, v: { trail: 'glitter' } },
-    { id: 't_bananes', name: 'Bananes', pass: 31, v: { trail: 'banana' } }
+    { id: 't_bananes', name: 'Bananes', pass: 31, v: { trail: 'banana' } },
+    { id: 't_plumes', name: 'Plumes', pass: 7, season: 2, v: { trail: 'feather' } },
+    { id: 't_abeilles', name: 'Abeilles', pass: 24, season: 2, v: { trail: 'bee' } },
+    { id: 't_fleurs', name: 'Pétales de fleurs', pass: 35, season: 2, v: { trail: 'petal' } }
   ] }
 };
 const ACH = {
@@ -1162,6 +1201,12 @@ function drawProp(type, t0) {
   if (type === 'fish') { const w = M.sin(t0 * .3) * .15; X.save(); X.rotate(w); poly('#2bb3c0', [0, -4, -4, 2, 4, 2]); X.fillStyle = '#2bb3c0'; X.beginPath(); X.ellipse(0, -18, 6, 14, 0, 0, 6.29); X.fill(); X.fillStyle = '#7fd4b8'; X.beginPath(); X.ellipse(1.5, -18, 2.6, 10, 0, 0, 6.29); X.fill(); circ('#fff', -2, -27, 1.8); circ('#1d1d24', -2, -27, .8); X.strokeStyle = '#1d6a78'; X.lineWidth = .8; X.beginPath(); X.arc(0, -31, 2.4, .3, 2.8); X.stroke(); X.restore(); return }
   if (type === 'duck') { X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(0, -6, 8, 6, 0, 0, 6.29); X.fill(); circ('#f2c230', 4, -14, 5); poly('#f08a1c', [8, -14, 13, -13, 8, -11.5]); circ('#1d1d24', 5.5, -15.5, .9); X.fillStyle = '#e8b020'; X.beginPath(); X.ellipse(-2, -6, 4, 2.4, -.3, 0, 6.29); X.fill(); return }
   if (type === 'pan') { line('#3a3a44', 3, [0, 24, 0, -6]); X.fillStyle = '#2a2a33'; X.beginPath(); X.ellipse(0, -18, 12, 12, 0, 0, 6.29); X.fill(); X.fillStyle = '#4a4a55'; X.beginPath(); X.ellipse(0, -18, 10, 10, 0, 0, 6.29); X.fill(); X.fillStyle = '#fff'; X.beginPath(); X.ellipse(-1, -18, 7, 6, .3, 0, 6.29); X.fill(); circ('#f2c230', 0, -19, 3) ; return }
+  if (type === 'carrot') { X.save(); X.rotate(.1); X.fillStyle = '#f08a1c'; X.beginPath(); X.moveTo(-4, -26); X.quadraticCurveTo(0, -28, 4, -26); X.lineTo(0, 16); X.closePath(); X.fill(); X.strokeStyle = 'rgba(150,60,0,.4)'; X.lineWidth = .8; for (const y of [-18, -8, 2]) { X.beginPath(); X.moveTo(-2.5, y); X.lineTo(1, y + 1); X.stroke() } for (const a of [-.5, 0, .5]) { X.save(); X.translate(0, -27); X.rotate(a); X.fillStyle = '#2e9a4c'; X.beginPath(); X.ellipse(0, -6, 1.6, 6, 0, 0, 6.29); X.fill(); X.restore() } X.restore(); return }
+  if (type === 'corn') { X.fillStyle = '#9ed86a'; X.beginPath(); X.moveTo(0, 14); X.quadraticCurveTo(-9, -8, -3, -28); X.lineTo(0, -10); X.fill(); X.beginPath(); X.moveTo(0, 14); X.quadraticCurveTo(9, -8, 4, -26); X.lineTo(0, -10); X.fill(); X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(0, -10, 4.4, 14, 0, 0, 6.29); X.fill(); X.fillStyle = '#e0a020'; for (let y = -22; y < 2; y += 3) for (const x of [-2, 0, 2]) circ('#e0a020', x, y + (x ? 1.5 : 0), .7); return }
+  if (type === 'pitchfork') { line('#a0703c', 2.6, [0, -26, 0, 26]); X.strokeStyle = '#8a8a98'; X.lineWidth = 1.8; X.lineCap = 'round'; X.beginPath(); X.moveTo(-6, -28); X.lineTo(6, -28); for (const x of [-6, 0, 6]) { X.moveTo(x, -28); X.lineTo(x, -40) } X.stroke(); return }
+  if (type === 'bucket') { line('#7a7a88', 1.4, [0, -6, -6, 2]); line('#7a7a88', 1.4, [0, -6, 6, 2]); X.fillStyle = '#9a9aa8'; X.beginPath(); X.moveTo(-7, 2); X.lineTo(7, 2); X.lineTo(5.5, 16); X.lineTo(-5.5, 16); X.closePath(); X.fill(); X.fillStyle = '#fff'; X.beginPath(); X.ellipse(0, 2.5, 7, 1.8, 0, 0, 6.29); X.fill(); X.fillStyle = 'rgba(255,255,255,.4)'; X.fillRect(-5, 4, 1.4, 11); X.fillStyle = '#7a7a88'; X.fillRect(-6.5, 8, 13, 1); return }
+  if (type === 'chick') { const b = M.abs(M.sin(t0 * .1)) * 1.5; circ('#f2c230', 0, -6 - b, 6); circ('#f2c230', 2, -13 - b, 4.2); poly('#f08a1c', [5.5, -13.5 - b, 8.5, -12.6 - b, 5.5, -11.8 - b]); if (t0 % 90 < 5) line('#1d1d24', .7, [2.6, -14.2 - b, 4.4, -14.2 - b]); else circ('#1d1d24', 3.6, -14.2 - b, .8); X.fillStyle = '#e8b020'; X.beginPath(); X.ellipse(-3, -6 - b, 3, 2, -.4, 0, 6.29); X.fill(); line('#f08a1c', .8, [-1.5, -.5, -2, 1.5]); line('#f08a1c', .8, [1.5, -.5, 2, 1.5]); return }
+  if (type === 'wateringcan') { X.fillStyle = '#2e9a4c'; X.beginPath(); X.roundRect(-6, -14, 13, 13, 2); X.fill(); X.strokeStyle = '#2e9a4c'; X.lineWidth = 2; X.beginPath(); X.arc(0, -14, 5, M.PI, 0); X.stroke(); X.beginPath(); X.moveTo(7, -6); X.lineTo(15, -14); X.stroke(); X.fillStyle = '#1f6a30'; X.beginPath(); X.ellipse(15.5, -14.5, 2.2, 1.2, -.8, 0, 6.29); X.fill(); X.strokeStyle = '#6ab0e0'; X.lineWidth = .9; for (let i = 0; i < 4; i++) { const d = (t0 * .8 + i * 4) % 14; X.beginPath(); X.moveTo(16 + i * .8, -13 + d); X.lineTo(16.4 + i * .8, -11 + d); X.stroke() } return }
   if (type === 'scepter') { line('#c99a2e', 3, [0, -26, 0, 24]); circ('#a07818', 0, 24, 2.6); circ('#c99a2e', 0, -28, 5); circ('#d8402c', 0, -29, 3.2); circ('rgba(255,255,255,.7)', -1, -30, 1); for (const a of [0, 1.57, 3.14, 4.71]) circ('#f2d27a', M.cos(a) * 5, -28 + M.sin(a) * 5, 1.1); return }
 }
 function drawHat(flop) {
@@ -1240,6 +1285,22 @@ function drawTorsoPattern() {
     for (let i = -7; i <= 7; i++) for (let j = -10; j <= 4; j++) if ((i * 5 + j * 3) % 4 === 0) { const x = i * 8 + (j & 1) * 4, y = j * 8; X.fillStyle = S3[1]; X.beginPath(); X.ellipse(x, y, 1.1, 2, .4, 0, 6.29); X.fill() }
   } else if (mo === 'disco') {
     for (let i = -9; i <= 8; i++) for (let j = -12; j <= 6; j++) { X.fillStyle = `hsl(${(i * 40 + j * 25 + t * 4) % 360},85%,${(i + j) & 1 ? 60 : 72}%)`; X.fillRect(i * 7, j * 7, 7, 7) }
+  } else if (mo === 'salopette') {
+    X.save(); X.rotate(-.55);
+    X.fillStyle = 'rgba(255,255,255,.08)'; for (let y = -80; y < 50; y += 3) X.fillRect(-60, y, 120, 1);
+    X.fillStyle = S3[1]; X.fillRect(-8, -28, 16, 14); X.strokeStyle = S3[2]; X.lineWidth = .8; X.setLineDash([1.5, 1.5]); X.strokeRect(-8, -28, 16, 14); X.strokeRect(-5, -24, 10, 7); X.setLineDash([]);
+    X.fillStyle = S3[1]; X.fillRect(-11, -50, 4, 24); X.fillRect(7, -50, 4, 24); circ(S3[2], -9, -27, 2); circ(S3[2], 9, -27, 2);
+    X.restore();
+  } else if (mo === 'carreaux') {
+    X.save(); X.rotate(-.55); X.globalAlpha = .45; X.fillStyle = S3[1];
+    for (let i = -60; i < 60; i += 12) { X.fillRect(i, -80, 5, 130); X.fillRect(-60, i - 20, 120, 5) }
+    X.globalAlpha = .6; X.fillStyle = S3[2]; for (let i = -60; i < 60; i += 12) { X.fillRect(i + 8, -80, 1, 130); X.fillRect(-60, i - 12, 120, 1) }
+    X.restore();
+  } else if (mo === 'abeille') {
+    X.save(); X.rotate(-.55); for (let y = -80; y < 50; y += 10) { X.fillStyle = S3[1]; X.fillRect(-60, y, 120, 5) } X.restore();
+  } else if (mo === 'laine') {
+    X.lineWidth = .8; X.strokeStyle = '#c8c4bc';
+    for (let i = -8; i <= 8; i++) for (let j = -12; j <= 6; j++) { const x = i * 6 + (j & 1) * 3, y = j * 5; X.fillStyle = (i + j) % 3 ? S3[0] : S3[1]; X.beginPath(); X.arc(x, y, 3.6, 0, 6.29); X.fill(); X.stroke() }
   } else if (mo === 'lunes') {
     for (let i = -7; i <= 7; i++) for (let j = -9; j <= 4; j++) if ((i + j) % 2 === 0) { const x = i * 8, y = j * 9 + (i & 1) * 4; circ(S3[1], x, y, 2.8); circ(S3[0], x + 1.2, y - .8, 2.4); if ((i * j) % 3 === 0) circ(S3[2], x + 4, y + 4, .8) }
   }
@@ -1300,6 +1361,11 @@ function drawCollar() {
     for (let i = -5; i <= 5; i++) { circ('#f8f4ec', i * 2.1, -31.6 + i * i * .1, 1.5); circ('rgba(255,255,255,.9)', i * 2.1 - .5, -32.1 + i * i * .1, .5) }
   } else if (c === 'jabot') {
     for (let i = 0; i < 4; i++) { X.fillStyle = '#fbfaf6'; X.strokeStyle = '#c9c4bb'; X.lineWidth = .7; X.beginPath(); X.moveTo(-6 + i * .6, -31 + i * 3.4); X.quadraticCurveTo(0, -27 + i * 3.4, 6 - i * .6, -31 + i * 3.4); X.lineTo(4 - i * .5, -28 + i * 3.4); X.quadraticCurveTo(0, -25 + i * 3.4, -4 + i * .5, -28 + i * 3.4); X.closePath(); X.fill(); X.stroke() }
+  } else if (c === 'cowbell') {
+    X.strokeStyle = DL.collarColor; X.lineWidth = 2.4; X.beginPath(); X.ellipse(0, -33, 9, 3.2, 0, 0, M.PI); X.stroke();
+    const sw = M.sin(t * .2) * .2; X.save(); X.translate(0, -30); X.rotate(sw); X.fillStyle = '#c99a2e'; X.beginPath(); X.moveTo(-3, 0); X.lineTo(3, 0); X.lineTo(4.5, 7); X.lineTo(-4.5, 7); X.closePath(); X.fill(); X.fillStyle = '#fff3c0'; X.fillRect(-2.6, 1, 1, 5); circ('#6a4a10', 0, 7.6, 1.2); X.restore();
+  } else if (c === 'daisies') {
+    for (let i = -4; i <= 4; i++) { const x = i * 2.4, y = -31.6 + i * i * .12; for (let k = 0; k < 5; k++) circ('#fff', x + M.cos(k * 1.26) * 1.4, y + M.sin(k * 1.26) * 1.4, .9); circ('#f2c230', x, y, .8) }
   } else if (c === 'medal') {
     poly(DL.collarColor, [-4, -33, -1, -33, 1, -24, -2, -24]); poly('#d8402c', [4, -33, 1, -33, -1, -24, 2, -24]);
     circ('#a07818', 0, -21, 4.4); circ('#f2c230', 0, -21, 3.6); star(0, -21, 2.2, 0, '#fff3c0');
@@ -1424,6 +1490,48 @@ function drawHatShape(flop) {
   } else if (sh === 'minime') {
     const keep = DL, mini = { ...DL, hatShape: 'A', knob: 'ball', back: 'none', prop: 'cane' };
     X.save(); X.translate(0, -47); X.scale(.3, .3); drawPoli({ run: t * .1, idle: true }, mini); X.restore(); DL = keep;
+  } else if (sh === 'paille') {
+    X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -48, 20, 4.5, 0, 0, 6.29); X.fill();
+    X.beginPath(); X.ellipse(0, -52 + flop * .3, 9, 6, 0, M.PI, 0); X.fill(); X.fillRect(-9, -52, 18, 4);
+    X.strokeStyle = 'rgba(120,80,20,.45)'; X.lineWidth = .7; for (let a = 0; a < 6.28; a += .35) { X.beginPath(); X.moveTo(M.cos(a) * 10, -48 + M.sin(a) * 2.2); X.lineTo(M.cos(a) * 19, -48 + M.sin(a) * 4.2); X.stroke() }
+    X.fillStyle = L.pattern || '#d8402c'; X.fillRect(-9, -51, 18, 2.4);
+    poly('#e6c35a', [-20, -48, -23, -46, -19, -47]); poly('#e6c35a', [18, -49, 22, -50, 19, -47]);
+  } else if (sh === 'casquette') {
+    X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -49, 10, 9 + flop * .2, 0, M.PI, 0); X.fill();
+    X.fillStyle = L.pattern || '#f4f0e8'; X.beginPath(); X.ellipse(-3, -53, 5, 4.5, 0, M.PI, 0); X.fill();
+    X.fillStyle = L.hat; X.beginPath(); X.moveTo(3, -49); X.quadraticCurveTo(15, -50, 17, -46); X.quadraticCurveTo(10, -46, 3, -47); X.fill();
+    X.fillStyle = '#e6b830'; X.beginPath(); X.ellipse(-3, -53, 2.2, 1.6, 0, 0, 6.29); X.fill(); circ(L.hat, 0, -58 + flop * .2, 1.2);
+  } else if (sh === 'tournesol') {
+    for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + M.sin(t * .02) * .05; X.save(); X.translate(M.cos(a) * 12.5, -41 + M.sin(a) * 12.5); X.rotate(a); X.fillStyle = i & 1 ? L.hat : '#f08a1c'; X.beginPath(); X.ellipse(0, 0, 5, 2.4, 0, 0, 6.29); X.fill(); X.restore() }
+    X.strokeStyle = L.pattern || '#6b4430'; X.lineWidth = 2; X.beginPath(); X.arc(0, -41, 8.6, 0, 6.29); X.stroke();
+  } else if (sh === 'foin') {
+    X.fillStyle = L.hat; X.beginPath(); X.roundRect(-12, -61 + flop * .3, 24, 14, 2); X.fill();
+    X.strokeStyle = 'rgba(120,80,10,.5)'; X.lineWidth = .7; for (let x = -11; x < 12; x += 2.2) { X.beginPath(); X.moveTo(x, -61 + flop * .3); X.lineTo(x + 1, -47); X.stroke() }
+    X.fillStyle = L.pattern || '#a8862a'; X.fillRect(-12, -57 + flop * .3, 24, 1.6); X.fillRect(-12, -51 + flop * .2, 24, 1.6);
+    for (const [x, y, a] of [[-12, -60, -.8], [12, -59, .7], [-4, -62, -.2], [6, -62, .3]]) { X.save(); X.translate(x, y + flop * .3); X.rotate(a); X.fillStyle = L.hat; X.fillRect(-.5, -5, 1, 5); X.restore() }
+  } else if (sh === 'cochon') {
+    X.fillStyle = L.pattern || '#e87aa0'; X.fillRect(-9, -48.5, 18, 2.4);
+    for (const s of [-1, 1]) { X.save(); X.translate(s * 6.5, -48); X.rotate(s * .35 + flop * .02); poly(L.hat, [-4, 0, 4, 0, s * 3, -9]); poly(L.pattern || '#e87aa0', [-2, -1, 2, -1, s * 1.8, -6]); X.restore() }
+  } else if (sh === 'nid') {
+    X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -50, 12, 5, 0, 0, M.PI); X.fill(); X.beginPath(); X.ellipse(0, -50, 12, 2.6, 0, 0, 6.29); X.fill();
+    X.strokeStyle = '#5a4020'; X.lineWidth = .8; for (let i = -10; i < 10; i += 2.5) { X.beginPath(); X.moveTo(i, -49); X.lineTo(i + 3, -46); X.stroke() }
+    X.fillStyle = '#e8f0ff'; X.beginPath(); X.ellipse(-5, -52, 2.6, 3.2, -.2, 0, 6.29); X.fill(); X.beginPath(); X.ellipse(5.5, -52, 2.6, 3.2, .2, 0, 6.29); X.fill();
+    const b = M.max(0, M.sin(t * .08)) * 2; circ(L.pattern || '#f2c230', 0, -54 - b, 3.6); poly('#f08a1c', [2.8, -54.5 - b, 5.2, -54 - b, 2.8, -53 - b]); circ('#1d1d24', 1.4, -55.4 - b, .6);
+    X.strokeStyle = '#5a4020'; X.lineWidth = .7; X.beginPath(); X.moveTo(-12, -50); X.lineTo(-15, -53); X.moveTo(12, -50); X.lineTo(15, -52); X.stroke();
+  } else if (sh === 'ruche') {
+    for (let i = 0; i < 4; i++) { X.fillStyle = i & 1 ? L.pattern || '#c8902a' : L.hat; X.beginPath(); X.ellipse(0, -50 - i * 4 + flop * .1 * i, 11 - i * 2, 3, 0, 0, 6.29); X.fill() }
+    X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -63, 4, 3, 0, 0, 6.29); X.fill(); circ('#3a2a10', 0, -51, 1.6);
+    for (let i = 0; i < 3; i++) { const a = t * .06 + i * 2.1, bx = M.cos(a) * 15, by = -56 + M.sin(a * 1.3) * 6; X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(bx, by, 1.8, 1.2, 0, 0, 6.29); X.fill(); X.fillStyle = '#1d1d24'; X.fillRect(bx - .3, by - 1.1, .7, 2.2); X.fillStyle = 'rgba(255,255,255,.75)'; X.beginPath(); X.ellipse(bx, by - 1.6, 1.1, .7, 0, 0, 6.29); X.fill() }
+  } else if (sh === 'vache') {
+    for (const s of [-1, 1]) {
+      X.fillStyle = '#f4ecd8'; X.beginPath(); X.moveTo(s * 4, -47); X.quadraticCurveTo(s * 10, -49, s * 11, -57 + flop * .3); X.quadraticCurveTo(s * 8, -51, s * 3.5, -50); X.fill(); X.strokeStyle = '#b8a888'; X.lineWidth = .6; X.stroke();
+      X.save(); X.translate(s * 8.5, -45); X.rotate(s * .5); X.fillStyle = L.hat; X.beginPath(); X.ellipse(s * 3, 0, 4.6, 2.2, 0, 0, 6.29); X.fill(); X.fillStyle = '#f6a8c8'; X.beginPath(); X.ellipse(s * 3, 0, 2.6, 1.1, 0, 0, 6.29); X.fill(); X.restore();
+    }
+    X.fillStyle = L.pattern || '#1d1d24'; X.beginPath(); X.ellipse(-3, -48.5, 3, 1.6, 0, 0, 6.29); X.fill();
+  } else if (sh === 'citrouille') {
+    X.fillStyle = L.hat; for (const [x, rx] of [[-6, 6], [6, 6], [0, 7]]) { X.beginPath(); X.ellipse(x, -54 + flop * .2, rx, 7.5, 0, 0, 6.29); X.fill() }
+    X.strokeStyle = 'rgba(120,50,0,.35)'; X.lineWidth = .8; for (const x of [-4, 4]) { X.beginPath(); X.ellipse(x, -54, 3, 7, 0, 0, 6.29); X.stroke() }
+    X.fillStyle = '#5a3a1c'; X.fillRect(-1, -64 + flop * .3, 2, 4); X.fillStyle = L.pattern || '#2e7a3a'; X.beginPath(); X.ellipse(3, -63 + flop * .3, 3, 1.5, -.4, 0, 6.29); X.fill();
   } else if (sh === 'unicorn') {
     X.fillStyle = L.hat; X.beginPath(); X.ellipse(0, -47, 10, 2.4, 0, M.PI, 0); X.fill();
     poly('#f2d27a', [-3, -48, 3, -48, 0, -66 + flop]); X.strokeStyle = '#c99a2e'; X.lineWidth = .8; X.beginPath(); X.moveTo(-2, -52); X.lineTo(2, -54); X.moveTo(-1.5, -57); X.lineTo(1.5, -59); X.stroke();
@@ -1455,6 +1563,9 @@ function drawFaceExtra(f) {
     X.fillStyle = '#f4f0e8'; X.fillRect(-7.2, -44.6, 14.4, 4.6);
     X.fillStyle = '#ff3a3a'; X.fillRect(-6.4, -43.9, 5.4, 3.2); X.fillStyle = '#2bd8e0'; X.fillRect(1, -43.9, 5.4, 3.2);
   }
+  else if (f === 'strawmouth') { X.strokeStyle = '#e6c35a'; X.lineWidth = .9; X.beginPath(); X.moveTo(2, -37.5); X.lineTo(10, -34 + M.sin(t * .1) * .8); X.stroke(); poly('#e6c35a', [10, -34, 12, -35.5, 11.5, -33]) }
+  else if (f === 'snout') { X.fillStyle = '#f6a8c8'; X.beginPath(); X.ellipse(0, -39, 3.4, 2.4, 0, 0, 6.29); X.fill(); X.strokeStyle = '#d87a9a'; X.lineWidth = .6; X.stroke(); circ('#a8506a', -1.2, -39, .7); circ('#a8506a', 1.2, -39, .7) }
+  else if (f === 'mud') { X.fillStyle = 'rgba(110,70,30,.7)'; X.beginPath(); X.ellipse(-4.6, -38.5, 2.4, 1.4, .3, 0, 6.29); X.ellipse(4, -45.5, 1.8, 1, -.2, 0, 6.29); X.ellipse(5.2, -38, 1.2, .9, 0, 0, 6.29); X.fill() }
   else if (f === 'tear') { X.fillStyle = '#4a8ad0'; X.beginPath(); X.moveTo(-3, -40); X.quadraticCurveTo(-4.4, -37.6, -3, -36.8); X.quadraticCurveTo(-1.6, -37.6, -3, -40); X.fill() }
 }
 
@@ -1478,6 +1589,22 @@ function drawBackExtra(type) {
     X.strokeStyle = '#7a4a1a'; X.lineWidth = 2; X.beginPath(); for (let a = 0; a < 15; a += .25) X.lineTo(M.cos(a) * a * .9, M.sin(a) * a * .9); X.stroke();
     X.fillStyle = 'rgba(255,255,255,.25)'; X.beginPath(); X.ellipse(-5, -7, 4, 2, -.6, 0, 6.29); X.fill();
     X.restore(); return true;
+  }
+  if (type === 'windmill') {
+    line('#8a6a40', 2.4, [-12, -8, -16, -44]); X.save(); X.translate(-16, -45); X.rotate(t * .05);
+    for (let i = 0; i < 4; i++) { X.rotate(1.5708); X.fillStyle = '#f4f0e8'; X.fillRect(1.5, -2.6, 15, 5.2); X.strokeStyle = '#8a6a40'; X.lineWidth = .7; X.strokeRect(1.5, -2.6, 15, 5.2); X.beginPath(); X.moveTo(6, -2.6); X.lineTo(6, 2.6); X.moveTo(11, -2.6); X.lineTo(11, 2.6); X.stroke() }
+    circ('#d8402c', 0, 0, 2.4); X.restore(); return true;
+  }
+  if (type === 'sack') {
+    X.save(); X.translate(-20, -16); X.rotate(-.2);
+    X.fillStyle = '#c8a870'; X.beginPath(); X.moveTo(-8, -10); X.quadraticCurveTo(-11, 8, -6, 13); X.lineTo(7, 13); X.quadraticCurveTo(11, 8, 8, -10); X.closePath(); X.fill();
+    X.fillStyle = '#a8865a'; X.fillRect(-8, -12, 16, 3); for (const a of [-.4, 0, .4]) { X.save(); X.translate(0, -12); X.rotate(a); X.fillStyle = '#e6c35a'; X.fillRect(-.5, -8, 1, 8); X.beginPath(); X.ellipse(0, -9, 1.3, 2.4, 0, 0, 6.29); X.fill(); X.restore() }
+    X.fillStyle = '#6b4a2a'; X.font = 'bold 5px Georgia'; X.textAlign = 'center'; X.fillText('BLÉ', 0, 4); X.restore(); return true;
+  }
+  if (type === 'chickenwings') {
+    const fl = M.sin(t * .5) * .3;
+    for (const side of [-1, 1]) { X.save(); X.translate(side * 7, -26); X.scale(side, 1); X.rotate(-.3 + fl); for (let i = 3; i >= 0; i--) { X.fillStyle = i % 2 ? '#f4f0e8' : '#e8e0d0'; X.beginPath(); X.ellipse(6 + i * 2.6, i * 2.4, 8 - i, 3.2, .4, 0, 6.29); X.fill() } X.restore() }
+    return true;
   }
   if (type === 'balloons') {
     const bob = M.sin(t * .06) * 2;
@@ -1538,8 +1665,37 @@ function drawPoliChrome(pose, look) {
   const k = M.floor(t / 25) % 5, gx = [-8, 6, -2, 10, -12][k], gy = [-50, -30, -66, -12, -24][k], a = 1 - (t % 25) / 25;
   X.save(); X.globalAlpha *= a; star(gx, gy, 3.5 * a + 1, t * .1, '#fff'); X.restore();
 }
+// ---------- legendary farm outfit: the whole polichinelle becomes a cow ----------
+function drawPoliCow(pose, look) {
+  const m = X.getTransform(), sc = M.min(4, M.max(.6, M.hypot(m.a, m.b)));
+  const BW = 180, BH = 180, OX = 90, OY = 140, cw = M.ceil(BW * sc), ch = M.ceil(BH * sc);
+  if (!chromeA) { chromeA = document.createElement('canvas'); chromeB = document.createElement('canvas') }
+  chromeA.width = cw; chromeA.height = ch; chromeB.width = cw; chromeB.height = ch;
+  const ga = chromeA.getContext('2d'), gb = chromeB.getContext('2d');
+  ga.setTransform(sc, 0, 0, sc, OX * sc, OY * sc);
+  CHROME_BUSY = true; try { withCtx(ga, () => drawPoli(pose, { ...look, hatShape: 'none' })) } finally { CHROME_BUSY = false }
+  gb.drawImage(chromeA, 0, 0);
+  gb.globalCompositeOperation = 'saturation'; gb.fillStyle = '#808080'; gb.fillRect(0, 0, cw, ch);
+  gb.globalCompositeOperation = 'screen'; gb.fillStyle = '#c8c4bc'; gb.fillRect(0, 0, cw, ch);
+  gb.globalCompositeOperation = 'source-atop'; gb.setTransform(sc, 0, 0, sc, OX * sc, OY * sc); gb.fillStyle = '#1d1d24';
+  for (const [x, y, rx, ry, r] of [[-8, -24, 6, 4.5, .4], [7, -12, 5, 6, -.3], [-4, -6, 3.4, 2.6, 0], [10, -28, 3, 2.4, .5], [-14, -14, 2.6, 4, .2], [-8, -12, 2.2, 3, 0], [9, -6, 2.4, 3.2, .3], [-16, 6, 3, 2.4, 0], [14, 4, 3, 2, 0], [4, -46, 3, 2, .3], [-6, -66, 4, 3, .2], [8, -58, 3, 2.4, -.3]]) { gb.beginPath(); gb.ellipse(x, y, rx, ry, r, 0, 6.29); gb.fill() }
+  gb.setTransform(1, 0, 0, 1, 0, 0);
+  gb.globalCompositeOperation = 'destination-in'; gb.drawImage(chromeA, 0, 0); gb.globalCompositeOperation = 'source-over';
+  // tail swishing behind
+  const sw = M.sin(t * .12) * 4; X.strokeStyle = '#f4f0e8'; X.lineWidth = 2; X.beginPath(); X.moveTo(-10, -26); X.quadraticCurveTo(-22, -18 + sw, -20 + sw, -6); X.stroke(); X.fillStyle = '#1d1d24'; X.beginPath(); X.ellipse(-20 + sw, -5, 2.4, 3.4, 0, 0, 6.29); X.fill();
+  X.drawImage(chromeB, -OX, -OY, BW, BH);
+  // head of the cow: horns, ears, pink muzzle, golden bell (in the upper-body frame, like drawPoli)
+  const run = pose.run || 0, hipY = -33 + (pose.sq || 0) * 6 + (pose.duck || 0) * 19 + (pose.idle ? M.sin(run * 2) * 1.5 : pose.air ? 0 : -M.abs(M.sin(run)) * 2.2);
+  X.save(); X.translate((pose.duck || 0) * 2, hipY); X.rotate(pose.idle ? M.sin(run) * .06 : (pose.duck || 0) * .45 + (pose.air ? 0 : .08)); if (pose.dead) X.rotate(-.3);
+  const keep = DL; DL = { ...look, hatShape: 'vache', hat: '#f4f0e8', pattern: '#1d1d24' }; drawHatShape(0); DL = keep;
+  X.fillStyle = '#f6b8c8'; X.beginPath(); X.ellipse(0, -38.4, 4.6, 3, 0, 0, 6.29); X.fill(); circ('#c8708a', -1.6, -38.4, .8); circ('#c8708a', 1.6, -38.4, .8);
+  const bs = M.sin(t * .2) * .2; X.save(); X.translate(0, -30); X.rotate(bs); X.fillStyle = '#e6b830'; X.beginPath(); X.moveTo(-3, 0); X.lineTo(3, 0); X.lineTo(4.5, 7); X.lineTo(-4.5, 7); X.closePath(); X.fill(); circ('#6a4a10', 0, 7.6, 1.2); X.restore();
+  line('#8a1f2a', 2, [-8, -31.5, 8, -31.5]);
+  X.restore();
+}
 function drawPoli(pose, look) {
   if ((look || LOOK).chrome && !CHROME_BUSY) { drawPoliChrome(pose, look || LOOK); return }
+  if ((look || LOOK).cow && !CHROME_BUSY) { drawPoliCow(pose, look || LOOK); return }
   const { run = 0, air = false, duck = 0, sq = 0, dead = false, idle = false } = pose;
   DL = look || LOOK;
   X.save();
