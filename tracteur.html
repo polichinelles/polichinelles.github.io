@@ -2146,8 +2146,8 @@ function update() {
         T0.spin[i] += vt * h / r;
         if (J > 2.2 && sub === 0) { sfx.land(); shake = M.min(6, J) }
       });
-      if (!contacts && !T0.dead) { if (gas) T0.w -= .0011 * h * 4; if (brk) T0.w += .0011 * h * 4 } else if (gas) T0.w -= .0008;
-      T0.w *= .996; T0.x += T0.vx * h; T0.y += T0.vy * h; T0.a += T0.w * h;
+      if (!contacts && !T0.dead) { if (gas) T0.w -= .0021 * h * 4; if (brk) T0.w += .0021 * h * 4 } else if (gas && !T0.dead) { const climb = M.max(0, -M.atan(slope(T0.x))); T0.w -= (.0016 + climb * .004) * h * 4 } else if (brk && contacts === 2) T0.w += .0004 * h * 4;
+      T0.w *= contacts ? .985 : .997; T0.x += T0.vx * h; T0.y += T0.vy * h; T0.a += T0.w * h;
       if (!contacts) WHEELS.forEach((wh, i) => T0.spin[i] += (gas ? .3 : brk ? -.1 : 0) * h);
     }
     T0.ground = contacts;
@@ -2327,26 +2327,48 @@ function drawBarn(x, y, s) {
 function drawSilo(x, y, s) { X.save(); X.translate(x, y); X.scale(s, s); X.fillStyle = '#c8c4d0'; X.fillRect(-10, -70, 20, 70); X.beginPath(); X.arc(0, -70, 10, M.PI, 0); X.fill(); X.fillStyle = 'rgba(0,0,0,.12)'; for (let yy = -64; yy < 0; yy += 10) X.fillRect(-10, yy, 20, 2); X.restore() }
 function drawMill(x, y, s) { X.save(); X.translate(x, y); X.scale(s, s); X.fillStyle = '#e8dcc0'; poly('#e8dcc0', [-10, 0, 10, 0, 6, -50, -6, -50]); poly('#8a5a3a', [-8, -50, 8, -50, 0, -60]); X.translate(0, -52); X.rotate(t * .02); for (let i = 0; i < 4; i++) { X.rotate(1.5708); X.fillStyle = '#f4f0e8'; X.fillRect(2, -3, 30, 6) } X.restore() }
 function drawTree(x, y, s) { X.save(); X.translate(x, y); X.scale(s, s); X.fillStyle = '#6b4430'; X.fillRect(-3, -20, 6, 20); circ('#3a7a3a', 0, -30, 16); circ('#4a8a4a', -8, -24, 11); circ('#4a8a4a', 9, -26, 11); X.restore() }
+function flat(path, fill, x0, y0, feet) {
+  // a painted cardboard flat: dark outline and little wooden braces at the bottom
+  X.fillStyle = fill; path(); X.fill(); X.strokeStyle = 'rgba(40,20,30,.55)'; X.lineWidth = 2; X.stroke();
+  if (feet) { X.fillStyle = '#6b4430'; for (const fx of feet) { X.beginPath(); X.moveTo(fx, y0); X.lineTo(fx + 10, y0); X.lineTo(fx + 2, y0 - 14); X.fill() } }
+}
 function drawStage() {
   X.save(); X.translate(0, -T);
-  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#6ab8e8'); g.addColorStop(.6, '#bfe4f4'); g.addColorStop(1, '#f6e8c0'); X.fillStyle = g; X.fillRect(0, 0, W, H);
-  // act ambiance tints the sky
-  X.save(); X.globalCompositeOperation = 'soft-light'; X.globalAlpha = .45; X.fillStyle = `rgb(${AMB.spot})`; X.fillRect(0, 0, W, H); X.restore();
-  X.save(); X.globalAlpha = .35; circ('#fff6c0', W * .8, H * .16, 46); X.restore(); circ('#fff3a0', W * .8, H * .16, 24);
-  for (let i = 0; i < 6; i++) { const cx = ((i * 230 - camX * .08 * ZM) % (W + 200) + W + 200) % (W + 200) - 100, cy = H * (.1 + (i % 3) * .07); X.fillStyle = 'rgba(255,255,255,.85)'; X.beginPath(); X.ellipse(cx, cy, 36, 11, 0, 0, 6.29); X.ellipse(cx + 22, cy - 6, 22, 11, 0, 0, 6.29); X.ellipse(cx - 20, cy - 3, 18, 9, 0, 0, 6.29); X.fill() }
+  // painted sky canvas, with the seams of the backdrop
+  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#5aa8de'); g.addColorStop(.6, '#a8d8ee'); g.addColorStop(1, '#f2dfb0'); X.fillStyle = g; X.fillRect(0, 0, W, H);
+  X.save(); X.globalCompositeOperation = 'soft-light'; X.globalAlpha = .5; X.fillStyle = `rgb(${AMB.spot})`; X.fillRect(0, 0, W, H); X.restore();
+  const seam = 140, so = -(camX * .05 * ZM) % seam;
+  for (let x = so; x < W; x += seam) { X.fillStyle = 'rgba(0,0,0,.05)'; X.fillRect(x, 0, 3, H); X.fillStyle = 'rgba(255,255,255,.06)'; X.fillRect(x + 3, 0, 2, H) }
+  for (let i = 0; i < 3; i++) { X.fillStyle = 'rgba(40,30,60,.05)'; X.beginPath(); X.ellipse(W / 2, H * (.25 + i * .22), W, 10, 0, 0, 6.29); X.fill() }
+  // cardboard sun and clouds hanging on wires
+  const sw = M.sin(t * .02) * .05, sx = W * .78, sy = H * .19;
+  line('#2a2230', 1, [sx - 14, 0, sx - 14, sy - 20]); line('#2a2230', 1, [sx + 14, 0, sx + 14, sy - 20]);
+  X.save(); X.translate(sx, sy); X.rotate(sw);
+  for (let i = 0; i < 12; i++) { X.save(); X.rotate(i * .5236 + t * .003); poly('#f2b830', [-5, -26, 5, -26, 0, -38]); X.restore() }
+  circ('#ffd84a', 0, 0, 25); X.strokeStyle = '#c99a2e'; X.lineWidth = 2; X.beginPath(); X.arc(0, 0, 25, 0, 6.29); X.stroke();
+  circ('#7a4a10', -8, -4, 2.4); circ('#7a4a10', 8, -4, 2.4); X.strokeStyle = '#7a4a10'; X.lineWidth = 2; X.beginPath(); X.arc(0, 4, 9, .3, M.PI - .3); X.stroke(); circ('rgba(255,120,80,.4)', -14, 6, 4); circ('rgba(255,120,80,.4)', 14, 6, 4);
+  X.restore();
+  for (let i = 0; i < 5; i++) {
+    const cx = ((i * 260 - camX * .08 * ZM) % (W + 260) + W + 260) % (W + 260) - 130, cy = H * (.09 + (i % 3) * .06), sway = M.sin(t * .03 + i) * 3;
+    line('#2a2230', 1, [cx, 0, cx + sway, cy - 10]);
+    flat(() => { X.beginPath(); X.ellipse(cx + sway, cy, 32, 10, 0, 0, 6.29); X.ellipse(cx + 18 + sway, cy - 6, 20, 10, 0, 0, 6.29); X.ellipse(cx - 16 + sway, cy - 3, 16, 8, 0, 0, 6.29) }, '#fbfbff');
+  }
   const hy = H * .5 - (camY + VH * .58 - 260) * .12 * ZM;
-  hillLayer(.15, 26, hy, '#9cc8a8', 1);
-  // far farm buildings
+  // far hills: painted flats with braces
+  const off1 = camX * .15 * ZM;
+  flat(() => { X.beginPath(); X.moveTo(0, H); for (let sx2 = 0; sx2 <= W + 10; sx2 += 10) { const wx = sx2 + off1; X.lineTo(sx2, hy + M.sin(wx * .006 + 1) * 24 + M.sin(wx * .017) * 7) } X.lineTo(W, H); X.closePath() }, '#9cc8a8');
+  // far farm buildings, as cut-outs on stands
   const par = .3, sec = 520;
   for (let n = M.floor(camX * par / sec) - 1; n <= M.floor((camX * par + W / ZM) / sec) + 1; n++) {
-    const sx = (n * sec - camX * par + hsh(n, 1) * 200) * ZM, k = M.floor(hsh(n, 2) * 4), by = hy + 26 + M.sin((n * sec + camX * par) * .004 + 3) * 8;
-    if (k === 0) drawBarn(sx, by, .6 * ZM + .2); else if (k === 1) { drawSilo(sx, by, .55 * ZM + .2); drawSilo(sx + 18, by, .45 * ZM + .2) } else if (k === 2) drawMill(sx, by, .6 * ZM + .2); else { drawTree(sx, by, .7); drawTree(sx + 22, by + 2, .55) }
+    const bx = (n * sec - camX * par + hsh(n, 1) * 200) * ZM, k = M.floor(hsh(n, 2) * 4), by = hy + 26 + M.sin((n * sec + camX * par) * .004 + 3) * 8;
+    X.fillStyle = '#6b4430'; X.fillRect(bx - 1, by - 4, 3, 14); X.beginPath(); X.moveTo(bx - 10, by + 10); X.lineTo(bx + 10, by + 10); X.lineTo(bx, by - 2); X.fill();
+    if (k === 0) drawBarn(bx, by, .6 * ZM + .2); else if (k === 1) { drawSilo(bx, by, .55 * ZM + .2); drawSilo(bx + 18, by, .45 * ZM + .2) } else if (k === 2) drawMill(bx, by, .6 * ZM + .2); else { drawTree(bx, by, .7); drawTree(bx + 22, by + 2, .55) }
   }
-  hillLayer(.45, 22, hy + 40, '#7ab07a', 4);
+  const off2 = camX * .45 * ZM, h2 = hy + 40;
+  flat(() => { X.beginPath(); X.moveTo(0, H); for (let sx2 = 0; sx2 <= W + 10; sx2 += 10) { const wx = sx2 + off2; X.lineTo(sx2, h2 + M.sin(wx * .005 + 4) * 20 + M.sin(wx * .013 + 2) * 6) } X.lineTo(W, H); X.closePath() }, '#7ab07a');
   X.restore();
 }
 function drawCrowd() {}
-function drawValance() {}
 function drawBatten() {}
 function drawHay(x, y) { X.fillStyle = '#e6c35a'; X.beginPath(); X.ellipse(x, y - 13, 15, 13, 0, 0, 6.29); X.fill(); X.strokeStyle = '#b8902a'; X.lineWidth = 1.2; X.beginPath(); X.ellipse(x - 4, y - 13, 6, 9, 0, 0, 6.29); X.stroke(); X.beginPath(); X.ellipse(x - 4, y - 13, 2, 4, 0, 0, 6.29); X.stroke() }
 function drawCow(x, y, f) {
@@ -2392,7 +2414,7 @@ function drawGame() {
   // decor on the hills (behind the road)
   for (let n = M.floor(x0 / 260); n <= x1 / 260; n++) {
     if (n < 2) continue; const r = hsh(n, 7), x = n * 260 + r * 120, gy = ground(x) + 4;
-    if (r < .25) drawHay(x, gy); else if (r < .4) drawCow(x, gy, hsh(n, 3) < .5 ? 1 : -1); else if (r < .55) { for (let k = 0; k < 3; k++) { const fx = x + k * 9; line('#3a7a3a', 1.5, [fx, gy, fx, gy - 22 - k * 3]); for (let p = 0; p < 8; p++) circ('#f2c230', fx + M.cos(p * .785) * 4.5, gy - 24 - k * 3 + M.sin(p * .785) * 4.5, 2.4); circ('#6b4430', fx, gy - 24 - k * 3, 2.6) } }
+    if (r < .25) drawHay(x, gy); else if (r < .4) { drawCow(x, gy, hsh(n, 3) < .5 ? 1 : -1); X.fillStyle = '#6b4430'; X.beginPath(); X.moveTo(x - 4, gy); X.lineTo(x + 8, gy); X.lineTo(x + 2, gy - 10); X.fill() } else if (r < .55) { for (let k = 0; k < 3; k++) { const fx = x + k * 9; line('#3a7a3a', 1.5, [fx, gy, fx, gy - 22 - k * 3]); for (let p = 0; p < 8; p++) circ('#f2c230', fx + M.cos(p * .785) * 4.5, gy - 24 - k * 3 + M.sin(p * .785) * 4.5, 2.4); circ('#6b4430', fx, gy - 24 - k * 3, 2.6) } }
     else if (r < .7) { X.strokeStyle = '#a07040'; X.lineWidth = 2; for (let k = 0; k < 4; k++) { const fx = x + k * 14; X.beginPath(); X.moveTo(fx, ground(fx) + 4); X.lineTo(fx, ground(fx) - 14); X.stroke() } X.beginPath(); X.moveTo(x, ground(x) - 10); for (let k = 1; k < 4; k++) X.lineTo(x + k * 14, ground(x + k * 14) - 10); X.stroke() }
   }
   for (let m = M.ceil(x0 / (100 * PXM)) * 100; m * PXM + 120 < x1; m += 100) if (m > 0) drawSign(m * PXM + 120, ground(m * PXM + 120) + 4, m);
@@ -2401,15 +2423,39 @@ function drawGame() {
   if (bx > 300 && bx > x0 && bx < x1) { const by = ground(bx); line('#5a3a1c', 2, [bx, by, bx, by - 44]); poly(COL.yellow, [bx, by - 44, bx + 22, by - 38, bx, by - 32]); txt('Record', bx, by - 52, 10, '#3a2010', 'center', false) }
   // the ground
   X.beginPath(); X.moveTo(x0, ground(x0)); for (let x = x0; x <= x1; x += 8) X.lineTo(x, ground(x)); X.lineTo(x1, camY + VH + 50); X.lineTo(x0, camY + VH + 50); X.closePath();
-  const gg = X.createLinearGradient(0, camY, 0, camY + VH); gg.addColorStop(0, '#8a5a32'); gg.addColorStop(1, '#5a3a20'); X.fillStyle = gg; X.fill();
+  const gg = X.createLinearGradient(0, camY, 0, camY + VH); gg.addColorStop(0, '#9a6a3c'); gg.addColorStop(1, '#5a3a20'); X.fillStyle = gg; X.fill();
+  X.save(); X.clip();
+  for (let y = M.floor((camY - 40) / 16) * 16; y < camY + VH + 60; y += 16) { X.fillStyle = 'rgba(40,20,10,.3)'; X.fillRect(x0, y, x1 - x0, 1.5); for (let x = M.floor(x0 / 90) * 90 + ((y / 16) & 1) * 45; x < x1; x += 90) { X.fillRect(x, y, 1.5, 16); circ('rgba(30,15,5,.5)', x + 6, y + 8, 1.2) } }
+  for (let x = M.floor(x0 / 220) * 220; x < x1; x += 220) { X.strokeStyle = 'rgba(60,30,10,.35)'; X.lineWidth = 6; X.beginPath(); X.moveTo(x, ground(x) + 20); X.lineTo(x + 110, camY + VH + 60); X.stroke() }
+  X.restore();
   X.strokeStyle = '#4e9a3a'; X.lineWidth = 9; X.lineJoin = 'round'; X.beginPath(); for (let x = x0; x <= x1; x += 8) X.lineTo(x, ground(x) + 3); X.stroke();
   X.strokeStyle = '#6ac04a'; X.lineWidth = 3; X.beginPath(); for (let x = x0; x <= x1; x += 8) X.lineTo(x, ground(x)); X.stroke();
+  X.fillStyle = '#4e9a3a'; for (let x = M.floor(x0 / 16) * 16; x < x1; x += 16) { X.beginPath(); X.arc(x + 8, ground(x + 8) + 6, 8, 0, M.PI); X.fill() }
+  X.fillStyle = COL.yellow; for (let x = M.floor(x0 / 16) * 16; x < x1; x += 16) circ(COL.yellow, x + 8, ground(x + 8) + 15, 1.6);
   for (let x = M.floor(x0 / 37) * 37; x < x1; x += 37) { const gy = ground(x); if (hsh(x, 1) < .5) { line('#6ac04a', 1.5, [x, gy, x - 2, gy - 6]); line('#6ac04a', 1.5, [x + 2, gy, x + 3, gy - 7]) } else if (hsh(x, 2) < .3) { X.fillStyle = '#a89a8a'; X.beginPath(); X.ellipse(x, gy + 10, 5, 3, 0, 0, 6.29); X.fill() } }
   // fuel cans and stars
   for (const cn of cans) if (!cn.got) { const y = ground(cn.x) - 4 + M.sin(t * .1) * 2; X.save(); X.globalAlpha = .3; circ('#fff3a0', cn.x, y - 12, 20); X.restore(); X.fillStyle = '#d8402c'; X.beginPath(); X.roundRect(cn.x - 9, y - 24, 18, 22, 3); X.fill(); X.fillStyle = '#2a2a33'; X.fillRect(cn.x - 2, y - 28, 6, 4); X.fillStyle = '#f2c230'; txt('⛽', cn.x, y - 13, 11, '#fff', 'center', false) }
   for (const co of coins) star(co.x, ground(co.x) - co.h + M.sin(t * .1 + co.x) * 2, 7, t * .05);
   for (const p of smoke) { X.save(); X.globalAlpha = p.l / 50 * .45; circ('#8a8a92', p.x, p.y, p.s); X.restore() }
   drawTractor();
+  X.restore();
+  // batten with two follow spots
+  X.save(); X.translate(0, -T);
+  const tx = (TR.x - camX) * ZM, ty2 = (TR.y - camY) * ZM, by = 40;
+  X.fillStyle = '#2a2230'; X.fillRect(0, by - 4, W, 5);
+  for (const sx of [W * .22, W * .72]) {
+    const a = M.atan2(tx - sx, ty2 - by), len = M.hypot(tx - sx, ty2 - by) + 40;
+    X.save(); X.translate(sx, by); X.rotate(-a);
+    X.save(); X.globalCompositeOperation = 'lighter'; const cg = X.createLinearGradient(0, 0, 0, len); cg.addColorStop(0, `rgba(${AMB.spot},.32)`); cg.addColorStop(1, `rgba(${AMB.spot},.03)`); X.fillStyle = cg; X.beginPath(); X.moveTo(-6, 8); X.lineTo(6, 8); X.lineTo(46, len); X.lineTo(-46, len); X.fill(); X.restore();
+    X.fillStyle = '#2b2b33'; X.beginPath(); X.roundRect(-9, -4, 18, 14, 3); X.fill(); X.fillStyle = '#fff3b0'; X.beginPath(); X.ellipse(0, 10, 7, 2.5, 0, 0, 6.29); X.fill();
+    X.restore();
+  }
+  // side curtains
+  for (const side of [0, 1]) { X.save(); if (side) { X.translate(W, 0); X.scale(-1, 1) } const cg = X.createLinearGradient(0, 0, 26, 0); cg.addColorStop(0, '#4a0a14'); cg.addColorStop(1, '#9a2032'); X.fillStyle = cg; X.beginPath(); X.moveTo(0, 0); X.lineTo(28, 0); X.quadraticCurveTo(14, H * .4, 22, H); X.lineTo(0, H); X.fill(); X.restore() }
+  // front row of the audience
+  const ay = H - (LAND ? 12 : 22), ao = -(camX * ZM * .6) % 26;
+  for (let x = ao - 26; x < W + 26; x += 26) { const b = M.abs(M.sin(t * .08 + x)) * -2; X.fillStyle = '#120f26'; X.beginPath(); X.arc(x, ay + 12 + b, 13, M.PI, 0); X.fill(); circ('#120f26', x, ay + b, 7) }
+  X.fillStyle = '#0b0918'; X.fillRect(0, ay + 12, W, 30);
   X.restore();
 }
 function drawHud() {
