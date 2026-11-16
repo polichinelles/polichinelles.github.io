@@ -514,7 +514,7 @@ function renderTabs() {
 function renderGrid() {
   wdGrid.innerHTML = '';
   for (const it of WARD[wdCat].items) {
-    if ((it.pass || it.ach) && !PROF.owned.includes(it.id)) continue;   // rewards stay secret until they are won
+    if (it.pass && !PROF.owned.includes(it.id)) continue;   // rewards stay secret until they are won
     const own = PROF.owned.includes(it.id), eq = PROF.eq[it.cat] === it.id;
     const el = document.createElement('div');
     el.className = 'card' + (eq ? ' eq' : '') + (own ? '' : ' lock') + (wdSel === it.id ? ' sel' : '');
