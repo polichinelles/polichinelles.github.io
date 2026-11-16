@@ -99,6 +99,7 @@ document.getElementById('wheelB').onclick = () => {
     const parts = []; if (got.stars) parts.push(`+${got.stars} ⭐`); if (got.xp) parts.push(`+${got.xp} XP`); if (got.item) parts.push(`🕺 la danse « ${DANCE_N[got.item] || got.item} » est dans ta Loge !`);
     r.textContent = (WHEEL[got.i].label === 'JACKPOT' ? '🎉 JACKPOT ! ' : '🎉 Gagné : ') + parts.join(' · '); void r.offsetWidth; r.classList.add('win');
     showWallet(); confetti(); b.textContent = 'Reviens demain';
+    if (WHEEL[got.i].label === 'JACKPOT' || got.item) try { const n = localStorage.getItem('polichinelles_name'); if (n) fetch('https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app/feed.json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n, g: 'roue', k: got.item ? 'danse' : 'jackpot', ts: { '.sv': 'timestamp' } }) }).catch(() => {}) } catch (e) {}
   })(t0);
 };
 showWallet(); wheelUI(); addEventListener('pageshow', () => { showWallet(); wheelUI() });

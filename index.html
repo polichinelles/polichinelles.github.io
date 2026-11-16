@@ -113,6 +113,28 @@
   #inst ol{margin:0 0 12px;padding-left:22px;line-height:1.5}
   #inst b{color:#ffe9a0}#inst p{margin:0 0 10px;color:#ffd2a0;font-size:14px}
   #inst button{display:block;margin:4px auto 0;font:700 15px Georgia,serif;padding:10px 24px;border-radius:9px;border:0;background:#e6b830;color:#2a2230}
+  .news{max-width:760px;margin:14px auto 0;padding:0 14px}
+  .news .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.45);padding:10px 12px}
+  .news h2{margin:0 0 6px;font-size:18px;color:#e6b830}
+  .news ul{list-style:none;margin:0;padding:0}
+  .news li{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border-radius:10px;margin:4px 0;background:rgba(255,255,255,.05);font-size:14px;line-height:1.25}
+  .news li.me{background:rgba(216,64,44,.28);outline:1px solid #ff8070}
+  .news li.new::after{content:'NOUVEAU';margin-left:auto;flex:none;font-size:9px;font-weight:700;color:#3a1a0a;background:#f2c230;border-radius:6px;padding:2px 5px;align-self:center}
+  .news li .ic{font-size:18px;flex:none}.news li small{display:block;color:#9fe0ff;font-size:11px;margin-top:2px}
+  .news .msg{color:#c9c2d8;font-size:13px;background:none}
+  .gen li{cursor:pointer;position:relative}
+  .gen .ch{display:block;font-size:11px;font-weight:400;color:#ffd0e6;margin-top:2px}
+  .cheer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.6)}
+  .cheer.on{display:flex}
+  .cheer .p{background:#1c1838;border:3px solid #e6b830;border-radius:18px;padding:16px;width:min(320px,88vw);text-align:center;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  .cheer h3{margin:0 0 4px;color:#e6b830;font-size:20px;overflow-wrap:anywhere}.cheer .c{font-size:13px;color:#c9c2d8;margin-bottom:12px}
+  .cheer .bt{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .cheer button{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:14px;padding:12px 6px;cursor:pointer}
+  .cheer .b1{background:#2e9a4c;color:#fff}.cheer .b2{background:#d8402c;color:#fff}
+  .cheer button:disabled{opacity:.4;cursor:default}
+  .cheer .x{margin-top:10px;background:none;color:#c9c2d8;font-size:13px;padding:4px}
+  .fly{position:fixed;z-index:60;font-size:44px;pointer-events:none;animation:fly 1s ease-out forwards}
+  @keyframes fly{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}30%{transform:translate(-50%,-50%) scale(1.3);opacity:1}100%{transform:translate(-50%,-140%) scale(1);opacity:0}}
 </style>
 </head>
 <body>
@@ -127,9 +149,10 @@
 </div>
 
 <section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 40</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
+<section class="news"><div class="box"><h2>📣 Les nouvelles du Théâtre</h2><ul id="newsL"><li class="msg">Chargement…</li></ul></div></section>
 <section class="gen"><div class="box">
   <h2>🏆 Classement général</h2>
-  <div class="sub">Tous les jeux du Théâtre réunis</div>
+  <div class="sub">Tous les jeux du Théâtre réunis · touche un joueur pour lui envoyer 👏 ou 🍅</div>
   <ol id="genList"><li class="msg">Chargement…</li></ol>
   <details><summary>Comment ça marche ?</summary>Dans chaque jeu, le top 10 rapporte des points : 10 points pour le 1er, 9 pour le 2e… jusqu’à 1 point pour le 10e. Le classement général additionne les points de tous les jeux (on compte le meilleur score de chaque prénom).</details>
 </div></section>
@@ -137,6 +160,7 @@
 <h2 id="jeux" class="jeuxT">🎪 Choisis ton jeu</h2>
 <main id="games"></main>
 
+<div class="cheer" id="cheer"><div class="p"><h3 id="chN"></h3><div class="c" id="chC"></div><div class="bt"><button class="b1" id="chB">👏 Bravo</button><button class="b2" id="chT">🍅 Tomate</button></div><button class="x" id="chX">Fermer</button></div></div>
 <footer>
   <button id="installBtn">📲 Ajouter le Théâtre à l’écran d’accueil</button>
   <div>🎩 Ta Loge (tenues et étoiles) est partagée entre tous les jeux.<br>🏆 Chaque jeu a son propre top 10.</div>
@@ -297,11 +321,78 @@ async function loadGeneral() {
   if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; document.getElementById('champN').textContent = 'Sois le premier !'; return }
   const medal = ['🥇', '🥈', '🥉'];
   let me = ''; try { me = norm(localStorage.getItem('polichinelles_name') || '') } catch (e) {}
-  list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}<small class="gm">${r.games.join('')}</small></span><span class="pt">${r.pts} pts</span></li>`).join('');
+  list.innerHTML = rows.map((r, i) => `<li data-n="${esc(r.name)}" class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}<small class="gm">${r.games.join('')}</small><span class="ch" data-k="${nameKey(r.name)}"></span></span><span class="pt">${r.pts} pts</span></li>`).join('');
   document.getElementById('champN').textContent = rows[0].name; document.getElementById('champP').textContent = `${rows[0].pts} points · tous les jeux`;
-  showSkins(rows);
+  showSkins(rows); showCheers();
 }
 loadGeneral();
+
+// ---------- the news of the theatre ----------
+const NEWS_G = { roue: 'à la roue' };
+function ago(ts) { const m = M_floor((Date.now() - ts) / 60000); return m < 1 ? 'à l’instant' : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${M_floor(m / 60)} h` : `il y a ${M_floor(m / 1440)} j` }
+const M_floor = Math.floor;
+async function loadNews() {
+  const L = document.getElementById('newsL');
+  let d = null, cache = null;
+  try { cache = JSON.parse(localStorage.getItem('polichinelles_news')); if (cache && Date.now() - cache.t < 60000) d = cache.d } catch (e) {}
+  if (!d) {
+    try { const r = await fetch(`${RTDB}/feed.json?orderBy=%22$key%22&limitToLast=12`); if (!r.ok) throw 0; d = await r.json() || {}; localStorage.setItem('polichinelles_news', JSON.stringify({ t: Date.now(), d })) }
+    catch (e) { d = cache ? cache.d : null }
+  }
+  if (!d) { L.innerHTML = '<li class="msg">Les nouvelles arrivent bientôt…</li>'; return }
+  let me = '', seen = ''; try { me = norm(localStorage.getItem('polichinelles_name') || ''); seen = localStorage.getItem('polichinelles_news_seen') || '' } catch (e) {}
+  const items = Object.entries(d).sort((a, b) => a[0] < b[0] ? 1 : -1).slice(0, 7);
+  if (!items.length) { L.innerHTML = '<li class="msg">Rien pour l’instant : entre au classement d’un jeu pour faire la une !</li>'; return }
+  L.innerHTML = items.map(([id, e]) => {
+    const n = `<b>${esc(String(e.n || '?'))}</b>`, g = PASS_A[e.g] || NEWS_G[e.g] || '', s = e.s ? ` avec ${(+e.s).toLocaleString('fr-FR')} points` : '';
+    const mine = e.p && norm(String(e.p)) === me && me, self = norm(String(e.n || '')) === me;
+    let ic = '🔥', tx = `${n} entre dans le top 10 ${g}${s}`;
+    if (e.k === 'top1') { ic = '👑'; tx = mine ? `${n} t’a pris la 1re place ${g} ! À toi de la reprendre` : `${n} devient N°1 ${g}${s}${e.p ? ` et détrône ${esc(String(e.p))}` : ''}` }
+    else if (e.k === 'top3') { ic = ['', '', '🥈', '🥉'][e.r] || '🥉'; tx = `${n} monte sur le podium ${g}${s}` }
+    else if (e.k === 'jackpot') { ic = '🎡'; tx = `${n} gagne le JACKPOT de la roue !` }
+    else if (e.k === 'danse') { ic = '🕺'; tx = `${n} gagne la danse Salto arrière à la roue` }
+    else if (e.k === 'boss') { ic = '🎩'; tx = `${n} a battu le Directeur au Casse-Décor (niveau ${+e.s || '?'})` }
+    return `<li class="${mine ? 'me' : ''} ${id > seen && seen && !self ? 'new' : ''}"><span class="ic">${ic}</span><span>${tx}<small>${e.ts ? ago(e.ts) : ''}</small></span></li>`;
+  }).join('');
+  try { localStorage.setItem('polichinelles_news_seen', items[0][0]) } catch (e) {}
+}
+loadNews();
+// ---------- bravo and tomatoes ----------
+let CHEERS = {}, chTarget = null;
+async function showCheers(force) {
+  try {
+    let cache = null; try { cache = JSON.parse(localStorage.getItem('polichinelles_cheers_c')) } catch (e) {}
+    if (!force && cache && Date.now() - cache.t < 60000) CHEERS = cache.d;
+    else { const r = await fetch(`${RTDB}/cheers.json`); if (r.ok) { CHEERS = await r.json() || {}; localStorage.setItem('polichinelles_cheers_c', JSON.stringify({ t: Date.now(), d: CHEERS })) } else if (cache) CHEERS = cache.d }
+  } catch (e) {}
+  paintCheers();
+}
+function paintCheers() { document.querySelectorAll('#genList .ch').forEach(el => { const c = CHEERS[el.dataset.k] || {}; el.textContent = (c.b || c.t) ? `👏 ${c.b || 0}   🍅 ${c.t || 0}` : '' }) }
+function sentToday() { try { const d = JSON.parse(localStorage.getItem('polichinelles_cheers_sent')); if (d && d.day === new Date().toDateString()) return d } catch (e) {} return { day: new Date().toDateString(), to: {} } }
+document.getElementById('genList').addEventListener('click', e => {
+  const li = e.target.closest('li[data-n]'); if (!li) return;
+  const name = li.dataset.n, k = nameKey(li.querySelector('.nm').firstChild.textContent || name);
+  let me = ''; try { me = localStorage.getItem('polichinelles_name') || '' } catch (e2) {}
+  chTarget = { name: li.querySelector('.nm').firstChild.textContent, k, li };
+  const c = CHEERS[k] || {}, done = sentToday().to[k], self = me && nameKey(me) === k;
+  document.getElementById('chN').textContent = chTarget.name;
+  document.getElementById('chC').textContent = self ? `C’est toi ! Tu as reçu 👏 ${c.b || 0} et 🍅 ${c.t || 0}` : !me ? 'Entre d’abord au classement d’un jeu pour pouvoir envoyer des bravos' : done ? `Déjà envoyé aujourd’hui (${done === 'b' ? '👏' : '🍅'}) · reviens demain` : `👏 ${c.b || 0}   🍅 ${c.t || 0} · un envoi par jour et par joueur`;
+  document.getElementById('chB').disabled = document.getElementById('chT').disabled = !!(self || !me || done);
+  document.getElementById('cheer').classList.add('on');
+});
+function sendCheer(kind) {
+  const T = chTarget; if (!T) return; const d = sentToday(); if (d.to[T.k]) return;
+  d.to[T.k] = kind; try { localStorage.setItem('polichinelles_cheers_sent', JSON.stringify(d)) } catch (e) {}
+  CHEERS[T.k] = CHEERS[T.k] || {}; CHEERS[T.k][kind] = (CHEERS[T.k][kind] || 0) + 1; paintCheers();
+  fetch(`${RTDB}/cheers/${T.k}/${kind}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ '.sv': { increment: 1 } }) }).then(() => localStorage.removeItem('polichinelles_cheers_c')).catch(() => {});
+  document.getElementById('cheer').classList.remove('on');
+  const r = T.li.getBoundingClientRect(), f = document.createElement('div'); f.className = 'fly'; f.textContent = kind === 'b' ? '👏' : '🍅'; f.style.left = (r.left + r.width / 2) + 'px'; f.style.top = (r.top + r.height / 2) + 'px'; document.body.appendChild(f); setTimeout(() => f.remove(), 1100);
+  if (navigator.vibrate) try { navigator.vibrate(kind === 'b' ? 20 : [30, 30, 60]) } catch (e) {}
+}
+document.getElementById('chB').onclick = () => sendCheer('b');
+document.getElementById('chT').onclick = () => sendCheer('t');
+document.getElementById('chX').onclick = () => document.getElementById('cheer').classList.remove('on');
+document.getElementById('cheer').onclick = e => { if (e.target.id === 'cheer') e.target.classList.remove('on') };
 function showPass() {
   try {
     const p = ensureDaily(loadPass()), S = seasonOf(p); savePass(p); const L = levelInfo(p.xp), Ti = tierInfo(S.xp), un = passUnclaimed(p), se = PASS_SEASON_OBJ;

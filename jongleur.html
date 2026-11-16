@@ -374,6 +374,10 @@ function drawAvatar(cv, b) {
   const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0);
   withCtx(ctx, () => { X.translate(14, 33); X.scale(.3, .3); drawPoli({ run: 0, idle: true }, lookFor(b) || buildLook(eqFrom(null))) });
 }
+function postFeed(k, extra) {
+  // the news of the theatre on the home page (only for players who chose a name)
+  try { const n = localStorage.getItem('polichinelles_name'); if (!n) return; fetch(`${RTDB}/feed.json`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n, g: GAME, k, ts: { '.sv': 'timestamp' }, ...(extra || {}) }) }).catch(() => {}) } catch (e) {}
+}
 async function postScore(name, sc) {
   const r = await fetch(`${RTDB}/lb/${LB_KEY}/${nameKey(name)}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, score: sc }) });
   if (!r.ok && r.status !== 401 && r.status !== 403) throw new Error(r.status);   // 401/403 = this name already has a better score
@@ -394,12 +398,15 @@ entryEl.querySelector('form').onsubmit = async e => {
   if (!name) { entryErr.textContent = 'Écris ton prénom'; return }
   try { localStorage.setItem('polichinelles_name', name) } catch (e) {}
   entryErr.textContent = 'Enregistrement…';
-  const sc = score;
+  const sc = score, oldTop = board[0], wasIn = board.some(b => nameKey(b.name) === nameKey(name));
   try {
     await postScore(name, sc);
     uploadLook(true);
     await loadBoard();
     lastRank = board.findIndex(b => b.name === name && b.score === sc);
+    if (lastRank === 0 && (!oldTop || nameKey(oldTop.name) !== nameKey(name))) postFeed('top1', { s: sc, p: oldTop ? oldTop.name : '' });
+    else if (lastRank > 0 && lastRank < 3 && (!oldTop || oldTop.score !== sc)) postFeed('top3', { s: sc, r: lastRank + 1 });
+    else if (lastRank >= 3 && !wasIn) postFeed('top10', { s: sc, r: lastRank + 1 });
     closeEntry();
   } catch (err) { entryErr.textContent = 'Pas de connexion, réessaie' }
 };
