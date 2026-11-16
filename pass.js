@@ -71,10 +71,22 @@ function dailyFor(day) {
 }
 function ensureDaily(p) { const d = passToday(); if (p.day !== d) { p.day = d; p.daily = dailyFor(d); p.gamesDay = [] } return p }
 const DAILY_XP = 150;
+// ---- daily streak: play on consecutive days for bonus XP and stars ----
+function streakBonus(n) { const m = ((n - 1) % 7) + 1; return [null, { xp: 50, stars: 0 }, { xp: 75, stars: 0 }, { xp: 100, stars: 10 }, { xp: 125, stars: 0 }, { xp: 150, stars: 20 }, { xp: 175, stars: 0 }, { xp: 250, stars: 40 }][m] }
+function dayStr(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() }
+function streakState(p) {
+  const st = p.streak || { last: null, n: 0 }, today = passToday(), y = new Date(); y.setDate(y.getDate() - 1);
+  const alive = st.last === today || st.last === dayStr(y);
+  return { n: alive ? st.n : 0, doneToday: st.last === today, next: alive ? (st.last === today ? st.n + 1 : st.n + 1) : 1 };
+}
 // called at the end of every game
 function passAward(game, earned, score) {
   const p = ensureDaily(loadPass()), before = levelInfo(p.xp).level;
   let xp = 30 + earned * 6; const done = [];
+  let streak = null;
+  { const today = passToday(), y = new Date(); y.setDate(y.getDate() - 1); const st = p.streak || { last: null, n: 0 };
+    if (st.last !== today) { st.n = st.last === dayStr(y) ? st.n + 1 : 1; st.last = today; const b = streakBonus(st.n); xp += b.xp; streak = { n: st.n, xp: b.xp, stars: b.stars } }
+    p.streak = st }
   if (!p.gamesDay.includes(game)) p.gamesDay.push(game);
   for (const c of p.daily) {
     if (c.done) continue;
@@ -86,7 +98,7 @@ function passAward(game, earned, score) {
     if (c.prog >= c.goal) { c.prog = c.goal; c.done = true; xp += DAILY_XP; done.push(c.text) }
   }
   p.xp += xp; const se = seasonOf(p), tb = tierInfo(se.xp).tier; se.xp += xp; savePass(p);
-  return { xp, before, after: levelInfo(p.xp), done, tier: tierInfo(se.xp), tierUp: tierInfo(se.xp).tier > tb };
+  return { xp, before, after: levelInfo(p.xp), done, tier: tierInfo(se.xp), tierUp: tierInfo(se.xp).tier > tb, streak, streakStars: streak ? streak.stars : 0 };
 }
 var passResult = null;
 // line drawn in the game-over panel of every game
@@ -99,5 +111,6 @@ function drawXpLine(ox, y) {
   txt(`+${r.xp} XP`, ox + 104, y, 11, '#9fe0ff', 'right', false);
   if (PASS_SEASON_OBJ.items) txt(`Palier ${r.tier.tier} / ${PASS_MAX}` + (r.tierUp ? ' · nouvelle récompense !' : ''), ox, y + 17 + (r.done.length ? 15 : 0), 11, r.tierUp ? '#ffe066' : '#c9c2d8', 'center', false);
   if (r.done.length) txt(`✔ Défi du jour réussi${r.done.length > 1 ? ' ×' + r.done.length : ''} !`, ox, y + 17, 11, '#7dff8a', 'center', false);
-  if (up) { X.save(); X.globalAlpha = .75 + M.sin(t * .2) * .25; txt(`⬆ NIVEAU ${a.level} !`, ox, y - 168, 22, COL.yellow); X.restore() }
+  if (r.streak) txt(`🔥 ${r.streak.n} jour${r.streak.n > 1 ? 's' : ''} d’affilée : +${r.streak.xp} XP` + (r.streak.stars ? ` +${r.streak.stars} ⭐` : ''), ox, y - 16, 11, '#ffb060', 'center', false);
+  if (up) { X.save(); X.globalAlpha = .75 + M.sin(t * .2) * .25; txt(`⬆ NIVEAU ${a.level} !`, ox, y - 184, 22, COL.yellow); X.restore() }
 }

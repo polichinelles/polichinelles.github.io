@@ -259,7 +259,10 @@ function showPass() {
     } else lg.hidden = true;
     const d = document.getElementById('mDot'); d.hidden = !un; d.textContent = un;
     if (p.settledMsg) window.__settled = 1;
-    document.getElementById('mDaily').innerHTML = (window.__settled ? `<li>🎁 Les récompenses de la saison passée sont dans ta Loge !</li>` : '') + p.daily.map(c => `<li>${c.done ? '✅' : '🎯'} ${c.text}<span class="p">${c.done ? '+150 XP' : c.prog + ' / ' + c.goal}</span></li>`).join('');
+    const sk = streakState(p), nb = streakBonus(sk.next);
+    const skLine = sk.doneToday ? `<li style="color:#ffb060">🔥 <b>${sk.n} jour${sk.n > 1 ? 's' : ''} d’affilée</b> · reviens demain : +${nb.xp} XP${nb.stars ? ' +' + nb.stars + ' ⭐' : ''}</li>`
+      : `<li style="color:#ffb060">🔥 ${sk.n ? `<b>${sk.n} jour${sk.n > 1 ? 's' : ''} d’affilée</b> · ` : ''}joue aujourd’hui : +${nb.xp} XP${nb.stars ? ' +' + nb.stars + ' ⭐' : ''}</li>`;
+    document.getElementById('mDaily').innerHTML = skLine + (window.__settled ? `<li>🎁 Les récompenses de la saison passée sont dans ta Loge !</li>` : '') + p.daily.map(c => `<li>${c.done ? '✅' : '🎯'} ${c.text}<span class="p">${c.done ? '+150 XP' : c.prog + ' / ' + c.goal}</span></li>`).join('');
     if (p.settledMsg) { delete p.settledMsg; savePass(p) }
   } catch (e) {}
 }

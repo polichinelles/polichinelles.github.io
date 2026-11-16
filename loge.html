@@ -39,6 +39,7 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #lb li{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:10px;margin:4px 0;background:rgba(255,255,255,.05);min-height:26px}
 #lb li.me{background:rgba(230,184,48,.22);outline:1px solid #e6b830}
 #lb .rk{width:34px;text-align:center;font-size:18px;color:#e6b830;flex:none}
+#lb .av{width:28px;height:34px;flex:none;margin:-6px 0}
 #lb .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #lb .sc{font-variant-numeric:tabular-nums;color:#ffe9a0;flex:none}
 #lb li.r1{background:rgba(230,184,48,.16)}
@@ -338,12 +339,36 @@ async function loadBoard() {
     const d = await r.json() || {};
     board = Object.values(d).filter(b => b && b.score > 0).map(b => ({ name: String(b.name), score: +b.score })).sort((a, b) => b.score - a.score).slice(0, LB_SIZE);
     boardStatus = 'ok'; boardStale = false;
+    fetchLooks();
     try { localStorage.setItem(LB_CACHE, JSON.stringify(board)) } catch (e) {}
   } catch (e) {
     // no network or a server problem: show the last leaderboard we received
     let c = null; try { c = JSON.parse(localStorage.getItem(LB_CACHE)) } catch (e2) {}
     if (c && c.length) { board = c; boardStatus = 'ok'; boardStale = true } else boardStatus = 'err';
   }
+}
+// ---------- everyone's outfit in the leaderboards ----------
+const LOOK_CACHE = {};
+function eqFrom(raw) { const eq = {}; for (const c of CATS) { const id = raw && raw[c]; eq[c] = id && ITEM[id] && ITEM[id].cat === c ? id : WARD[c].items[0].id } return eq }
+function lookFor(b) { if (!b || !b.eq) return null; const k = JSON.stringify(b.eq); return LOOK_CACHE[k] || (LOOK_CACHE[k] = buildLook(eqFrom(b.eq))) }
+async function fetchLooks() {
+  const list = board.slice(0, LB_SIZE);
+  await Promise.all(list.map(async b => { try { const r = await fetch(`${RTDB}/looks/${nameKey(b.name)}.json`); if (r.ok) { const d = await r.json(); if (d) b.eq = d } } catch (e) {} }));
+  try { localStorage.setItem(LB_CACHE, JSON.stringify(board)) } catch (e) {}
+  if (lbEl && lbEl.classList.contains('on')) renderPanel();
+}
+function uploadLook(force) {
+  try {
+    const name = localStorage.getItem('polichinelles_name'); if (!name) return;
+    const eq = eqFrom(PROF.eq), body = JSON.stringify(eq), key = 'polichinelles_look_up';
+    if (!force && localStorage.getItem(key) === nameKey(name) + body) return;
+    fetch(`${RTDB}/looks/${nameKey(name)}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body }).then(r => { if (r.ok) localStorage.setItem(key, nameKey(name) + body) }).catch(() => {});
+  } catch (e) {}
+}
+function drawAvatar(cv, b) {
+  const d = M.min(devicePixelRatio || 1, 2); cv.width = 28 * d; cv.height = 34 * d;
+  const ctx = cv.getContext('2d'); ctx.setTransform(d, 0, 0, d, 0, 0);
+  withCtx(ctx, () => { X.translate(14, 33); X.scale(.3, .3); drawPoli({ run: 0, idle: true }, lookFor(b) || buildLook(eqFrom(null))) });
 }
 async function postScore(name, sc) {
   const r = await fetch(`${RTDB}/lb/${LB_KEY}/${nameKey(name)}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, score: sc }) });
@@ -368,6 +393,7 @@ entryEl.querySelector('form').onsubmit = async e => {
   const sc = score;
   try {
     await postScore(name, sc);
+    uploadLook(true);
     await loadBoard();
     lastRank = board.findIndex(b => b.name === name && b.score === sc);
     closeEntry();
@@ -376,6 +402,7 @@ entryEl.querySelector('form').onsubmit = async e => {
 for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) entryEl.addEventListener(ev, e => e.stopPropagation());
 loadBoard();
 
+let LOOK_DEF_C = null; function LOOK_DEF() { return LOOK_DEF_C || (LOOK_DEF_C = buildLook(eqFrom(null))) }
 function drawBoard(cx, y, n, compact) {
   if (boardStatus === 'off') return;
   const w = compact ? 170 : 210;
@@ -389,8 +416,9 @@ function drawBoard(cx, y, n, compact) {
     const yy = y + 40 + i * 19, hl = i === lastRank && state === 'over';
     const k = hl ? COL.yellow : i === 0 ? '#ffe9a0' : '#fff';
     txt((i + 1) + '.', cx - w / 2 + 12, yy, 13, k, 'left', false);
-    X.save(); X.beginPath(); X.rect(cx - w / 2 + 34, yy - 10, w - 100, 20); X.clip();
-    txt(b.name, cx - w / 2 + 34, yy, 13, k, 'left', false); X.restore();
+    X.save(); X.translate(cx - w / 2 + 38, yy + 8); X.scale(.17, .17); drawPoli({ run: 0, idle: true }, lookFor(b) || LOOK_DEF()); X.restore();
+    X.save(); X.beginPath(); X.rect(cx - w / 2 + 48, yy - 10, w - 112, 20); X.clip();
+    txt(b.name, cx - w / 2 + 48, yy, 13, k, 'left', false); X.restore();
     txt(String(b.score), cx + w / 2 - 12, yy, 13, k, 'right', false);
   });
 }
@@ -407,8 +435,9 @@ function renderPanel() {
   if (!board.length) { lbList.innerHTML = '<li class="msg">Personne pour l’instant.<br>Sois le premier !</li>'; return }
   const medal = ['🥇', '🥈', '🥉'];
   lbList.innerHTML = board.slice(0, LB_SIZE).map((b, i) =>
-    `<li class="${i === 0 ? 'r1' : ''}${b.name === me ? ' me' : ''}"><span class="rk">${medal[i] || (i + 1)}</span><span class="nm">${esc(b.name)}</span><span class="sc">${b.score}</span></li>`).join('');
+    `<li class="${i === 0 ? 'r1' : ''}${b.name === me ? ' me' : ''}"><span class="rk">${medal[i] || (i + 1)}</span><canvas class="av"></canvas><span class="nm">${esc(b.name)}</span><span class="sc">${b.score}</span></li>`).join('');
   if (boardStale) lbList.innerHTML += '<li class="msg">Dernier classement connu (hors ligne)</li>';
+  lbList.querySelectorAll('canvas.av').forEach((cv, i) => drawAvatar(cv, board[i]));
   lbList.scrollTop = 0;
 }
 async function openPanel() {
@@ -2149,7 +2178,7 @@ function gameOver() {
   if (score > best) { best = score; saveBest() }
   // La Loge: stars collected + a tip from the audience go to the wallet
   tip = M.floor(M.floor(dist / 10) / 150); earned = stars + tip;
-  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars; try { passResult = passAward(GAME, earned, score); if (passResult.after.level > passResult.before) setTimeout(() => sfx.star(), 700) } catch (e) { passResult = null } if (fellIn) PROF.stats.traps++;
+  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars; uploadLook(); try { passResult = passAward(GAME, earned, score); PROF.wallet += passResult.streakStars || 0; if (passResult.after.level > passResult.before) setTimeout(() => sfx.star(), 700) } catch (e) { passResult = null } if (fellIn) PROF.stats.traps++;
   saveProf(); checkUnlocks(); updateWdBtn();
   lastRank = -1;
   if (qualifies(score)) setTimeout(() => { if (state === 'over') openEntry() }, 700);
@@ -2258,8 +2287,8 @@ function render() {
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
     const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
-    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 196, 12); X.fill(); X.stroke();
-    drawXpLine(ox, oy + 122);
+    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 214, 12); X.fill(); X.stroke();
+    drawXpLine(ox, oy + 138);
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
     txt('RIDEAU !', ox, oy, 40, COL.red);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
