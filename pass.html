@@ -391,7 +391,7 @@ async function fetchLooks() {
 function uploadLook(force) {
   try {
     const name = localStorage.getItem('polichinelles_name'); if (!name) return;
-    const eq = eqFrom(PROF.eq), body = JSON.stringify(eq), key = 'polichinelles_look_up';
+    const eq = eqFrom(PROF.eq); delete eq.dance; const body = JSON.stringify(eq), key = 'polichinelles_look_up';
     if (!force && localStorage.getItem(key) === nameKey(name) + body) return;
     fetch(`${RTDB}/looks/${nameKey(name)}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body }).then(r => { if (r.ok) localStorage.setItem(key, nameKey(name) + body) }).catch(() => {});
   } catch (e) {}
@@ -552,6 +552,7 @@ function thumb(cv, it) {
     else if (it.cat === 'collar') { X.translate(32, 36 + 68 * 1.6); X.scale(1.6, 1.6) }
     else if (it.cat === 'hat') { X.translate(32, 38 + 88 * 1.05); X.scale(1.05, 1.05) }
     else if (it.cat === 'back') { X.translate(38, 70); X.scale(.52, .52) }
+    else if (it.cat === 'dance') { X.translate(32, 69); X.scale(.6, .6); const keep = t; t = 37; drawDancer({ run: 1, idle: true }, look); t = keep; return }
     else { X.translate(34, 69); X.scale(.62, .62) }
     if (it.cat === 'prop') { X.translate(8, 0) }
     drawPoli({ run: 0, idle: true }, look);
@@ -570,7 +571,7 @@ function renderTabs() {
 function renderGrid() {
   wdGrid.innerHTML = '';
   for (const it of WARD[wdCat].items) {
-    if (it.pass && !PROF.owned.includes(it.id)) continue;   // rewards stay secret until they are won
+    if ((it.pass || it.wheel || it.quest) && !PROF.owned.includes(it.id)) continue;   // rewards stay secret until they are won
     const own = PROF.owned.includes(it.id), eq = PROF.eq[it.cat] === it.id;
     const el = document.createElement('div');
     el.className = 'card' + (eq ? ' eq' : '') + (own ? '' : ' lock') + (wdSel === it.id ? ' sel' : '');
@@ -637,7 +638,7 @@ function drawPreview() {
     if (look.trail === 'none') prevParts = [];
     for (const p of prevParts) { p.x += p.vx; p.y += p.vy; p.vy += p.g; p.l--; drawPart(p) }
     prevParts = prevParts.filter(p => p.l > 0);
-    X.save(); X.translate(r.width / 2, gy); X.scale(sc, sc); drawPoli({ run: t * .05, idle: true }, look); X.restore();
+    X.save(); X.translate(r.width / 2, gy); X.scale(sc, sc); drawDancer({ run: t * .05, idle: true }, look); X.restore();
   });
 }
 
@@ -1076,6 +1077,18 @@ const WARD = {
     { id: 't_plumes', name: 'Plumes', pass: 7, season: 2, v: { trail: 'feather' } },
     { id: 't_abeilles', name: 'Abeilles', pass: 24, season: 2, v: { trail: 'bee' } },
     { id: 't_fleurs', name: 'Pétales de fleurs', pass: 35, season: 2, v: { trail: 'petal' } }
+  ] },
+  dance: { label: 'Danse', items: [
+    { id: 'd_aucune', name: 'Aucune', free: 1, v: { dance: 'none' } },
+    { id: 'd_saut', name: 'Petits sauts', price: 40, v: { dance: 'saut' } },
+    { id: 'd_balancier', name: 'Balancier', price: 60, v: { dance: 'balancier' } },
+    { id: 'd_toupie', name: 'Toupie', price: 90, v: { dance: 'toupie' } },
+    { id: 'd_robot', name: 'Robot', price: 110, v: { dance: 'robot' } },
+    { id: 'd_moonwalk', name: 'Moonwalk', price: 140, v: { dance: 'moonwalk' } },
+    { id: 'd_disco', name: 'Disco', price: 160, v: { dance: 'disco' } },
+    { id: 'd_salto', name: 'Salto arrière', wheel: 1, v: { dance: 'salto' } },
+    { id: 'd_twist', name: 'Twist', quest: 1, v: { dance: 'twist' } },
+    { id: 'd_triomphe', name: 'Triomphe', quest: 1, v: { dance: 'triomphe' } }
   ] }
 };
 const ACH = {
@@ -1098,8 +1111,8 @@ const ACH = {
   stars1000: { text: 'Ramasser 1 000 étoiles au total', stat: 'totalStars', goal: 1000 },
   act10: { text: 'Atteindre l’Acte X', stat: 'maxAct', goal: 10 }
 };
-const CATS = ['costume', 'hat', 'collar', 'face', 'legs', 'prop', 'back', 'trail'];
-const LOOK_BASE = { pattern: 0, motif: 0, belly: 1, hatShape: 'A', collar: 'none', collarColor: '#d8402c', legPattern: 0, legs2: '#ffffff', shoeStyle: 'normal', back: 'none' };
+const CATS = ['costume', 'hat', 'collar', 'face', 'legs', 'prop', 'back', 'trail', 'dance'];
+const LOOK_BASE = { pattern: 0, motif: 0, belly: 1, hatShape: 'A', collar: 'none', collarColor: '#d8402c', legPattern: 0, legs2: '#ffffff', shoeStyle: 'normal', back: 'none', dance: 'none' };
 const ITEM = {}; for (const cat of CATS) for (const it of WARD[cat].items) { it.cat = cat; ITEM[it.id] = it }
 const PROF_KEY = 'polichinelles_loge';
 let PROF = { wallet: 0, owned: [], eq: {}, stats: { games: 0, totalStars: 0, maxAct: 1, maxCombo: 0, masks: 0, traps: 0 }, seen: [] };
@@ -1108,7 +1121,7 @@ for (const cat of CATS) for (const it of WARD[cat].items) if (it.free && !PROF.o
 for (const cat of CATS) if (!ITEM[PROF.eq[cat]]) PROF.eq[cat] = WARD[cat].items[0].id;
 function saveProf() { try { localStorage.setItem(PROF_KEY, JSON.stringify(PROF)) } catch (e) {} }
 function statVal(k) { if (k !== 'best') return PROF.stats[k] || 0; if (GAME === 'course') return best; try { return +localStorage.getItem('polichinelles_best') || 0 } catch (e) { return 0 } }
-function buildLook(eq) { const L = { ...LOOK_BASE }; for (const cat of CATS) Object.assign(L, ITEM[eq[cat]].v); return L }
+function buildLook(eq) { const L = { ...LOOK_BASE }; for (const cat of CATS) Object.assign(L, (ITEM[eq[cat]] || WARD[cat].items[0]).v); return L }
 let LOOK = buildLook(PROF.eq);
 // unlock every challenge item whose goal is reached; announces new ones
 function checkUnlocks() {
@@ -1692,6 +1705,33 @@ function drawPoliChrome(pose, look) {
   X.save(); X.globalAlpha *= a; star(gx, gy, 3.5 * a + 1, t * .1, '#fff'); X.restore();
 }
 // ---------- legendary farm outfit: the whole polichinelle becomes a cow ----------
+// ---------- dances (Loge, title screens) ----------
+function drawDancer(pose, look) {
+  const L = look || LOOK, d = L.dance, k = t * .08;
+  if (!d || d === 'none') { drawPoli(pose, look); return }
+  X.save();
+  if (d === 'saut') { const j = M.abs(M.sin(k * 1.6)); X.translate(0, -j * 14); X.scale(1 + (1 - j) * .05, 1 - (1 - j) * .05); drawPoli({ run: k * 2, air: j > .35 }, look) }
+  else if (d === 'balancier') { X.rotate(M.sin(k) * .22); drawPoli({ run: 0, idle: true }, look) }
+  else if (d === 'toupie') { const c = M.cos(k * 1.4); X.translate(0, -M.abs(M.sin(k * 1.4)) * 3); X.scale(M.abs(c) < .08 ? (c < 0 ? -.08 : .08) : c, 1); drawPoli({ run: k, idle: true }, look) }
+  else if (d === 'robot') { const st = M.floor(k * 1.6) % 4; X.rotate([-.14, 0, .14, 0][st]); X.translate(0, [0, -3, 0, -3][st]); drawPoli({ run: st * .9 }, look) }
+  else if (d === 'moonwalk') { X.translate(M.sin(k * .5) * 16, 0); drawPoli({ run: -k * 1.6 }, look) }
+  else if (d === 'disco') {
+    X.rotate(M.sin(k * 2) * .1); X.translate(M.sin(k * 2) * 3, -M.abs(M.sin(k * 2)) * 2); drawPoli({ run: k * 2, idle: true }, look);
+    for (let i = 0; i < 4; i++) { const a = k * .7 + i * 1.57; X.save(); X.globalAlpha = .5 + M.sin(k * 3 + i) * .5; star(M.cos(a) * 30, -60 + M.sin(a) * 30, 3.5, k + i, ['#f27ab0', '#9fe0ff', '#f2c230', '#7dff8a'][i]); X.restore() }
+  }
+  else if (d === 'salto') {
+    const p = (k * .35) % 1;
+    if (p < .4) { const s = p / .4, up = M.sin(s * M.PI) * 30; X.translate(0, -45 - up); X.rotate(-s * 6.283); X.translate(0, 45); drawPoli({ run: 0, air: true }, look) }
+    else drawPoli({ run: 0, idle: true }, look);
+  }
+  else if (d === 'twist') { const q = M.abs(M.sin(k * 1.5)); X.rotate(M.sin(k * 3) * .12); drawPoli({ run: k * 3, duck: q * .6 }, look) }
+  else if (d === 'triomphe') {
+    const j = M.max(0, M.sin(k * 1.2)); X.translate(0, -j * 22); drawPoli({ run: k, air: j > .2 }, look); X.translate(0, j * 22);
+    for (let i = 0; i < 10; i++) { const x = ((i * 23 + k * 9) % 70) - 35, y = -110 + ((i * 37 + k * 30) % 110); X.fillStyle = ['#d8402c', '#f2c230', '#3070d0', '#2e9a4c', '#f27ab0'][i % 5]; X.save(); X.translate(x, y); X.rotate(k + i); X.fillRect(-2.5, -1.2, 5, 2.4); X.restore() }
+  }
+  else drawPoli(pose, look);
+  X.restore();
+}
 function drawPoliCow(pose, look) {
   const m = X.getTransform(), sc = M.min(4, M.max(.6, M.hypot(m.a, m.b)));
   const BW = 180, BH = 180, OX = 90, OY = 140, cw = M.ceil(BW * sc), ch = M.ceil(BH * sc);
@@ -2209,7 +2249,7 @@ function gameOver() {
   if (score > best) { best = score; saveBest() }
   // La Loge: stars collected + a tip from the audience go to the wallet
   tip = M.floor(M.floor(dist / 10) / 150); earned = stars + tip;
-  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars; uploadLook(); try { passResult = passAward(GAME, earned, score); PROF.wallet += passResult.streakStars || 0; if (passResult.after.level > passResult.before) setTimeout(() => sfx.star(), 700) } catch (e) { passResult = null } if (fellIn) PROF.stats.traps++;
+  PROF.wallet += earned; PROF.stats.games++; PROF.stats.totalStars += stars; uploadLook(); try { passResult = passAward(GAME, earned, score); PROF.wallet += (passResult.streakStars || 0) + (passResult.weekStars || 0); if (passResult.weekItem && !PROF.owned.includes(passResult.weekItem)) PROF.owned.push(passResult.weekItem); if (passResult.after.level > passResult.before) setTimeout(() => sfx.star(), 700) } catch (e) { passResult = null } if (fellIn) PROF.stats.traps++;
   saveProf(); checkUnlocks(); updateWdBtn();
   lastRank = -1;
   if (qualifies(score)) setTimeout(() => { if (state === 'over') openEntry() }, 700);
@@ -2292,7 +2332,7 @@ function render() {
   if (state === 'title') {
     if (LAND) {
       const mx = W * .47;
-      X.save(); X.translate(W * .16, G + 8); X.scale(1.25, 1.25); drawPoli({ run: P.run, idle: true }); X.restore();
+      X.save(); X.translate(W * .16, G + 8); X.scale(1.25, 1.25); drawDancer({ run: P.run, idle: true }); X.restore();
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('La Course', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
@@ -2303,7 +2343,7 @@ function render() {
       drawBoard(W - 95, 110, 5, true);
     } else {
     const ty = M.max(-T + 70, 46 - T * .6);
-    X.save(); X.translate(W / 2, G - 14); X.scale(1.3, 1.3); drawPoli({ run: P.run, idle: true }); X.restore();
+    X.save(); X.translate(W / 2, G - 14); X.scale(1.3, 1.3); drawDancer({ run: P.run, idle: true }); X.restore();
     txt('LES POLICHINELLES', W / 2, ty, W < 400 ? 26 : 34, COL.yellow);
     txt('La Course', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
@@ -2348,6 +2388,7 @@ document.addEventListener('visibilitychange', () => { last = performance.now() }
 <div class="wrap">
 <div class="hero"><div class="lvl"><small>PALIER</small><b id="pL">1</b></div><div class="info"><div class="season" id="pS"></div><div class="xp" id="pEnd" style="color:#ffe9a0"></div><div class="bar"><i id="pB"></i></div><div class="xp" id="pXp"></div><div class="xp" id="pPl" style="margin-top:3px"></div><button class="all" id="pAll" hidden>Tout réclamer</button></div></div>
 <h2>🗓️ Défis du jour <small style="font-size:12px;color:#c9c2d8">(+150 XP chacun, nouveaux chaque jour)</small></h2><div class="daily"><ul id="pD"></ul></div>
+<h2>📅 Quêtes de la semaine <small style="font-size:12px;color:#c9c2d8" id="pWkS"></small></h2><div class="daily"><ul id="pWk"></ul></div>
 <h2 id="pTt">🎁 Les 40 paliers</h2><div id="pT"></div>
 <div id="pNext"></div>
 <p style="text-align:center;color:#c9c2d8;font-size:12px;font-weight:400">Chaque partie rapporte de l’XP, dans tous les jeux du Théâtre : 300 XP par palier. Les récompenses de la saison sont introuvables à la boutique de la Loge. À la fin de la saison, les paliers atteints mais pas réclamés arrivent tout seuls dans ta Loge.</p>
@@ -2366,6 +2407,9 @@ function passRender(scroll) {
   document.getElementById('pXp').textContent = tr >= PASS_MAX ? 'Tous les paliers sont atteints, bravo !' : `${Ti.into} / ${Ti.need} XP avant le palier ${tr + 1}`;
   document.getElementById('pPl').textContent = `Ton niveau de joueur : ${L.level} (${L.into} / ${L.need} XP)`;
   const un = passUnclaimed(p), all = document.getElementById('pAll'); all.hidden = !un; all.textContent = `Tout réclamer (${un})`;
+  { const wk = weekQuests(p); savePass(p); const DN = { d_twist: 'Twist', d_triomphe: 'Triomphe' }, dn = DN[questDance(p)];
+    document.getElementById('pWkS').textContent = `(+${WEEK_XP} XP +${WEEK_STARS} ⭐ chacune · ${weekLeft()})`;
+    document.getElementById('pWk').innerHTML = wk.list.map(c => `<li class="${c.done ? 'done' : ''}"><span style="font-size:22px">${c.done ? '✅' : '📌'}</span><div class="t">${c.text}<small>${c.done ? `Réussie ! +${WEEK_XP} XP +${WEEK_STARS} ⭐` : `${c.prog} / ${c.goal}`}</small><div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div></div></li>`).join('') + `<li class="${wk.bonus ? 'done' : ''}"><span style="font-size:22px">🕺</span><div class="t">${wk.bonus ? `Danse « ${dn} » gagnée !` : `Bonus : les 3 quêtes = la danse « ${dn} »`}<small>${wk.bonus ? 'Elle est dans ta Loge' : 'Introuvable à la boutique'}</small></div></li>` }
   document.getElementById('pD').innerHTML = p.daily.map(c => `<li class="${c.done ? 'done' : ''}"><span style="font-size:22px">${c.done ? '✅' : '🎯'}</span><div class="t">${c.text}<small>${c.done ? 'Réussi ! +150 XP' : `${c.prog} / ${c.goal}`}</small><div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div></div></li>`).join('');
   const nx = nextSeason();
   document.getElementById('pNext').innerHTML = nx ? `<div class="hero" style="margin-top:16px;background:linear-gradient(135deg,#2e6a3a,#8a5a2a)"><div class="lvl" style="font-size:34px">${nx.icon}</div><div class="info"><div class="season">Prochaine saison</div><div style="font-size:20px;color:#fff">Saison ${nx.id} · ${nx.name}</div><div class="xp">Ouverture le ${frDate(nx)}, avec 40 nouveaux paliers et des récompenses inédites.</div></div></div>` : '';

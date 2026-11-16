@@ -110,6 +110,21 @@
   #inst ol{margin:0 0 12px;padding-left:22px;line-height:1.5}
   #inst b{color:#ffe9a0}#inst p{margin:0 0 10px;color:#ffd2a0;font-size:14px}
   #inst button{display:block;margin:4px auto 0;font:700 15px Georgia,serif;padding:10px 24px;border-radius:9px;border:0;background:#e6b830;color:#2a2230}
+  .fun{max-width:760px;margin:14px auto 0;padding:0 14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:620px){.fun{grid-template-columns:1fr}}
+  .fun .card{background:linear-gradient(160deg,#1e1a3c,#2a1430);border:3px solid #e6b830;border-radius:16px;padding:12px 14px;box-shadow:0 8px 20px rgba(0,0,0,.45);color:#fff}
+  .fun h3{margin:0 0 2px;font-size:17px;color:#e6b830}.fun .s{font-size:12px;color:#c9c2d8;margin-bottom:8px}
+  .wheel{display:flex;flex-direction:column;align-items:center}
+  .wheel .wc{position:relative;width:220px;height:220px}
+  .wheel canvas{width:220px;height:220px;display:block}
+  .wheel .pin{position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:24px solid #fff;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+  .wheel button{margin-top:10px;font:inherit;font-weight:700;font-size:16px;border:0;border-radius:22px;padding:9px 22px;background:#f2c230;color:#3a1a0a;box-shadow:0 4px 0 #a07a10;cursor:pointer}
+  .wheel button:disabled{background:#5a5470;color:#c9c2d8;box-shadow:0 4px 0 #34304a;cursor:default}
+  .wheel .res{min-height:22px;margin-top:8px;font-weight:700;color:#ffe9a0;text-align:center}
+  .quests ul{margin:0;padding:0}.quests li{list-style:none;background:rgba(255,255,255,.06);border-radius:12px;padding:8px 10px;margin:6px 0;font-size:14px}
+  .quests li.done{background:rgba(125,255,138,.12)}
+  .quests li small{float:right;color:#9fe0ff}.quests .pb{height:6px;border-radius:3px;background:rgba(0,0,0,.35);margin-top:5px;overflow:hidden}.quests .pb i{display:block;height:100%;background:#7dff8a}
+  .quests .bonus{margin-top:8px;padding:8px 10px;border-radius:12px;border:2px dashed #f27ab0;color:#ffd0e6;font-size:13px}
 </style>
 </head>
 <body>
@@ -124,6 +139,8 @@
 </div>
 
 <section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 40</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
+<section class="fun"><div class="card wheel"><h3>🎡 La roue du jour</h3><div class="s">Un tour gratuit chaque jour</div><div class="wc"><canvas id="wheelC" width="440" height="440"></canvas><div class="pin"></div></div><button id="wheelB">Tourner !</button><div class="res" id="wheelR"></div></div>
+<div class="card quests"><h3>📅 Quêtes de la semaine</h3><div class="s" id="wkS"></div><ul id="wkL"></ul><div class="bonus" id="wkB"></div></div></section>
 <section class="gen"><div class="box">
   <h2>🏆 Classement général</h2>
   <div class="sub">Tous les jeux du Théâtre réunis</div>
@@ -318,6 +335,54 @@ function showPass() {
   } catch (e) {}
 }
 showPass(); addEventListener('pageshow', showPass);
+// ---------- wheel of fortune + quests of the week ----------
+const DANCE_N = { d_salto: 'Salto arrière', d_twist: 'Twist', d_triomphe: 'Triomphe' };
+let wheelA = 0;
+function drawWheel() {
+  const c = document.getElementById('wheelC'), x = c.getContext('2d'), R = 210, tot = WHEEL.reduce((a, s) => a + s.w, 0), n = WHEEL.length;
+  x.clearRect(0, 0, 440, 440); x.save(); x.translate(220, 220); x.rotate(wheelA);
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * 6.2832 - 1.5708, a1 = (i + 1) / n * 6.2832 - 1.5708;
+    x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, a0, a1); x.closePath(); x.fillStyle = WHEEL[i].col; x.fill(); x.strokeStyle = '#fff3c0'; x.lineWidth = 4; x.stroke();
+    x.save(); x.rotate((a0 + a1) / 2); x.fillStyle = '#fff'; x.font = 'bold 26px system-ui,sans-serif'; x.textAlign = 'right'; x.textBaseline = 'middle'; x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 4; x.fillText(WHEEL[i].label, R - 16, 0); x.restore();
+  }
+  x.beginPath(); x.arc(0, 0, R, 0, 6.2832); x.lineWidth = 10; x.strokeStyle = '#e6b830'; x.stroke();
+  for (let i = 0; i < 16; i++) { const a = i / 16 * 6.2832; x.beginPath(); x.arc(M_cos(a) * R, M_sin(a) * R, 5, 0, 6.2832); x.fillStyle = '#fff8d0'; x.fill() }
+  x.restore();
+  x.beginPath(); x.arc(220, 220, 34, 0, 6.2832); x.fillStyle = '#3a1a0a'; x.fill(); x.lineWidth = 6; x.strokeStyle = '#e6b830'; x.stroke();
+  x.fillStyle = '#f2c230'; x.font = 'bold 30px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('★', 220, 222);
+}
+const M_cos = Math.cos, M_sin = Math.sin;
+function wheelUI() {
+  const b = document.getElementById('wheelB'), r = document.getElementById('wheelR'), ok = wheelReady();
+  b.disabled = !ok; b.textContent = ok ? 'Tourner !' : 'Reviens demain';
+  if (!ok && !r.dataset.got) r.textContent = 'Déjà tournée aujourd’hui 🎪';
+}
+document.getElementById('wheelB').onclick = () => {
+  const got = spinWheel(); if (!got) { wheelUI(); return }
+  const b = document.getElementById('wheelB'), r = document.getElementById('wheelR'); b.disabled = true; r.textContent = ''; r.dataset.got = 1;
+  const n = WHEEL.length, target = -((got.i + .5) / n) * 6.2832 + (Math.random() - .5) * (4.5 / n);
+  const start = wheelA, end = target - 6.2832 * (6 + Math.ceil((start - target) / 6.2832)), t0 = performance.now(), D = 4200;
+  (function step(now) {
+    const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 4); wheelA = start + (end - start) * e; drawWheel();
+    if (k < 1) return requestAnimationFrame(step);
+    const parts = []; if (got.stars) parts.push(`+${got.stars} ⭐`); if (got.xp) parts.push(`+${got.xp} XP`); if (got.item) parts.push(`🕺 nouvelle danse « ${DANCE_N[got.item] || got.item} » dans ta Loge`);
+    r.textContent = (WHEEL[got.i].label === 'JACKPOT' ? '🎉 JACKPOT ! ' : '🎉 ') + parts.join(' · ');
+    try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
+    b.textContent = 'Reviens demain'; showPass(); showWeek();
+  })(t0);
+};
+function showWeek() {
+  try {
+    const p = loadPass(), wk = weekQuests(p); savePass(p);
+    document.getElementById('wkS').textContent = `+${WEEK_XP} XP et +${WEEK_STARS} ⭐ par quête · ${weekLeft()}`;
+    document.getElementById('wkL').innerHTML = wk.list.map(c => `<li class="${c.done ? 'done' : ''}">${c.done ? '✅' : '🎯'} ${c.text}<small>${c.done ? 'Réussi !' : c.prog + ' / ' + c.goal}</small><div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div></li>`).join('');
+    const dn = DANCE_N[questDance(p)];
+    document.getElementById('wkB').innerHTML = wk.bonus ? `🕺 Danse « ${dn} » gagnée ! Équipe-la dans la Loge.` : `🎁 Les 3 quêtes réussies = la danse <b>« ${dn} »</b>, introuvable à la boutique`;
+  } catch (e) {}
+}
+drawWheel(); wheelUI(); showWeek(); addEventListener('pageshow', () => { wheelUI(); showWeek() });
+
 
 // ---------- install (same behaviour as in the games) ----------
 const installBtn = document.getElementById('installBtn'), instEl = document.getElementById('inst'), instBody = document.getElementById('instBody');

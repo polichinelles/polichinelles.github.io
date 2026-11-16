@@ -97,8 +97,56 @@ function passAward(game, earned, score) {
     else if (c.kind === 'score' && c.game === game && score >= c.score) c.prog = 1;
     if (c.prog >= c.goal) { c.prog = c.goal; c.done = true; xp += DAILY_XP; done.push(c.text) }
   }
+  // quests of the week
+  const wk = weekQuests(p), weekDone = []; let weekStars = 0, weekItem = null;
+  if (!wk.games.includes(game)) wk.games.push(game); if (!wk.days.includes(passToday())) wk.days.push(passToday());
+  for (const c of wk.list) {
+    if (c.done) continue;
+    if (c.kind === 'games') c.prog++; else if (c.kind === 'stars') c.prog += earned; else if (c.kind === 'days') c.prog = wk.days.length;
+    else if (c.kind === 'diff') c.prog = wk.games.filter(g => g in PASS_GAMES).length; else if (c.kind === 'game' && c.game === game) c.prog++;
+    else if (c.kind === 'score' && c.game === game && score >= c.score) c.prog = 1;
+    if (c.prog >= c.goal) { c.prog = c.goal; c.done = true; xp += WEEK_XP; weekStars += WEEK_STARS; weekDone.push(c.text) }
+  }
+  if (!wk.bonus && wk.list.every(c => c.done)) { wk.bonus = true; weekItem = questDance(p) }
   p.xp += xp; const se = seasonOf(p), tb = tierInfo(se.xp).tier; se.xp += xp; savePass(p);
-  return { xp, before, after: levelInfo(p.xp), done, tier: tierInfo(se.xp), tierUp: tierInfo(se.xp).tier > tb, streak, streakStars: streak ? streak.stars : 0 };
+  return { xp, before, after: levelInfo(p.xp), done, tier: tierInfo(se.xp), tierUp: tierInfo(se.xp).tier > tb, streak, streakStars: streak ? streak.stars : 0, weekDone, weekStars, weekItem };
+}
+// ---- quests of the week (Monday to Sunday) ----
+const WEEK_XP = 500, WEEK_STARS = 30, QUEST_DANCES = ['d_twist', 'd_triomphe'];
+function weekStart(d = new Date()) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x }
+function weekKey() { return dayStr(weekStart()) }
+function weekLeft() { const e = weekStart(); e.setDate(e.getDate() + 7); const ms = e - new Date(), d = Math.floor(ms / 864e5); return d >= 1 ? `encore ${d} jour${d > 1 ? 's' : ''}` : `encore ${Math.floor(ms / 36e5)} h` }
+function weekFor(key) {
+  let h = 5381; for (const ch of key + 'w') { h = Math.imul(h ^ ch.charCodeAt(0), 2654435761) }
+  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 10000) / 10000 };
+  const ids = Object.keys(PASS_GAMES), g1 = ids[Math.floor(rnd() * ids.length)]; let g2 = ids[Math.floor(rnd() * ids.length)]; if (g2 === g1) g2 = ids[(ids.indexOf(g1) + 2) % ids.length];
+  const a = [{ kind: 'games', goal: 30, text: 'Joue 30 parties' }, { kind: 'stars', goal: 200, text: 'Gagne 200 ⭐' }, { kind: 'days', goal: 4, text: 'Joue 4 jours différents' }][Math.floor(rnd() * 3)];
+  const b = rnd() < .5 ? { kind: 'diff', goal: Object.keys(PASS_GAMES).length, text: `Joue aux ${Object.keys(PASS_GAMES).length} jeux du Théâtre` } : { kind: 'game', game: g1, goal: 12, text: `Joue 12 parties ${PASS_DE[g1]}` };
+  const sc = Math.round(PASS_SCORE[g2] * 2.5 / 10) * 10;
+  return [a, b, { kind: 'score', game: g2, goal: 1, score: sc, text: `Fais ${sc} points ${PASS_A[g2]}` }].map(c => ({ ...c, prog: 0, done: false }));
+}
+function weekQuests(p) { const k = weekKey(); if (!p.week || p.week.key !== k) p.week = { key: k, list: weekFor(k), games: [], days: [], bonus: false }; return p.week }
+function questDance(p) { const k = weekKey(); let n = 0; for (const ch of k) n += ch.charCodeAt(0); return QUEST_DANCES[n % QUEST_DANCES.length] }
+// ---- wheel of fortune, one free spin a day ----
+const WHEEL = [
+  { label: '10 ⭐', stars: 10, w: 22, col: '#d8402c' }, { label: '+100 XP', xp: 100, w: 18, col: '#3070d0' },
+  { label: '25 ⭐', stars: 25, w: 16, col: '#2e9a4c' }, { label: '+250 XP', xp: 250, w: 12, col: '#8a4a9a' },
+  { label: '50 ⭐', stars: 50, w: 10, col: '#f08a1c' }, { label: 'Danse !', item: 'd_salto', w: 3, col: '#c99a2e' },
+  { label: '100 ⭐', stars: 100, w: 5, col: '#2bb3c0' }, { label: 'JACKPOT', xp: 500, stars: 50, w: 4, col: '#f27ab0' }
+];
+function wheelReady(p = loadPass()) { return p.wheelDay !== passToday() }
+function spinWheel() {
+  const p = loadPass(); if (!wheelReady(p)) return null;
+  let r = Math.random() * WHEEL.reduce((a, s) => a + s.w, 0), i = 0; while (r >= WHEEL[i].w) { r -= WHEEL[i].w; i++ }
+  const seg = WHEEL[i], got = { i, xp: seg.xp || 0, stars: seg.stars || 0, item: null };
+  let loge; try { loge = JSON.parse(localStorage.getItem('polichinelles_loge')) } catch (e) {}
+  loge = Object.assign({ wallet: 0, owned: [], eq: {}, stats: { games: 0, totalStars: 0, maxAct: 1, maxCombo: 0, masks: 0, traps: 0 }, seen: [] }, loge || {});
+  if (seg.item) { if (loge.owned.includes(seg.item)) got.stars += 100; else { loge.owned.push(seg.item); got.item = seg.item } }
+  loge.wallet = (loge.wallet || 0) + got.stars;
+  try { localStorage.setItem('polichinelles_loge', JSON.stringify(loge)) } catch (e) {}
+  if (got.xp) { p.xp += got.xp; seasonOf(p).xp += got.xp }
+  p.wheelDay = passToday(); savePass(p);
+  return got;
 }
 var passResult = null;
 // line drawn in the game-over panel of every game
@@ -109,8 +157,9 @@ function drawXpLine(ox, y) {
   X.fillStyle = 'rgba(255,255,255,.15)'; X.beginPath(); X.roundRect(ox - 52, y - 5, 120, 10, 5); X.fill();
   X.fillStyle = '#9fe0ff'; X.beginPath(); X.roundRect(ox - 52, y - 5, M.max(10, 120 * a.into / a.need), 10, 5); X.fill();
   txt(`+${r.xp} XP`, ox + 104, y, 11, '#9fe0ff', 'right', false);
-  if (PASS_SEASON_OBJ.items) txt(`Palier ${r.tier.tier} / ${PASS_MAX}` + (r.tierUp ? ' · nouvelle récompense !' : ''), ox, y + 17 + (r.done.length ? 15 : 0), 11, r.tierUp ? '#ffe066' : '#c9c2d8', 'center', false);
-  if (r.done.length) txt(`✔ Défi du jour réussi${r.done.length > 1 ? ' ×' + r.done.length : ''} !`, ox, y + 17, 11, '#7dff8a', 'center', false);
+  if (PASS_SEASON_OBJ.items) txt(`Palier ${r.tier.tier} / ${PASS_MAX}` + (r.tierUp ? ' · nouvelle récompense !' : ''), ox, y + 17 + (r.done.length || (r.weekDone && r.weekDone.length) || r.weekItem ? 15 : 0), 11, r.tierUp ? '#ffe066' : '#c9c2d8', 'center', false);
+  const msg = []; if (r.done.length) msg.push(`✔ Défi du jour${r.done.length > 1 ? ' ×' + r.done.length : ''}`); if (r.weekDone && r.weekDone.length) msg.push(`✔ Quête de la semaine${r.weekDone.length > 1 ? ' ×' + r.weekDone.length : ''}`); if (r.weekItem) msg.push('🕺 Nouvelle danse !');
+  if (msg.length) txt(msg.join(' · '), ox, y + 17, 11, '#7dff8a', 'center', false);
   if (r.streak) txt(`🔥 ${r.streak.n} jour${r.streak.n > 1 ? 's' : ''} d’affilée : +${r.streak.xp} XP` + (r.streak.stars ? ` +${r.streak.stars} ⭐` : ''), ox, y - 16, 11, '#ffb060', 'center', false);
   if (up) { X.save(); X.globalAlpha = .75 + M.sin(t * .2) * .25; txt(`⬆ NIVEAU ${a.level} !`, ox, y - 184, 22, COL.yellow); X.restore() }
 }
