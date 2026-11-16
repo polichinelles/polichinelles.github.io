@@ -676,7 +676,11 @@ const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- Le Tracteur : hill-climb on the farm ----
-const PXM = 20, GRAV = .3, VMAX = 7, INERT = 520, WHEELS = [[-24, 16, 15], [25, 19, 10]];
+const PXM = 20, WHEELS = [[-24, 16, 15], [25, 19, 10]];
+// rigid-body physics (units: px and frames): chassis + two wheels on suspension, motor on the rear wheel
+const SUB = 8, GV = .28, MC = 1, IC = 520, MW = .16, KS = .045, CS = .1, MU = 1.15, OMAX = .5, TMAX = 2.6, AIRT = .0016;
+const BODY = [[-36, 10], [38, 4], [36, -10], [-34, -4]], ROOF = [[-10, -34], [-24, -42], [2, -42]];
+function placeWheels() { TR.wh = WHEELS.map(([ox, oy, r]) => { const c = M.cos(TR.a), s = M.sin(TR.a); return { x: TR.x + ox * c - oy * s, y: TR.y + ox * s + oy * c, vx: TR.vx, vy: TR.vy, ang: 0, om: 0, r, I: .5 * MW * r * r, ax: ox, ay: oy } }) }
 let TR = null, ZM = 1, VW = 400, VH = 600, camX = 0, camY = 0, gasOn = false, brakeOn = false, keyGas = false, keyBrake = false, gasId = null, brakeId = null;
 let cans = [], coins = [], smoke = [], flips = 0, airT = 0, airRot = 0, maxX = 0, crashT = 0, emptyT = 0, nextCan = 0, nextCoin = 0, lastSign = 0, engSnd = null;
 function hsh(a, b) { const x = M.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - M.floor(x) }
@@ -705,7 +709,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  TR = { x: 120, y: 260, vx: 0, vy: 0, a: 0, w: 0, spin: [0, 0], fuel: 100, ground: 2, dead: false };
+  TR = { x: 120, y: 262, vx: 0, vy: 0, a: 0, w: 0, fuel: 100, ground: 2, dead: false }; placeWheels();
   cans = []; coins = []; smoke = []; flips = 0; airT = 0; airRot = 0; maxX = 120; crashT = 0; emptyT = 0; nextCan = 1300; nextCoin = 600; lastSign = 0;
   gasOn = brakeOn = keyGas = keyBrake = false; gasId = brakeId = null;
   ZM = LAND ? 1 : M.min(1, W / 380); VW = W / ZM; VH = H / ZM; camX = TR.x - VW * .32; camY = TR.y - VH * .58;
@@ -2124,31 +2128,60 @@ function update() {
     // spawn fuel cans and star arcs ahead
     while (nextCan < camX + VW * 2) { cans.push({ x: nextCan, got: false }); nextCan += 2200 + nextCan * .22 + rnd(-200, 200) }
     while (nextCoin < camX + VW * 2) { const n = 5; for (let i = 0; i < n; i++) coins.push({ x: nextCoin + i * 26, h: 34 + M.sin(i / (n - 1) * M.PI) * 22, got: false }); nextCoin += rnd(500, 900) }
-    // physics, 4 sub-steps
+    // physics: sub-steps with impulses (suspension, tyre grip, motor torque and its reaction on the chassis)
     let contacts = 0;
-    for (let sub = 0; sub < 4; sub++) {
-      const h = .25; T0.vy += GRAV * h; contacts = 0;
-      WHEELS.forEach(([ox, oy, r], i) => {
-        const c = M.cos(T0.a), s = M.sin(T0.a), rx = ox * c - oy * s, ry = ox * s + oy * c, px = T0.x + rx, py = T0.y + ry;
-        const sl = slope(px), len = M.hypot(1, sl), nx = sl / len, ny = -1 / len, tx = 1 / len, ty = sl / len;
-        const dist = (ground(px) - py) / len, pen = r - dist;
-        if (pen <= 0) return;
+    const hitBody = (px, py, rx, ry, mu) => {
+      const sl = slope(px), len = M.hypot(1, sl), nx = sl / len, ny = -1 / len, pen = (py - ground(px)) / len;
+      if (pen <= 0) return false;
+      const vx = T0.vx - T0.w * ry, vy = T0.vy + T0.w * rx, vn = vx * nx + vy * ny, cn = rx * ny - ry * nx;
+      const jn = M.max(0, (-vn + .2 * pen * SUB) / (1 / MC + cn * cn / IC));
+      T0.vx += jn * nx / MC; T0.vy += jn * ny / MC; T0.w += cn * jn / IC;
+      const tx = -ny, ty = nx, vt = (T0.vx - T0.w * ry) * tx + (T0.vy + T0.w * rx) * ty, ct = rx * ty - ry * tx;
+      const jt = M.max(-mu * jn, M.min(mu * jn, -vt / (1 / MC + ct * ct / IC)));
+      T0.vx += jt * tx / MC; T0.vy += jt * ty / MC; T0.w += ct * jt / IC;
+      return true;
+    };
+    for (let sub = 0; sub < SUB; sub++) {
+      const h = 1 / SUB; contacts = 0;
+      T0.vy += GV * h; for (const wh of T0.wh) wh.vy += GV * h;
+      const ca = M.cos(T0.a), sa = M.sin(T0.a), ux = -sa, uy = ca, lx = ca, ly = sa;
+      for (const wh of T0.wh) {
+        const rAx = wh.ax * ca - wh.ay * sa, rAy = wh.ax * sa + wh.ay * ca, dx = wh.x - (T0.x + rAx), dy = wh.y - (T0.y + rAy);
+        const apply = (j, nx, ny) => { wh.vx += j * nx / MW; wh.vy += j * ny / MW; T0.vx -= j * nx / MC; T0.vy -= j * ny / MC; T0.w -= (rAx * ny - rAy * nx) * j / IC };
+        const relv = (nx, ny) => (wh.vx - (T0.vx - T0.w * rAy)) * nx + (wh.vy - (T0.vy + T0.w * rAx)) * ny;
+        // the wheel slides only along the suspension axis
+        const cl = rAx * ly - rAy * lx, l = dx * lx + dy * ly;
+        apply(-(relv(lx, ly) + .3 * l * SUB) / (1 / MW + 1 / MC + cl * cl / IC), lx, ly);
+        // suspension spring and end stops
+        const sp = dx * ux + dy * uy, cu = rAx * uy - rAy * ux;
+        apply((-KS * sp - CS * relv(ux, uy)) * h, ux, uy);
+        if (sp > 7 || sp < -6) { const tgt = sp > 7 ? sp - 7 : sp + 6, v = relv(ux, uy); if (tgt * v > 0 || true) apply(-(v + .3 * tgt * SUB) / (1 / MW + 1 / MC + cu * cu / IC), ux, uy) }
+      }
+      // motor on the rear wheel, brakes on both
+      const rear = T0.wh[0];
+      if (gas) { const d = M.max(-TMAX * h / rear.I, M.min(TMAX * h / rear.I, OMAX - rear.om)); rear.om += d; T0.w -= d * rear.I / IC }
+      for (const wh of T0.wh) if (brk) { const tgt = M.abs(T0.vx) < .4 ? -OMAX * .35 : 0, d = M.max(-TMAX * 1.6 * h / wh.I, M.min(TMAX * 1.6 * h / wh.I, tgt - wh.om)); wh.om += d; T0.w -= d * wh.I / IC } else if (!gas || wh !== rear) wh.om *= .9995;
+      // tyres on the ground
+      for (const wh of T0.wh) {
+        const sl = slope(wh.x), len = M.hypot(1, sl), nx = sl / len, ny = -1 / len, pen = wh.r - (ground(wh.x) - wh.y) / len;
+        if (pen <= 0) continue;
         contacts++;
-        const cvx = T0.vx - T0.w * ry, cvy = T0.vy + T0.w * rx, vn = cvx * nx + cvy * ny, vt = cvx * tx + cvy * ty;
-        const J = M.max(0, -vn * .55 + pen * .22);
-        let Jt;
-        if (gas) Jt = M.max(-J * 1.3, M.min(J * 1.3, (VMAX - vt) * .05));
-        else if (brk) Jt = M.max(-J * 1.3, M.min(J * 1.3, (vt > .3 ? -vt : -VMAX * .45 - vt) * .05));
-        else Jt = -vt * .0025;
-        const Ix = J * nx + Jt * tx, Iy = J * ny + Jt * ty;
-        T0.vx += Ix * .5; T0.vy += Iy * .5; T0.w += (rx * Iy - ry * Ix) / INERT;
-        T0.x += nx * pen * .3; T0.y += ny * pen * .3;
-        T0.spin[i] += vt * h / r;
-        if (J > 2.2 && sub === 0) { sfx.land(); shake = M.min(6, J) }
-      });
-      if (!contacts && !T0.dead) { if (gas) T0.w -= .0021 * h * 4; if (brk) T0.w += .0021 * h * 4 } else if (gas && !T0.dead) { const climb = M.max(0, -M.atan(slope(T0.x))); T0.w -= (.0016 + climb * .004) * h * 4 } else if (brk && contacts === 2) T0.w += .0004 * h * 4;
-      T0.w *= contacts ? .985 : .997; T0.x += T0.vx * h; T0.y += T0.vy * h; T0.a += T0.w * h;
-      if (!contacts) WHEELS.forEach((wh, i) => T0.spin[i] += (gas ? .3 : brk ? -.1 : 0) * h);
+        const rcx = -nx * wh.r, rcy = -ny * wh.r;
+        const vn = (wh.vx - wh.om * rcy) * nx + (wh.vy + wh.om * rcx) * ny, jn = M.max(0, (-vn + .25 * pen * SUB) * MW);
+        wh.vx += jn * nx / MW; wh.vy += jn * ny / MW;
+        const tx = -ny, ty = nx, vt = (wh.vx - wh.om * rcy) * tx + (wh.vy + wh.om * rcx) * ty, ct = rcx * ty - rcy * tx;
+        const jt = M.max(-MU * jn, M.min(MU * jn, -vt / (1 / MW + ct * ct / wh.I)));
+        wh.vx += jt * tx / MW; wh.vy += jt * ty / MW; wh.om += ct * jt / wh.I;
+        if (jn > .5 && sub === 0) { sfx.land(); shake = M.min(6, jn * 4) }
+      }
+      // the bodywork can scrape on the ground; the roof or the driver's head = crash
+      for (const [ox, oy] of BODY) { const rx = ox * ca - oy * sa, ry = ox * sa + oy * ca; hitBody(T0.x + rx, T0.y + ry, rx, ry, .5) }
+      if (!T0.dead) for (const [ox, oy] of ROOF) { const rx = ox * ca - oy * sa, ry = ox * sa + oy * ca; if (ground(T0.x + rx) < T0.y + ry + 1) { T0.dead = true; crashT = 1; sfx.crash(); buzz([100, 50, 200]); shake = 10; popup(W / 2, 200 - T, 'Aïe !', '#ff8080'); break } }
+      if (T0.dead) for (const [ox, oy] of ROOF) { const rx = ox * ca - oy * sa, ry = ox * sa + oy * ca; hitBody(T0.x + rx, T0.y + ry, rx, ry, .8) }
+      // a little air control, like in every hill-climb game
+      if (!contacts && !T0.dead) { if (gas) T0.w -= AIRT * h; if (brk) T0.w += AIRT * h }
+      T0.x += T0.vx * h; T0.y += T0.vy * h; T0.a += T0.w * h; T0.w *= .9995;
+      for (const wh of T0.wh) { wh.x += wh.vx * h; wh.y += wh.vy * h; wh.ang += wh.om * h }
     }
     T0.ground = contacts;
     // flips and air time
@@ -2160,8 +2193,6 @@ function update() {
       }
       airT = 0; airRot = 0;
     }
-    // the driver's head or the roof hits the ground
-    if (!T0.dead) for (const [ox, oy] of [[-10, -34], [-24, -40], [2, -40]]) { const [px, py] = trPoint(ox, oy); if (ground(px) < py + 2) { T0.dead = true; crashT = 1; sfx.crash(); buzz([100, 50, 200]); shake = 10; popup(W / 2, 200 - T, 'Aïe !', '#ff8080'); break } }
     // fuel
     if (!T0.dead) { T0.fuel = M.max(0, T0.fuel - (gas ? .085 : .03)); if (T0.fuel === 0 && emptyT === 0) { emptyT = 1; sfx.empty(); popup(W / 2, 200 - T, 'Panne sèche !', '#ffb060') } }
     if (emptyT && M.hypot(T0.vx, T0.vy) < .25) emptyT++;
@@ -2398,14 +2429,15 @@ function drawTractor() {
   X.fillStyle = '#9a9aa8'; X.fillRect(19, -26, 4, 16); X.fillRect(18, -27, 6, 3);
   X.fillStyle = '#b8282a'; X.beginPath(); X.arc(-24, 16, 21, M.PI, 0); X.lineTo(-3, 16); X.lineTo(-45, 16); X.fill();
   X.fillStyle = '#2a2a33'; X.fillRect(30, 10, 10, 4);
-  // wheels
-  WHEELS.forEach(([ox, oy, r], i) => {
-    X.save(); X.translate(ox, oy); X.rotate(T0.spin[i]);
+  X.restore();
+  for (const wh of T0.wh) {
+    const ca = M.cos(T0.a), sa = M.sin(T0.a), axw = T0.x + wh.ax * ca - (wh.ay - 10) * sa, ayw = T0.y + wh.ax * sa + (wh.ay - 10) * ca;
+    line('#4a4a55', 4, [axw, ayw, wh.x, wh.y]);
+    X.save(); X.translate(wh.x, wh.y); X.rotate(wh.ang); const r = wh.r;
     circ('#1d1d24', 0, 0, r); X.fillStyle = '#3a3a44'; for (let k = 0; k < 10; k++) { X.save(); X.rotate(k * .628); X.fillRect(-2, -r - 1.5, 4, 4); X.restore() }
     circ('#f2c230', 0, 0, r * .55); circ('#c99a2e', 0, 0, r * .25); X.fillStyle = '#c99a2e'; for (let k = 0; k < 5; k++) { X.save(); X.rotate(k * 1.257); X.fillRect(-1, 0, 2, r * .5); X.restore() }
     X.restore();
-  });
-  X.restore();
+  }
 }
 function drawGame() {
   if (!TR) return;
