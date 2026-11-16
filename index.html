@@ -151,11 +151,14 @@ const GAMES = [
   { id: 'course', name: 'La Course', href: 'course.html', best: 'polichinelles_best', desc: 'Cours sur la scène, saute les sièges, baisse-toi sous les projecteurs et évite les trappes.', art: 'course', bg: ['#e9dcc6', '#8a1f2a'] },
   { id: 'envol', name: 'L’Envol', href: 'envol.html', best: 'polichinelles_best_envol', desc: 'Accroché à ton ballon, passe entre les rideaux et les piles de coffres.', art: 'envol', bg: ['#a9bcdd', '#1f3a7a'] },
   // { id: 'kart', name: 'Le Grand Prix', href: 'kart.html', best: 'polichinelles_best_kart', desc: 'Course de karts en 3D contre la montre : dérapages, turbos, tartes à la crème… boucle les tours pour gagner du temps !', art: 'kart', bg: ['#5b3a7a', '#3a3550'], fresh: true },
-  { id: 'trampo', name: 'Le Trampoline', href: 'trampo.html', best: 'polichinelles_best_trampo', fresh: true, desc: 'Rebondis de planche en planche toujours plus haut, jusqu’aux étoiles. Gare aux chauves-souris !', emoji: '🤸', bg: ['#b8c8f0', '#2a2a7a'] },
-  { id: 'tir', name: 'Le Tir Forain', href: 'tir.html', best: 'polichinelles_best_tir', fresh: true, desc: 'Vise les cibles qui défilent avant la fin du temps, enchaîne les séries… mais épargne le directeur !', emoji: '🎯', bg: ['#f2b8a8', '#8a1f2a'] },
+  { id: 'trampo', name: 'Le Trampoline', href: 'trampo.html', best: 'polichinelles_best_trampo', desc: 'Rebondis de planche en planche toujours plus haut, jusqu’aux étoiles. Gare aux chauves-souris !', emoji: '🤸', bg: ['#b8c8f0', '#2a2a7a'] },
+  { id: 'tir', name: 'Le Tir Forain', href: 'tir.html', best: 'polichinelles_best_tir', desc: 'Vise les cibles qui défilent avant la fin du temps, enchaîne les séries… mais épargne le directeur !', emoji: '🎯', bg: ['#f2b8a8', '#8a1f2a'] },
   { id: 'tape', name: 'Tape-Polichinelle', href: 'tape.html', best: 'polichinelles_best_tape', desc: 'Ils surgissent des trappes : tape-les vite… mais pas le directeur !', emoji: '🔨', bg: ['#dcb6dc', '#5a1f6e'] },
   { id: 'pyramide', name: 'La Pyramide', href: 'pyramide.html', best: 'polichinelles_best_pyramide', desc: 'Lâche les polichinelles au bon moment pour bâtir la plus haute pyramide.', emoji: '🏛️', bg: ['#c2dcb8', '#1f5a3a'] },
   { id: 'jongleur', name: 'Le Jongleur', href: 'jongleur.html', best: 'polichinelles_best_jongleur', desc: 'Garde balles, massues en feu et outils en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] },
+  { id: 'briques', name: 'Le Casse-Décor', href: 'briques.html', best: 'polichinelles_best_briques', fresh: true, desc: 'Fais rebondir la balle sur ton tambour et casse tout le décor, caisse après caisse. Attrape les surprises !', emoji: '🧱', bg: ['#d8b890', '#5a1f2a'] },
+  { id: 'farandole', name: 'La Farandole', href: 'farandole.html', best: 'polichinelles_best_farandole', fresh: true, desc: 'Mène la farandole sur la piste du bal : chaque masque l’allonge… sans jamais te cogner !', emoji: '💃', bg: ['#c8b0e0', '#3a1f6e'] },
+  { id: 'traversee', name: 'La Traversée', href: 'traversee.html', best: 'polichinelles_best_traversee', fresh: true, desc: 'Traverse la scène en plein changement de décor : chariots, fosse d’orchestre… et le rideau qui tombe !', emoji: '🚦', bg: ['#e8c890', '#7a4a2a'] },
   { id: 'tracteur', name: 'Le Tracteur', href: 'tracteur.html', best: 'polichinelles_best_tracteur', soon: true, shot: true, desc: 'Grimpe les collines de la ferme en tracteur, fais des saltos et ne tombe pas en panne d’essence !', emoji: '🚜', bg: ['#bfe4f4', '#4e9a3a'] },
   { id: 'oeufs', name: 'Le Poulailler', href: 'oeufs.html', best: 'polichinelles_best_oeufs', soon: true, shot: true, desc: 'Les poules pondent sans s’arrêter : rattrape les œufs dans ton panier, mais pas les œufs pourris !', emoji: '🥚', bg: ['#c89a4a', '#7a4a2a'] },
 ];
@@ -229,7 +232,7 @@ function drawArt(cv, kind) {
 
 // ---------- general leaderboard: ranking points from every game ----------
 const FB = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
-const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_trampo', '🤸'], ['scores_tir', '🎯'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹']];
+const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_trampo', '🤸'], ['scores_tir', '🎯'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹'], ['scores_briques', '🧱'], ['scores_farandole', '💃'], ['scores_traversee', '🚦']];
 const RTDB = 'https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app';
 async function topOf(coll) {
   const key = coll === 'scores' ? 'course' : coll.slice(7);
