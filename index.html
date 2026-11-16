@@ -34,6 +34,16 @@
   .wallet span{color:#c9c2d8;font-weight:400;font-size:12px}
   .logeBtn{display:inline-flex;align-items:center;gap:8px;margin:10px 0 0 8px;background:linear-gradient(#f2c230,#c99a2e);color:#3a1a0a;border-radius:22px;padding:8px 16px;font-weight:700;text-decoration:none;box-shadow:0 4px 10px rgba(0,0,0,.4);border:2px solid #fff3c0}
   .logeBtn:active{transform:scale(.96)}
+  .topbar{max-width:760px;margin:6px auto 0;padding:0 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
+  .topbar .btns{display:flex;flex-direction:column;gap:8px;justify-content:center}
+  .topbar .wallet,.topbar .logeBtn{margin:0;justify-content:center}
+  .champ{background:radial-gradient(circle at 50% 40%,rgba(255,215,90,.35),rgba(28,24,56,.95) 70%);border:3px solid #e6b830;border-radius:16px;text-align:center;padding:8px 6px;box-shadow:0 6px 16px rgba(0,0,0,.45);min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .champ .k{font-size:11px;letter-spacing:1.5px;color:#ffe9a0}
+  .champ img{width:76px;height:95px;object-fit:contain;margin:2px 0;filter:drop-shadow(0 0 8px rgba(255,220,120,.55));animation:legf 3s ease-in-out infinite}
+  .champ img:not([src]){visibility:hidden}
+  .champ .nm{font-weight:700;font-size:18px;color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .champ .pt{font-size:12px;color:#ffe9a0}
+  .gen .av{width:30px;height:38px;object-fit:contain;flex:none;margin:-8px 0}
   .playBtn{background:linear-gradient(#9fe0ff,#3070d0);color:#fff;border-color:#e6f6ff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
   html{scroll-behavior:smooth}
   .jeuxT{max-width:760px;margin:22px auto 0;padding:0 14px;color:#e6b830;font-size:22px;text-align:center;scroll-margin-top:12px}
@@ -71,21 +81,21 @@
   .gen .msg{text-align:center;color:#c9c2d8;padding:16px;background:none}
   .gen details{padding:0 14px 12px;font-size:12px;color:#c9c2d8}
   .gen summary{cursor:pointer;color:#e6b830}
-  main{max-width:760px;margin:18px auto 0;padding:0 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+  main{max-width:760px;margin:14px auto 0;padding:0 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .card{position:relative;border-radius:16px;overflow:hidden;border:3px solid #e6b830;background:#1c1838;box-shadow:0 8px 20px rgba(0,0,0,.45);text-decoration:none;color:#fff;display:flex;flex-direction:column;transition:transform .15s}
   .card:active{transform:scale(.97)}
-  .card .art{height:150px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;overflow:hidden}
+  .card .art{height:112px;display:flex;align-items:center;justify-content:center;font-size:64px;position:relative;overflow:hidden}
   .card .art::after{content:'';position:absolute;inset:auto 0 0 0;height:26px;background:linear-gradient(transparent,rgba(28,24,56,1))}
   .card .art canvas,.card .art img{width:100%;height:100%;display:block;object-fit:cover}
-  .card .body{padding:10px 14px 14px}
-  .card h2{margin:0;font-size:21px;color:#e6b830}
-  .card p{margin:4px 0 10px;font-size:13.5px;line-height:1.35;color:#ddd6ea}
-  .card .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .card .rec{font-size:13px;color:#ffe9a0}
-  .card .play{background:#e6b830;color:#2a2230;font-weight:700;border-radius:10px;padding:9px 18px;font-size:16px}
+  .card .body{padding:8px 10px 10px;display:flex;flex-direction:column;flex:1}
+  .card h2{margin:0;font-size:17px;color:#e6b830}
+  .card p{margin:4px 0 8px;font-size:12px;line-height:1.3;color:#ddd6ea;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+  .card .row{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+  .card .rec{font-size:12px;color:#ffe9a0;text-align:center}
+  .card .play{background:#e6b830;color:#2a2230;font-weight:700;border-radius:10px;padding:8px 6px;font-size:15px;text-align:center}
   .card.soon{border-color:#6a6280;filter:saturate(.35);opacity:.8}
   .card.soon .art{position:relative}.card.soon .art img{filter:grayscale(1) brightness(.75)}
-  .soonTag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-4deg);background:rgba(20,16,40,.85);color:#ffe9a0;border:2px solid #e6b830;border-radius:12px;padding:6px 14px;font:700 15px Georgia,serif;white-space:nowrap}
+  .soonTag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-4deg);background:rgba(20,16,40,.85);color:#ffe9a0;border:2px solid #e6b830;border-radius:12px;padding:5px 10px;font:700 12px Georgia,serif;white-space:nowrap}
   .card.soon .play{background:#4a4460;color:#cfc8e0}
   .badge{position:absolute;top:10px;right:10px;background:#e6b830;color:#2a2230;font-size:11px;font-weight:700;border-radius:10px;padding:3px 8px;z-index:2}
   .soon .badge{background:#4a4460;color:#fff}
@@ -106,8 +116,11 @@
 <header>
   <img class="logo" src="icon-512.png" alt="">
   <h1><small>LE THÉÂTRE DES</small>POLICHINELLES</h1>
-  <div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles pour la Loge</span></div><a class="logeBtn" href="loge.html">🎩 La Loge</a><a class="logeBtn playBtn" href="#jeux">🎮 Les jeux</a>
 </header>
+<div class="topbar">
+  <div class="btns"><div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles</span></div><a class="logeBtn" href="loge.html">🎩 La Loge</a><a class="logeBtn playBtn" href="#jeux">🎮 Les jeux</a></div>
+  <div class="champ" id="champ"><div class="k">👑 N°1 DU THÉÂTRE</div><img id="champImg" alt=""><div class="nm" id="champN">…</div><div class="pt" id="champP"></div></div>
+</div>
 
 <section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 40</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
 <section class="gen"><div class="box">
@@ -221,6 +234,33 @@ async function topOf(coll) {
   const d = await r.json() || {};
   return Object.values(d).filter(x => x && x.score > 0).map(x => ({ name: String(x.name), score: +x.score })).sort((a, b) => b.score - a.score);
 }
+// ---- skins of the players (drawn by a hidden copy of a game page) ----
+const nameKey = n => n.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').slice(0, 32) || 'x';
+let avFrame = null, avReady = null, avWait = {}, avId = 0;
+function avatarService() {
+  if (avReady) return avReady;
+  avReady = new Promise(res => {
+    addEventListener('message', e => { const d = e.data; if (!d) return; if (d.type === 'avatarReady') res(); if (d.type === 'avatars' && avWait[d.id]) { avWait[d.id](d.urls); delete avWait[d.id] } });
+    avFrame = document.createElement('iframe'); avFrame.src = 'avatar.html'; avFrame.style.cssText = 'position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none;left:-9px;top:-9px'; avFrame.setAttribute('aria-hidden', 'true'); avFrame.tabIndex = -1;
+    document.body.appendChild(avFrame);
+  });
+  return avReady;
+}
+async function avatars(eqs) { await avatarService(); return new Promise(res => { const id = ++avId; avWait[id] = res; avFrame.contentWindow.postMessage({ type: 'avatars', id, eqs }, '*'); setTimeout(() => { if (avWait[id]) { delete avWait[id]; res([]) } }, 8000) }) }
+async function looksOf(names) {
+  let cache = {}; try { cache = JSON.parse(localStorage.getItem('polichinelles_genlooks')) || {} } catch (e) {}
+  const fresh = cache.t && Date.now() - cache.t < 180000 ? cache.v || {} : {};
+  await Promise.all(names.map(async n => { const k = nameKey(n); if (k in fresh) return; try { const r = await fetch(`${RTDB}/looks/${k}.json`); fresh[k] = r.ok ? await r.json() : null } catch (e) { fresh[k] = (cache.v || {})[k] || null } }));
+  try { localStorage.setItem('polichinelles_genlooks', JSON.stringify({ t: cache.t && Date.now() - cache.t < 180000 ? cache.t : Date.now(), v: fresh })) } catch (e) {}
+  return names.map(n => fresh[nameKey(n)] || null);
+}
+async function showSkins(rows) {
+  try {
+    const eqs = await looksOf(rows.map(r => r.name)), urls = await avatars(eqs);
+    document.querySelectorAll('#genList img.av').forEach((im, i) => { if (urls[i]) im.src = urls[i] });
+    if (urls[0]) document.getElementById('champImg').src = urls[0];
+  } catch (e) {}
+}
 const esc = t => t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = n => n.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 async function loadGeneral() {
@@ -247,10 +287,12 @@ async function loadGeneral() {
   });
   if (!ok) { list.innerHTML = '<li class="msg">Classement indisponible pour le moment, réessaie un peu plus tard.</li>'; return }
   const rows = [...tot.values()].sort((a, b) => b.pts - a.pts).slice(0, 10);
-  if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; return }
+  if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; document.getElementById('champN').textContent = 'Sois le premier !'; return }
   const medal = ['🥇', '🥈', '🥉'];
   let me = ''; try { me = norm(localStorage.getItem('polichinelles_name') || '') } catch (e) {}
-  list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><span class="nm">${esc(r.name)}</span><span class="gm">${r.games.join('')}</span><span class="pt">${r.pts} pts</span></li>`).join('');
+  list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}</span><span class="gm">${r.games.join('')}</span><span class="pt">${r.pts} pts</span></li>`).join('');
+  document.getElementById('champN').textContent = rows[0].name; document.getElementById('champP').textContent = `${rows[0].pts} points · tous les jeux`;
+  showSkins(rows);
 }
 loadGeneral();
 function showPass() {
