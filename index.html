@@ -34,6 +34,9 @@
   .wallet span{color:#c9c2d8;font-weight:400;font-size:12px}
   .logeBtn{display:inline-flex;align-items:center;gap:8px;margin:10px 0 0 8px;background:linear-gradient(#f2c230,#c99a2e);color:#3a1a0a;border-radius:22px;padding:8px 16px;font-weight:700;text-decoration:none;box-shadow:0 4px 10px rgba(0,0,0,.4);border:2px solid #fff3c0}
   .logeBtn:active{transform:scale(.96)}
+  .playBtn{background:linear-gradient(#9fe0ff,#3070d0);color:#fff;border-color:#e6f6ff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  html{scroll-behavior:smooth}
+  .jeuxT{max-width:760px;margin:22px auto 0;padding:0 14px;color:#e6b830;font-size:22px;text-align:center;scroll-margin-top:12px}
   .pass{max-width:760px;margin:14px auto 0;padding:0 14px}
   .pass a{display:block;text-decoration:none;color:#fff;background:linear-gradient(135deg,#5b2a86,#8a1f2a);border:3px solid #e6b830;border-radius:16px;padding:12px 14px;box-shadow:0 8px 20px rgba(0,0,0,.45)}
   .pass .row1{display:flex;align-items:center;gap:12px}
@@ -101,7 +104,7 @@
 <header>
   <img class="logo" src="icon-512.png" alt="">
   <h1><small>LE THÉÂTRE DES</small>POLICHINELLES</h1>
-  <div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles pour la Loge</span></div><a class="logeBtn" href="loge.html">🎩 La Loge</a>
+  <div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles pour la Loge</span></div><a class="logeBtn" href="loge.html">🎩 La Loge</a><a class="logeBtn playBtn" href="#jeux">🎮 Les jeux</a>
 </header>
 
 <section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 40</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
@@ -112,6 +115,7 @@
   <details><summary>Comment ça marche ?</summary>Dans chaque jeu, le top 10 rapporte des points : 10 points pour le 1er, 9 pour le 2e… jusqu’à 1 point pour le 10e. Le classement général additionne les points de tous les jeux (on compte le meilleur score de chaque prénom).</details>
 </div></section>
 
+<h2 id="jeux" class="jeuxT">🎪 Choisis ton jeu</h2>
 <main id="games"></main>
 
 <footer>
