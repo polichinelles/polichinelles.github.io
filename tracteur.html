@@ -488,7 +488,7 @@ function mixAmb() {
 mixAmb();
 function setAct(n, instant) {
   act = n; ambFrom = instant ? ACTS[n % ACTS.length] : { ...ambTo }; ambTo = ACTS[n % ACTS.length]; ambK = instant ? 1 : 0;
-  if (!instant) { actBanner = 170; sfx.fanfare(); buzz([20, 60, 20]) }
+  if (!instant) { actBanner = 100; sfx.fanfare(); buzz([20, 60, 20]) }
   mixAmb();
 }
 
@@ -2281,12 +2281,12 @@ function render() {
   }
   if (state === 'play') drawHud();
   if (actBanner > 0 && state === 'play') {
-    const a = M.min(1, actBanner / 25, (170 - actBanner) / 15), A = ACTS[act % ACTS.length];
+    const a = M.min(1, actBanner / 18, (100 - actBanner) / 10), A = ACTS[act % ACTS.length];
     X.save(); X.globalAlpha = a;
-    X.fillStyle = 'rgba(20,16,40,.7)'; X.beginPath(); X.roundRect(W / 2 - 120, 100, 240, 70, 12); X.fill();
+    X.fillStyle = 'rgba(20,16,40,.7)'; X.beginPath(); X.roundRect(W / 2 - 82, 106, 164, 46, 10); X.fill();
     X.strokeStyle = COL.yellow; X.lineWidth = 2; X.stroke();
-    txt('ACTE ' + roman(act + 1), W / 2, 124, 26, COL.yellow);
-    txt(A.sub, W / 2, 153, 14, '#fff', 'center', false);
+    txt('ACTE ' + roman(act + 1), W / 2, 122, 18, COL.yellow);
+    txt(A.sub, W / 2, 141, 11, '#fff', 'center', false);
     X.restore();
   }
   if (state === 'play' && (paused || resumeT > 0)) {
