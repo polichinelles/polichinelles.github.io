@@ -739,7 +739,7 @@ function buildLevel(n) {
   const top = f.y + (LAND ? 24 : 40);
   if (p === 'boss') {
     const k = M.floor(n / 4);
-    BOSS = { x: f.x + f.w / 2, y: top + 30, hp: 12 + k * 4 + loop * 6, max: 12 + k * 4 + loop * 6, hit: 0, ph: 0, throwT: 120, dead: 0, sp: .8 + k * .18 };
+    BOSS = { x: f.x + f.w / 2, y: top + 30, hp: 2, max: 2, hit: 0, ph: 0, throwT: 120, dead: 0, sp: .8 + k * .18 };
     p = k % 2 ? ['', '', '', '', '~MM.....', 'a.b.c.d'] : ['', '', '', '', '~MMM....', '.a.*.a.'];
   }
   p.forEach((row, r) => {
