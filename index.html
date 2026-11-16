@@ -75,7 +75,8 @@
   .gen li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;margin:4px 0;background:rgba(255,255,255,.05)}
   .gen li.r1{background:rgba(230,184,48,.18)}
   .gen .rk{width:30px;text-align:center;font-size:18px;color:#e6b830;flex:none}
-  .gen .nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gen .nm{flex:1;min-width:0;font-weight:700;white-space:normal;overflow-wrap:anywhere;line-height:1.15}
+  .gen .nm small{display:block;font-size:11px;font-weight:400;letter-spacing:1px;margin-top:2px}
   .gen .gm{font-size:13px;letter-spacing:1px;flex:none}
   .gen .pt{font-weight:700;color:#ffe9a0;flex:none;font-variant-numeric:tabular-nums}
   .gen .msg{text-align:center;color:#c9c2d8;padding:16px;background:none}
@@ -290,7 +291,7 @@ async function loadGeneral() {
   if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; document.getElementById('champN').textContent = 'Sois le premier !'; return }
   const medal = ['🥇', '🥈', '🥉'];
   let me = ''; try { me = norm(localStorage.getItem('polichinelles_name') || '') } catch (e) {}
-  list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}</span><span class="gm">${r.games.join('')}</span><span class="pt">${r.pts} pts</span></li>`).join('');
+  list.innerHTML = rows.map((r, i) => `<li class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}<small class="gm">${r.games.join('')}</small></span><span class="pt">${r.pts} pts</span></li>`).join('');
   document.getElementById('champN').textContent = rows[0].name; document.getElementById('champP').textContent = `${rows[0].pts} points · tous les jeux`;
   showSkins(rows);
 }
