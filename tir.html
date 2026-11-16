@@ -1092,7 +1092,17 @@ const WARD = {
     { id: 'd_disco', name: 'Disco', price: 160, v: { dance: 'disco' } },
     { id: 'd_salto', name: 'Salto arrière', wheel: 1, v: { dance: 'salto' } },
     { id: 'd_twist', name: 'Twist', quest: 1, v: { dance: 'twist' } },
-    { id: 'd_triomphe', name: 'Triomphe', quest: 1, v: { dance: 'triomphe' } }
+    { id: 'd_triomphe', name: 'Triomphe', quest: 1, v: { dance: 'triomphe' } },
+    { id: 'd_pogo', name: 'Pogo', price: 70, v: { dance: 'pogo' } },
+    { id: 'd_reverence', name: 'Révérence', price: 80, v: { dance: 'reverence' } },
+    { id: 'd_poulet', name: 'Danse du poulet', price: 100, v: { dance: 'poulet' } },
+    { id: 'd_meduse', name: 'Méduse', price: 120, v: { dance: 'meduse' } },
+    { id: 'd_cancan', name: 'French cancan', price: 130, v: { dance: 'cancan' } },
+    { id: 'd_coeur', name: 'Cœur battant', price: 150, v: { dance: 'coeur' } },
+    { id: 'd_zombie', name: 'Zombie', price: 180, v: { dance: 'zombie' } },
+    { id: 'd_break', name: 'Breakdance', ach: 'games100', v: { dance: 'break' } },
+    { id: 'd_lev', name: 'Lévitation', ach: 'act7', v: { dance: 'lev' } },
+    { id: 'd_feu', name: 'Feu d’artifice', ach: 'stars1000', v: { dance: 'feu' } }
   ] }
 };
 const ACH = {
@@ -1732,6 +1742,36 @@ function drawDancer(pose, look) {
   else if (d === 'triomphe') {
     const j = M.max(0, M.sin(k * 1.2)); X.translate(0, -j * 22); drawPoli({ run: k, air: j > .2 }, look); X.translate(0, j * 22);
     for (let i = 0; i < 10; i++) { const x = ((i * 23 + k * 9) % 70) - 35, y = -110 + ((i * 37 + k * 30) % 110); X.fillStyle = ['#d8402c', '#f2c230', '#3070d0', '#2e9a4c', '#f27ab0'][i % 5]; X.save(); X.translate(x, y); X.rotate(k + i); X.fillRect(-2.5, -1.2, 5, 2.4); X.restore() }
+  }
+  else if (d === 'pogo') { const p = (k * .9) % 1, j = M.sin(p * M.PI); X.translate(0, -j * 34); if (p < .12 || p > .9) X.scale(1.12, .86); drawPoli({ run: 0, air: j > .2, sq: p < .12 ? 1 : 0 }, look) }
+  else if (d === 'reverence') { const p = (k * .3) % 1, b = p < .25 ? p / .25 : p < .6 ? 1 : p < .85 ? 1 - (p - .6) / .25 : 0, e = b * b * (3 - 2 * b); X.translate(0, -2); X.rotate(e * .5); X.translate(0, 2); drawPoli({ run: 0, idle: true, duck: e * .3 }, look) }
+  else if (d === 'poulet') {
+    const st = M.floor(k * 3) % 4; X.translate([-4, 4, -4, 4][st], 0); X.rotate([.12, -.12, .08, -.08][st]); drawPoli({ run: st * 1.4, duck: st % 2 ? .25 : 0 }, look);
+    for (let i = 0; i < 3; i++) { const f = (k * .6 + i / 3) % 1; X.save(); X.globalAlpha = 1 - f; X.translate(-20 + i * 20 + M.sin(f * 9 + i) * 8, -70 + f * 60); X.rotate(f * 4 + i); X.fillStyle = '#fff8e8'; X.beginPath(); X.ellipse(0, 0, 6, 2.5, 0, 0, 6.283); X.fill(); X.restore() }
+  }
+  else if (d === 'meduse') { const w = M.sin(k * 2.4); X.translate(0, 0); X.scale(1 + w * .12, 1 - w * .12); X.rotate(M.sin(k * 1.2) * .1); drawPoli({ run: k, idle: true }, look) }
+  else if (d === 'cancan') { const s = M.sin(k * 3); X.rotate(-.18 + s * .06); X.translate(s * 4, -M.abs(s) * 5); drawPoli({ run: k * 4.5, air: M.abs(s) > .7 }, look) }
+  else if (d === 'coeur') {
+    X.save(); X.rotate(M.sin(k) * .14); const bt = 1 + M.max(0, M.sin(k * 4)) * .05; X.scale(bt, bt); drawPoli({ run: k, idle: true }, look); X.restore();
+    for (let i = 0; i < 4; i++) { const f = (k * .25 + i / 4) % 1, x = M.sin(f * 8 + i * 2) * 18 + (i - 1.5) * 10, y = -40 - f * 70, r = 4 + f * 3; X.save(); X.globalAlpha = f < .6 ? 1 : (1 - f) * 2.5; X.fillStyle = i % 2 ? '#ff8ac0' : '#ff4a5a'; X.translate(x, y); X.beginPath(); X.moveTo(0, r * .9); X.bezierCurveTo(-r * 1.6, -r * .2, -r * .7, -r * 1.4, 0, -r * .5); X.bezierCurveTo(r * .7, -r * 1.4, r * 1.6, -r * .2, 0, r * .9); X.fill(); X.restore() }
+  }
+  else if (d === 'zombie') { const s = M.sin(k * .7); X.translate(s * 8, 0); X.rotate(.22 + M.sin(k * 1.4) * .08); drawPoli({ run: k * .7, duck: .2 }, look); X.globalCompositeOperation = 'source-over'; X.filter = 'none'; X.shadowBlur = 0; for (let i = 0; i < 4; i++) { const f = (k * .3 + i / 4) % 1; X.globalAlpha = f < .6 ? .9 : (1 - f) * 2.2; X.fillStyle = '#9dff9a'; X.beginPath(); X.arc(-14 + i * 9 + M.sin(f * 7 + i) * 6, -60 - f * 45, 3 + f * 6, 0, 6.283); X.fill() } X.globalAlpha = 1 }
+  else if (d === 'break') {
+    const p = (k * .25) % 1;
+    if (p < .65) { const c = M.cos(k * 3); X.translate(0, -82); X.rotate(M.PI + M.sin(k * 1.5) * .08); X.scale(M.abs(c) < .1 ? (c < 0 ? -.1 : .1) : c, 1); drawPoli({ run: k * 2, air: true }, look) }
+    else drawPoli({ run: k * 2, duck: .5 }, look);
+  }
+  else if (d === 'lev') {
+    const f = M.sin(k * .9) * .5 + .5, h = 14 + f * 18;
+    X.fillStyle = 'rgba(0,0,0,.28)'; X.beginPath(); X.ellipse(0, 2, 20 - f * 6, 4, 0, 0, 6.283); X.fill();
+    X.save(); X.translate(0, -h); X.rotate(M.sin(k * .7) * .06); drawPoli({ run: 0, air: true }, look); X.restore();
+    for (let i = 0; i < 5; i++) { const a = k * .5 + i * 1.257; X.save(); X.globalAlpha = .45 + M.sin(k * 2 + i) * .4; star(M.cos(a) * 28, -h - 40 + M.sin(a) * 12, 3, k + i, '#bfe8ff'); X.restore() }
+  }
+  else if (d === 'feu') {
+    const j = M.max(0, M.sin(k * 1.1)); X.save(); X.translate(0, -j * 10); drawPoli({ run: k, idle: j < .2, air: j > .2 }, look); X.restore();
+    for (let b = 0; b < 3; b++) { const f = (k * .22 + b / 3) % 1, cx = [-30, 32, 4][b], cy = [-95, -88, -120][b], col = ['#f2c230', '#f27ab0', '#9fe0ff'][b];
+      if (f < .25) { X.fillStyle = col; X.fillRect(cx - 1, cy + 80 * (1 - f / .25), 2, 8) }
+      else { const e = (f - .25) / .75; X.globalAlpha = 1 - e; X.fillStyle = col; for (let i = 0; i < 10; i++) { const a = i * .628 + b; X.beginPath(); X.arc(cx + M.cos(a) * e * 26, cy + M.sin(a) * e * 26 + e * e * 10, 2.2, 0, 6.283); X.fill() } X.globalAlpha = 1 } }
   }
   else drawPoli(pose, look);
   X.restore();
