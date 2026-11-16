@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#5e0f18">
+<title>Les défis · Théâtre des Polichinelles</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:#3a0a10;color:#fff;font-family:Georgia,'Times New Roman',serif;-webkit-tap-highlight-color:transparent}
+  body{background:repeating-linear-gradient(90deg,rgba(0,0,0,.22) 0 9px,rgba(255,255,255,0) 9px 30px,rgba(0,0,0,.12) 30px 38px,rgba(255,255,255,0) 38px 56px),linear-gradient(180deg,#8a1f2a 0%,#6a1520 60%,#3a0a10 100%);background-attachment:fixed;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(20px + env(safe-area-inset-bottom)) env(safe-area-inset-left);min-height:100vh}
+  .valance{height:46px;background:radial-gradient(circle at 20px -2px,#7a1822 20px,transparent 21px) 0 0/40px 40px repeat-x,linear-gradient(#7a1822,#7a1822) 0 0/100% 18px no-repeat;position:relative}
+  .valance::after{content:'';position:absolute;left:0;right:0;top:16px;height:3px;background:#e6b830}
+  .top{max-width:560px;margin:0 auto;padding:0 14px;display:flex;align-items:center;gap:10px}
+  .top a{color:#3a1a0a;background:linear-gradient(#f2c230,#c99a2e);border:2px solid #fff3c0;border-radius:22px;padding:6px 14px;font-weight:700;text-decoration:none}
+  .top .w{margin-left:auto;background:#1c1838;border:2px solid #e6b830;border-radius:22px;padding:6px 14px;color:#ffe9a0;font-weight:700}
+  h1{text-align:center;color:#e6b830;margin:14px 0 2px;font-size:clamp(26px,7vw,40px);text-shadow:0 2px 0 #2a2230,0 4px 12px rgba(0,0,0,.5)}
+  .sub{text-align:center;color:#ffe9a0;font-size:14px;margin-bottom:14px}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px}
+  .card{background:linear-gradient(160deg,#1e1a3c,#2a1430);border:3px solid #e6b830;border-radius:16px;padding:12px 14px;margin-top:14px;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+  .card h2{margin:0;font-size:19px;color:#e6b830}.card .s{font-size:12px;color:#c9c2d8;margin:2px 0 8px}
+  ul{margin:0;padding:0}li{list-style:none;background:rgba(255,255,255,.06);border-radius:12px;padding:9px 12px;margin:6px 0;display:flex;align-items:center;gap:10px;font-size:15px}
+  li .i{font-size:22px;flex:none}li .t{flex:1;min-width:0}li .t small{display:block;color:#9fe0ff;font-size:12px}
+  li.done{background:rgba(125,255,138,.12)}li.done .t small{color:#7dff8a}
+  .pb{height:6px;border-radius:3px;background:rgba(0,0,0,.35);margin-top:5px;overflow:hidden}.pb i{display:block;height:100%;background:#7dff8a}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .day{border-radius:10px;padding:6px 2px;text-align:center;background:rgba(255,255,255,.06);font-size:11px;color:#c9c2d8;border:2px solid transparent}
+  .day b{display:block;font-size:18px;margin:2px 0}.day.ok{background:rgba(255,150,60,.25);color:#ffd9b0}.day.now{border-color:#f2c230;color:#fff}
+  .bonus{margin-top:8px;padding:9px 12px;border-radius:12px;border:2px dashed #f27ab0;color:#ffd0e6;font-size:14px}
+  .bonus.ok{border-style:solid;border-color:#7dff8a;color:#c8ffd0;background:rgba(125,255,138,.1)}
+  .go{display:block;text-align:center;margin:18px auto 0;width:max-content;color:#3a1a0a;background:linear-gradient(#f2c230,#c99a2e);border:2px solid #fff3c0;border-radius:22px;padding:9px 22px;font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="valance"></div>
+<div class="top"><a href="./">◀ Théâtre</a><span class="w">⭐ <b id="wallet">0</b></span></div>
+<h1>🎯 Les défis</h1>
+<div class="sub">Chaque partie, dans tous les jeux, fait avancer tes défis</div>
+<div class="wrap">
+<div class="card"><h2>🔥 Série de jours</h2><div class="s" id="skS"></div><div class="days" id="skD"></div></div>
+<div class="card"><h2>🗓️ Défis du jour</h2><div class="s">+150 XP chacun · nouveaux chaque jour · <span id="dL"></span></div><ul id="dList"></ul></div>
+<div class="card"><h2>📅 Quêtes de la semaine</h2><div class="s" id="wkS"></div><ul id="wkL"></ul><div class="bonus" id="wkB"></div></div>
+<a class="go" href="./#jeux">🎮 Jouer</a>
+</div>
+<script src="pass.js"></script>
+<script>
+const ls = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
+const DN = { d_twist: 'Twist', d_triomphe: 'Triomphe' };
+const row = (c, ok, sub) => `<li class="${c.done ? 'done' : ''}"><span class="i">${c.done ? '✅' : '🎯'}</span><div class="t">${c.text}<small>${c.done ? ok : c.prog + ' / ' + c.goal}</small>${c.done ? '' : `<div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div>`}</div></li>`;
+function render() {
+  try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
+  const p = ensureDaily(loadPass()), wk = weekQuests(p); savePass(p);
+  const sk = streakState(p), nb = streakBonus(sk.next);
+  document.getElementById('skS').innerHTML = sk.doneToday ? `<b style="color:#ffb060">${sk.n} jour${sk.n > 1 ? 's' : ''} d’affilée !</b> Reviens demain : +${nb.xp} XP${nb.stars ? ' +' + nb.stars + ' ⭐' : ''}`
+    : `${sk.n ? `<b style="color:#ffb060">${sk.n} jour${sk.n > 1 ? 's' : ''} d’affilée</b> · ` : ''}Joue une partie aujourd’hui : +${nb.xp} XP${nb.stars ? ' +' + nb.stars + ' ⭐' : ''}`;
+  const base = sk.doneToday ? sk.n : sk.n + 1, start = Math.floor((base - 1) / 7) * 7;
+  let h = ''; for (let i = 1; i <= 7; i++) { const n = start + i, B = streakBonus(n), ok = n <= sk.n, now = n === (sk.doneToday ? sk.n : sk.n + 1);
+    h += `<div class="day${ok ? ' ok' : ''}${now ? ' now' : ''}">Jour ${n}<b>${ok ? '🔥' : B.stars ? '⭐' : '·'}</b>+${B.xp}${B.stars ? '<br>+' + B.stars + '⭐' : ''}</div>` }
+  document.getElementById('skD').innerHTML = h;
+  const left = p.daily.filter(c => !c.done).length; document.getElementById('dL').textContent = left ? `encore ${left} à faire` : 'tous réussis 🎉';
+  document.getElementById('dList').innerHTML = p.daily.map(c => row(c, 'Réussi ! +150 XP')).join('');
+  document.getElementById('wkS').textContent = `+${WEEK_XP} XP et +${WEEK_STARS} ⭐ par quête · ${weekLeft()}`;
+  document.getElementById('wkL').innerHTML = wk.list.map(c => row(c, `Réussie ! +${WEEK_XP} XP +${WEEK_STARS} ⭐`)).join('');
+  const dn = DN[questDance(p)], b = document.getElementById('wkB'); b.className = 'bonus' + (wk.bonus ? ' ok' : '');
+  b.innerHTML = wk.bonus ? `🕺 Danse « ${dn} » gagnée ! Équipe-la dans la Loge.` : `🎁 Les 3 quêtes réussies = la danse <b>« ${dn} »</b>, introuvable à la boutique`;
+}
+render(); addEventListener('pageshow', render);
+</script>
+</body>
+</html>
