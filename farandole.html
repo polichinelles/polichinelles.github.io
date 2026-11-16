@@ -679,9 +679,9 @@ const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0
 let SN = null, FD = null, GS = null, CR = [], eaten = 0, stepAcc = 0, turnQ = [], swipe = null, lastEat = 0, deadT = 0;
 const HATK = ['#d8402c', '#3070d0', '#2e9a4c', '#f2c230', '#8a4a9a', '#f08a1c', '#f27ab0'];
 function grid() {
-  const c = 20;
+  const c = 24;
   if (LAND) { const fw = M.min(W - 230, 640), cols = M.floor(fw / c), rows = M.floor((H - 34) / c); return { c, cols, rows, x: (W - cols * c) / 2, y: (H - rows * c) / 2 + 4 } }
-  const top = (T > 60 ? 64 : 78 + T) + 68, bot = H - (T > 60 ? 44 : 20), cols = 15, rows = M.floor((bot - top) / c);
+  const top = (T > 60 ? 64 : 78 + T) + 68, bot = H - (T > 60 ? 44 : 20), cols = 13, rows = M.floor((bot - top) / c);
   return { c, cols, rows, x: (W - cols * c) / 2, y: top }
 }
 function cellFree(x, y) { return !SN.segs.some(s => s.x === x && s.y === y) && !CR.some(r => r.x === x && r.y === y) && !(FD && FD.x === x && FD.y === y) && !(GS && GS.x === x && GS.y === y) }
@@ -690,6 +690,15 @@ function freeCell(far) {
   for (let i = 0; i < 400; i++) { const x = M.random() * g.cols | 0, y = M.random() * g.rows | 0; if (cellFree(x, y) && (!far || M.abs(x - h.x) + M.abs(y - h.y) > 4)) return { x, y } }
   return null;
 }
+// faces of the dancers: the upper part of a real polichinelle, drawn once
+let SPR = [], SPR_HEAD = null;
+function headSprite(look) {
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 166; const ctx = cv.getContext('2d'), keep = X;
+  X = ctx; try { X.save(); X.scale(3.2, 3.2); X.translate(20, 108); drawPoli({ run: 0, idle: true }, look); X.restore() } finally { X = keep }
+  return cv;
+}
+function RLOOK() { const eq = {}; for (const c of CATS) { const its = WARD[c].items.filter(i => !i.pass && !i.wheel && !i.quest && !i.ach); eq[c] = c === 'trail' || c === 'dance' ? its[0].id : its[M.random() * its.length | 0].id } return buildLook(eq) }
+function makeSprites() { SPR_HEAD = headSprite(LOOK); SPR = []; for (let i = 0; i < 10; i++) SPR.push(headSprite(RLOOK())) }
 function spd() { return M.min(11.5, 5.2 + eaten * .1) }   // cells per second
 
 let obs = [], items = [], parts = [];
@@ -704,7 +713,7 @@ function reset() {
   const g0 = grid(), cy = g0.rows / 2 | 0, cx = M.max(3, (g0.cols / 2 | 0) - 2);
   SN = { segs: [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }], prev: null, dir: { x: 1, y: 0 }, grow: 0, k: 0, looks: [] };
   SN.prev = SN.segs.map(s => ({ ...s })); CR = []; FD = null; GS = null; eaten = 0; stepAcc = 0; turnQ = []; swipe = null; lastEat = -999; deadT = 0;
-  FD = freeCell(true);
+  FD = freeCell(true); makeSprites();
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -2403,21 +2412,9 @@ function segPos(i, g) {
   return [g.x + (p.x + (s.x - p.x) * k + .5) * g.c, g.y + (p.y + (s.y - p.y) * k + .5) * g.c];
 }
 function drawMember(x, y, i, head) {
-  const r = head ? 8.5 : 7, hk = HATK[i % HATK.length], bob = M.sin(t * .25 + i * .9) * (head ? 0 : 1);
-  y += bob;
-  // ruff
-  X.fillStyle = '#fbf3e0'; X.beginPath(); for (let a = 0; a < 12; a++) { const an = a / 12 * 6.283, rr = a % 2 ? r + 1 : r + 3.5; X.lineTo(x + M.cos(an) * rr, y + 3 + M.sin(an) * rr * .55) } X.closePath(); X.fill();
-  // face
-  circ('#f6dcc0', x, y, r * .78);
-  // hat
-  const d = head ? SN.dir : null;
-  poly(hk, [x - r * .78, y - r * .25, x + r * .78, y - r * .25, x + (d ? d.x * 3 : 0), y - r * 2.1]);
-  circ('#f2c230', x + (d ? d.x * 3 : 0), y - r * 2.1, head ? 2.4 : 1.8);
-  // eyes and nose
-  const ex = d ? d.x * 2 : 0, ey = d ? d.y * 1.5 : 0;
-  circ('#1d1d24', x - 2.4 + ex, y + 1 + ey, head ? 1.3 : 1); circ('#1d1d24', x + 2.4 + ex, y + 1 + ey, head ? 1.3 : 1);
-  circ('#e05a4a', x + ex * 1.2, y + 3 + ey, head ? 1.6 : 1.2);
-  if (head && state === 'over') { line('#1d1d24', 1, [x - 4, y - 1, x - 1, y + 2]); line('#1d1d24', 1, [x - 1, y - 1, x - 4, y + 2]); line('#1d1d24', 1, [x + 1, y - 1, x + 4, y + 2]); line('#1d1d24', 1, [x + 4, y - 1, x + 1, y + 2]) }
+  const spr = head ? SPR_HEAD : SPR[i % SPR.length]; if (!spr) return;
+  const w = head ? 40 : 33, h = w * 166 / 128, bob = head ? 0 : M.sin(t * .25 + i * .9) * 1.2, tilt = head && state === 'over' ? -.5 : M.sin(t * .12 + i * .7) * .08;
+  X.save(); X.translate(x, y + 5 + bob); X.rotate(tilt); X.drawImage(spr, -w / 2, -h * .78, w, h); X.restore();
 }
 function drawMask(x, y) {
   X.save(); X.translate(x, y + M.sin(t * .12) * 1.5); X.rotate(M.sin(t * .07) * .15);
@@ -2442,7 +2439,7 @@ function drawGame() {
   if (GS) { X.save(); if (GS.l < 90 && M.floor(t / 5) % 2) X.globalAlpha = .4; const x = g.x + (GS.x + .5) * g.c, y = g.y + (GS.y + .5) * g.c; X.save(); X.globalAlpha *= .4; circ('#ffe680', x, y, 13); X.restore(); star(x, y, 9, t * .05); X.restore() }
   // hand in hand: a gold ribbon links the dancers
   const pts = SN.segs.map((_, i) => segPos(i, g));
-  X.strokeStyle = '#e6b830'; X.lineWidth = 2.5; X.lineJoin = 'round'; X.beginPath(); for (const [x, y] of pts) X.lineTo(x, y + 4); X.stroke();
+  X.strokeStyle = '#e6b830'; X.lineWidth = 2.5; X.lineJoin = 'round'; X.beginPath(); for (const [x, y] of pts) X.lineTo(x, y + 3); X.stroke();
   for (let i = pts.length - 1; i >= 0; i--) drawMember(pts[i][0], pts[i][1], i, i === 0);
   if (state === 'over' && SN.crash) { const x = g.x + (SN.crash.x + .5) * g.c, y = g.y + (SN.crash.y + .5) * g.c; for (let i = 0; i < 5; i++) { const a = t * .05 + i * 1.257; star(x + M.cos(a) * 12, y - 8 + M.sin(a) * 5, 3, 0, '#ffe066') } }
   X.restore();
