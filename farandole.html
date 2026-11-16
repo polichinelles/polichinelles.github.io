@@ -2396,14 +2396,14 @@ function render() {
 function turn(x, y) {
   const last = turnQ.length ? turnQ[turnQ.length - 1] : SN.dir;
   if ((x === last.x && y === last.y) || (x === -last.x && y === -last.y)) return;
-  if (turnQ.length < 3) { turnQ.push({ x, y }); sfx.turnS() }
+  if (turnQ.length < 2) { turnQ.push({ x, y }); sfx.turnS(); if (turnQ.length === 1 && state === 'play') stepAcc = M.max(stepAcc, .82) }
 }
 function onKey() {}
 function onPointerDown(e) { if (state !== 'play') return; swipe = { id: e.pointerId, x: e.clientX / S, y: e.clientY / S, used: false } }
 addEventListener('pointermove', e => {
   if (!swipe || e.pointerId !== swipe.id || state !== 'play') return;
   const dx = e.clientX / S - swipe.x, dy = e.clientY / S - swipe.y;
-  if (M.hypot(dx, dy) > 14) { if (M.abs(dx) > M.abs(dy)) turn(dx > 0 ? 1 : -1, 0); else turn(0, dy > 0 ? 1 : -1); swipe.x = e.clientX / S; swipe.y = e.clientY / S; swipe.used = true }
+  if (M.hypot(dx, dy) > 9 && M.max(M.abs(dx), M.abs(dy)) > 1.3 * M.min(M.abs(dx), M.abs(dy))) { if (M.abs(dx) > M.abs(dy)) turn(dx > 0 ? 1 : -1, 0); else turn(0, dy > 0 ? 1 : -1); swipe.x = e.clientX / S; swipe.y = e.clientY / S; swipe.used = true }
 });
 function sUp(e) {
   if (!swipe || e.pointerId !== swipe.id) return;
