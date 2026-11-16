@@ -676,7 +676,8 @@ const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- La Traversée : cross the busy stage ----
-let LN = {}, PL = null, camR = 0, maxRow = 0, hopQ = [], swipe = null, deathK = null, lastLaneType = 'safe', genRow = 0;
+POWERS.mask.label = 'Invincible'; POWERS.cape.label = 'Double bond'; POWERS.cape.dur = 480; POWERS.clock.dur = 420;
+let BAGS = [], lastHop = -99, LN = {}, PL = null, camR = 0, maxRow = 0, hopQ = [], swipe = null, deathK = null, lastLaneType = 'safe', genRow = 0;
 const CARTK = ['#3a8a4a', '#c8503a', '#3a6ab0', '#c89a2e', '#8a4a9a'];
 function cell() { return LAND ? 30 : 32 }
 function cols() { return LAND ? 13 : 10 }
@@ -692,6 +693,7 @@ function genTo(n) {
     if (props.length > C - 3) props.length = C - 3;
     LN[r] = { type: 'safe', props, star: M.random() < .2 ? (M.random() * C | 0) : -1 };
     if (props.includes(LN[r].star)) LN[r].star = -1;
+    if (r > 6 && LN[r].star < 0 && M.random() < .11) { const col = M.random() * C | 0; if (!props.includes(col)) LN[r].pw = { col, type: ['mask', 'cape', 'clock'][M.random() * 3 | 0] } }
     genRow++;
     const type = M.random() < .58 ? 'cart' : 'pit', n2 = 1 + (M.random() * (2 + d * 2.5) | 0);
     for (let k = 0; k < n2; k++) {
@@ -719,7 +721,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  LN = {}; genRow = 0; camR = 0; maxRow = 0; hopQ = []; swipe = null; deathK = null; genTo(40);
+  BAGS = []; lastHop = -99; LN = {}; genRow = 0; camR = 0; maxRow = 0; hopQ = []; swipe = null; deathK = null; genTo(40);
   PL = { r: 0, x: fx0() + (cols() / 2 | 0) * cell() + cell() / 2, hop: null, face: 1, sq: 0 };
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
@@ -2214,33 +2216,52 @@ function update() {
     const c = cell(), x0 = fx0(), C = cols(), d = M.min(1, maxRow / 160);
     genTo(PL.r + 30);
     // lanes move
-    for (let r = M.floor(camR) - 3; r < camR + 30; r++) { const L = LN[r]; if (!L || !L.objs) continue; for (const o of L.objs) { o.x += L.sp; if (L.sp > 0 && o.x > L.span - 3 * c) o.x -= L.span; if (L.sp < 0 && o.x + o.len * c < -3 * c) o.x += L.span } }
+    for (let r = M.floor(camR) - 3; r < camR + 30; r++) { const L = LN[r]; if (!L || !L.objs) continue; for (const o of L.objs) { o.x += L.sp * (power && power.type === 'clock' ? .45 : 1); if (L.sp > 0 && o.x > L.span - 3 * c) o.x -= L.span; if (L.sp < 0 && o.x + o.len * c < -3 * c) o.x += L.span } }
+    const slw = power && power.type === 'clock' ? .45 : 1;
+    if (power && --power.t <= 0) power = null;
     // hop
     if (!PL.hop && hopQ.length) {
-      const [dx, dr] = hopQ.shift(), nr = PL.r + dr, L = LN[nr];
+      let [dx, dr] = hopQ.shift();
+      if (dr === 1 && power && power.type === 'cape') { const L2 = LN[PL.r + 2], c2 = M.round((PL.x - x0 - c / 2) / c); if (!(L2 && L2.type === 'safe' && L2.props.includes(c2))) dr = 2 }
+      const nr = PL.r + dr, L = LN[nr];
       let nx = PL.x + dx * c; if (L && L.type !== 'pit') nx = x0 + M.round((nx - x0 - c / 2) / c) * c + c / 2;
       const col = M.round((nx - x0 - c / 2) / c);
-      if (nr >= 0 && nx > x0 && nx < x0 + C * c && nr > camR - 1.5 && !(L && L.type === 'safe' && L.props.includes(col))) { PL.hop = { fx: PL.x, fr: PL.r, tx: nx, tr: nr, k: 0 }; if (dx) PL.face = dx; sfx.hop() }
+      if (nr >= 0 && nx > x0 && nx < x0 + C * c && nr > camR - 1.5 && !(L && L.type === 'safe' && L.props.includes(col))) { PL.hop = { fx: PL.x, fr: PL.r, tx: nx, tr: nr, k: 0, big: dr > 1 }; if (dx) PL.face = dx; sfx.hop(); if (dr > 0) { combo = playT - lastHop < 34 ? combo + 1 : 1; lastHop = playT; if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() } } }
       else { PL.sq = 6; sfx.creak() }
     }
     if (PL.hop) {
-      const h = PL.hop; h.k += 1 / 7;
+      const h = PL.hop; h.k += 1 / (h.big ? 10 : 7);
       if (h.k >= 1) {
         PL.x = h.tx; PL.r = h.tr; PL.hop = null; PL.sq = 5;
-        if (PL.r > maxRow) { maxRow = PL.r; starPts += 10; const a = M.floor(maxRow / 25); if (a !== act) setAct(a, false); if (maxRow > PROF.stats.maxCombo && false) {} }
-        const L = LN[PL.r]; if (L && L.type === 'safe' && L.star >= 0 && M.round((PL.x - x0 - c / 2) / c) === L.star) { L.star = -1; stars++; starPts += 50; sfx.star(); flash = 5; popup(PL.x, rowY(PL.r) - 30 - T, '+50 ★', '#ffe066') }
+        if (PL.r > maxRow) { const gain = PL.r - maxRow, mult = M.min(5, 1 + M.floor(combo / 6)); maxRow = PL.r; starPts += 10 * gain * mult; if (mult > 1 && combo % 6 === 0) popup(PL.x, rowY(PL.r) - 40 - T, `Combo ×${mult} !`, '#ffe066'); const a = M.floor(maxRow / 25); if (a !== act) setAct(a, false); if (maxRow > PROF.stats.maxCombo && false) {} }
+        const L = LN[PL.r], col = M.round((PL.x - x0 - c / 2) / c);
+        if (L && L.pw && L.pw.col === col) { const ty = L.pw.type; power = { type: ty, t: POWERS[ty].dur, max: POWERS[ty].dur }; L.pw = null; sfx.power(); buzz(20); popup(PL.x, rowY(PL.r) - 34 - T, POWERS[ty].label + ' !', '#9fe0ff') }
+        if (L && L.type === 'safe' && L.star >= 0 && M.round((PL.x - x0 - c / 2) / c) === L.star) { L.star = -1; stars++; starPts += 50; sfx.star(); flash = 5; popup(PL.x, rowY(PL.r) - 30 - T, '+50 ★', '#ffe066') }
       }
     }
     if (PL.sq > 0) PL.sq--;
     // dangers, only when standing on a lane
     if (!PL.hop) {
       const L = LN[PL.r];
-      if (L && L.type === 'cart') { for (const o of L.objs) if (PL.x > o.x + 5 && PL.x < o.x + o.len * c - 5) { die('cart'); break } }
+      if (L && L.type === 'cart') { for (const o of L.objs) if (PL.x > o.x + 5 && PL.x < o.x + o.len * c - 5) { if (power && power.type === 'mask') { if (!o.bumped) { o.bumped = 1; sfx.power(); popup(PL.x, rowY(PL.r) - 30 - T, 'Boing !', '#ffe066'); starPts += 25 } } else { die('cart'); break } } }
       else if (L && L.type === 'pit') {
         const on = L.objs.find(o => PL.x > o.x + 3 && PL.x < o.x + o.len * c - 3);
-        if (!on) die('pit'); else { PL.x += L.sp; if (PL.x < x0 + 4 || PL.x > x0 + C * c - 4) die('pit') }
+        if (!on) die('pit'); else { PL.x += L.sp * slw; if (PL.x < x0 + 4 || PL.x > x0 + C * c - 4) die('pit') }
       }
-    } else if (PL.hop.k > .85) { const L = LN[PL.hop.tr]; if (L && L.type === 'cart') for (const o of L.objs) if (PL.hop.tx > o.x + 5 && PL.hop.tx < o.x + o.len * c - 5) { PL.x = PL.hop.tx; PL.r = PL.hop.tr; PL.hop = null; die('cart'); break } }
+    } else if (PL.hop.k > .85 && !(power && power.type === 'mask')) { const L = LN[PL.hop.tr]; if (L && L.type === 'cart') for (const o of L.objs) if (PL.hop.tx > o.x + 5 && PL.hop.tx < o.x + o.len * c - 5) { PL.x = PL.hop.tx; PL.r = PL.hop.tr; PL.hop = null; die('cart'); break } }
+    // sandbags fall from the flies on the safe rows ahead
+    if (maxRow > 20 && M.random() < M.min(.012, .004 + d * .01)) {
+      const r = PL.r + 1 + (M.random() * 4 | 0), L = LN[r];
+      if (L && L.type === 'safe' && L.props.length < C - 3) { const col = M.random() * C | 0; if (!L.props.includes(col) && !BAGS.some(b => b.r === r && b.col === col)) BAGS.push({ r, col, t: 80 }) }
+    }
+    for (const b of BAGS) {
+      if (--b.t > 0) continue;
+      const L = LN[b.r]; b.done = 1; L.props.push(b.col); (L.bags = L.bags || []).push(b.col); if (L.star === b.col) L.star = -1; if (L.pw && L.pw.col === b.col) L.pw = null;
+      shake = 3; sfx.squash(); burst(x0 + (b.col + .5) * c, rowY(b.r) - 6 - T - G, 8, ['#c8a870', '#8a6a4a', '#fff3c0'], 2.5);
+      const pc = M.round((PL.x - x0 - c / 2) / c);
+      if (!PL.hop && PL.r === b.r && pc === b.col) { if (power && power.type === 'mask') { L.props.pop(); L.bags.pop(); popup(PL.x, rowY(PL.r) - 30 - T, 'Boing !', '#ffe066') } else die('bag') }
+    }
+    BAGS = BAGS.filter(b => !b.done);
     // the camera follows and the curtain closes behind
     if (state === 'play') {
       const target = M.max(PL.r - (LAND ? 2 : 3), 0);
@@ -2340,8 +2361,8 @@ function render() {
       txt('La Traversée', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
       txt('Touche pour avancer · glisse pour aller de côté', mx, 166, 13, '#ddd', 'center', false);
-      txt('Évite les chariots de décor, saute sur les planches', mx, 184, 13, '#ddd', 'center', false);
-      txt('Ne traîne pas : le rideau tombe derrière toi !', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('Évite les chariots, les sacs de sable et la fosse', mx, 184, 13, '#ddd', 'center', false);
+      txt('Pouvoirs : masque, double bond, ralenti · le rideau te suit !', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
@@ -2351,8 +2372,8 @@ function render() {
     txt('La Traversée', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
     txt('Touche pour avancer · glisse pour aller de côté', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    txt('Évite les chariots de décor, saute sur les planches', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    if (T > 80) txt('Ne traîne pas : le rideau tombe derrière toi !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
+    txt('Évite les chariots, les sacs de sable et la fosse', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    if (T > 80) txt('Pouvoirs : masque, double bond, ralenti · le rideau te suit !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -2364,7 +2385,7 @@ function render() {
     X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 214, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 138);
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
-    txt(deathK === 'pit' ? 'Plouf, dans la fosse !' : deathK === 'curtain' ? 'Le rideau t’a eu !' : 'Écrasé par le décor !', ox, oy - 4, 22, COL.red);
+    txt(deathK === 'pit' ? 'Plouf, dans la fosse !' : deathK === 'curtain' ? 'Le rideau t’a eu !' : deathK === 'bag' ? 'Un sac sur la tête !' : 'Écrasé par le décor !', ox, oy - 4, 22, COL.red);
     txt(`${maxRow} rangée${maxRow > 1 ? 's' : ''} traversée${maxRow > 1 ? 's' : ''}`, ox, oy + 20, 13, '#ddd', 'center', false);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
@@ -2445,6 +2466,7 @@ function drawCart(o, y, c, L) {
   // the stagehand pushing it
   const hx = L.sp > 0 ? x - 5 : x + w + 5; X.save(); X.translate(hx, y - 3); X.scale(L.sp > 0 ? .3 : -.3, .3); drawStagehand(); X.restore();
 }
+function drawBag(x, y) { X.fillStyle = '#c8a870'; X.beginPath(); X.moveTo(x - 10, y - 2); X.quadraticCurveTo(x - 13, y - 18, x - 4, y - 22); X.lineTo(x + 4, y - 22); X.quadraticCurveTo(x + 13, y - 18, x + 10, y - 2); X.closePath(); X.fill(); X.fillStyle = '#8a6a4a'; X.fillRect(x - 5, y - 25, 10, 4); txt('kg', x, y - 7, 8, '#6a4a2a', 'center', false) }
 function drawStagehand() {
   X.fillStyle = '#1d1d24'; X.fillRect(-7, -40, 14, 30); X.fillRect(-8, -12, 6, 12); X.fillRect(2, -12, 6, 12);
   circ('#f6dcc0', 0, -48, 8); X.fillStyle = '#1d1d24'; X.fillRect(-8, -58, 16, 5); line('#1d1d24', 4, [5, -34, 16, -30]);
@@ -2465,7 +2487,7 @@ function drawGame() {
   for (let r = r1; r >= r0; r--) {
     const L = LN[r], y = rowY(r);
     if (L && L.type === 'pit') for (const o of L.objs) drawPlank(o, y, c);
-    if (L && L.type === 'safe') { for (const p of L.props) drawProp(x0 + (p + .5) * c, y - 2, c, p + r); if (L.star >= 0) { const sx = x0 + (L.star + .5) * c, sy = y - c / 2 + M.sin(t * .1) * 2; X.save(); X.globalAlpha = .35; circ('#fff6c0', sx, sy, 12); X.restore(); star(sx, sy, 9, t * .03) } }
+    if (L && L.type === 'safe') { for (const p of L.props) (L.bags && L.bags.includes(p) ? drawBag : drawProp)(x0 + (p + .5) * c, y - 2, c, p + r); if (L.pw) drawPowerIcon(L.pw.type, x0 + (L.pw.col + .5) * c, y - c / 2 + M.sin(t * .1) * 2, .62); for (const b of BAGS) if (b.r === r) { const bx = x0 + (b.col + .5) * c, k = 1 - b.t / 80; X.fillStyle = `rgba(0,0,0,${.15 + k * .35})`; X.beginPath(); X.ellipse(bx, y - 6, 6 + k * 8, 2 + k * 3, 0, 0, 6.29); X.fill(); if (b.t < 40) { const fy = y - 8 - b.t * 6; line('#8a8a8a', 1, [bx, fy - 20, bx, -10]); drawBag(bx, fy, c, 0) } else if (M.floor(t / 6) % 2) txt('!', bx, y - c + 6, 14, '#ff6060') } if (L.star >= 0) { const sx = x0 + (L.star + .5) * c, sy = y - c / 2 + M.sin(t * .1) * 2; X.save(); X.globalAlpha = .35; circ('#fff6c0', sx, sy, 12); X.restore(); star(sx, sy, 9, t * .03) } }
     if (L && L.type === 'cart') for (const o of L.objs) drawCart(o, y, c, L);
     // the polichinelle is drawn with his row so that what is in front hides him
     const pr = PL.hop ? M.max(PL.hop.fr, PL.hop.tr) : PL.r;
@@ -2484,6 +2506,7 @@ function drawPlayer(c) {
   if (PL.hop) { const h = PL.hop, k = h.k; px = h.fx + (h.tx - h.fx) * k; py = rowY(h.fr + (h.tr - h.fr) * k) - 3; lift = M.sin(k * M.PI) * 12 }
   if (state === 'over' && deathK === 'pit') { const k = M.min(1, stateT / 30); X.save(); X.globalAlpha = 1 - k; X.translate(px, py + k * 10); X.scale(.36 * (1 - k * .5), .36 * (1 - k * .5)); drawPoli({ run: 0, air: true }); X.restore(); return }
   X.fillStyle = 'rgba(0,0,0,.3)'; X.beginPath(); X.ellipse(px, py, 9, 3, 0, 0, 6.29); X.fill();
+  if (power && state === 'play' && !(power.t < 90 && M.floor(t / 5) % 2)) { X.save(); X.globalAlpha = .35 + M.sin(t * .3) * .1; circ(power.type === 'mask' ? '#ffe066' : power.type === 'cape' ? '#9fe0ff' : '#c8a0ff', px, py - lift - 18, 22); X.restore() }
   X.save(); X.translate(px, py - lift);
   if (state === 'over' && deathK === 'cart') X.scale(1.4, .35);
   const sq = PL.sq > 0 ? PL.sq / 6 * .12 : 0; X.scale(.36 * PL.face * (1 + sq), .36 * (1 - sq));

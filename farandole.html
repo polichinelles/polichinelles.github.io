@@ -676,7 +676,8 @@ const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- La Farandole : snake ----
-let SN = null, FD = null, GS = null, CR = [], eaten = 0, stepAcc = 0, turnQ = [], swipe = null, lastEat = 0, deadT = 0;
+POWERS.cape.label = 'Passe-muraille'; POWERS.cape.dur = 420; POWERS.clock.dur = 420; POWERS.mask.label = 'Ciseaux';
+let PU = null, puT = 600, DIRB = null, dirT = 900, TRAPS = [], trapT = 600, SN = null, FD = null, GS = null, CR = [], eaten = 0, stepAcc = 0, turnQ = [], swipe = null, lastEat = 0, deadT = 0;
 const HATK = ['#d8402c', '#3070d0', '#2e9a4c', '#f2c230', '#8a4a9a', '#f08a1c', '#f27ab0'];
 function grid() {
   const c = 24;
@@ -699,7 +700,8 @@ function headSprite(look) {
 }
 function RLOOK() { const eq = {}; for (const c of CATS) { const its = WARD[c].items.filter(i => !i.pass && !i.wheel && !i.quest && !i.ach); eq[c] = c === 'trail' || c === 'dance' ? its[0].id : its[M.random() * its.length | 0].id } return buildLook(eq) }
 function makeSprites() { SPR_HEAD = headSprite(LOOK); SPR = []; for (let i = 0; i < 10; i++) SPR.push(headSprite(RLOOK())) }
-function spd() { return M.min(11.5, 5.2 + eaten * .1) }   // cells per second
+function spd() { return M.min(11.5, 5.2 + eaten * .1) * (power && power.type === 'clock' ? .6 : 1) }
+function ghost() { return power && power.type === 'cape' }   // cells per second
 
 let obs = [], items = [], parts = [];
 const crowd = [];
@@ -713,7 +715,7 @@ function reset() {
   const g0 = grid(), cy = g0.rows / 2 | 0, cx = M.max(3, (g0.cols / 2 | 0) - 2);
   SN = { segs: [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }], prev: null, dir: { x: 1, y: 0 }, grow: 0, k: 0, looks: [] };
   SN.prev = SN.segs.map(s => ({ ...s })); CR = []; FD = null; GS = null; eaten = 0; stepAcc = 0; turnQ = []; swipe = null; lastEat = -999; deadT = 0;
-  FD = freeCell(true); makeSprites();
+  FD = freeCell(true); makeSprites(); PU = null; puT = 600; DIRB = null; dirT = 900; TRAPS = []; trapT = 700;
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -2209,10 +2211,13 @@ function update() {
     while (stepAcc >= 1 && state === 'play') {
       stepAcc -= 1;
       if (turnQ.length) { const d = turnQ.shift(); if (!(d.x === -SN.dir.x && d.y === -SN.dir.y)) SN.dir = d }
-      const h = SN.segs[0], nx = h.x + SN.dir.x, ny = h.y + SN.dir.y;
+      const h = SN.segs[0]; let nx = h.x + SN.dir.x, ny = h.y + SN.dir.y;
+      if (ghost()) { nx = (nx + g.cols) % g.cols; ny = (ny + g.rows) % g.rows }
       const old = SN.segs.map(s => ({ ...s }));
       const hitSelf = SN.segs.some((s, i) => s.x === nx && s.y === ny && !(i === SN.segs.length - 1 && SN.grow === 0));
-      if (nx < 0 || ny < 0 || nx >= g.cols || ny >= g.rows || hitSelf || CR.some(r => r.x === nx && r.y === ny)) {
+      const inTrap = TRAPS.some(q => q.open && q.y === ny && (q.x === nx || q.x + 1 === nx)), byDir = DIRB && !DIRB.warn && M.round(DIRB.cx) === nx && M.round(DIRB.cy) === ny;
+      if (nx < 0 || ny < 0 || nx >= g.cols || ny >= g.rows || (!ghost() && (hitSelf || inTrap || byDir || CR.some(r => r.x === nx && r.y === ny)))) {
+        SN.why = inTrap ? 'trap' : byDir ? 'dir' : '';
         SN.crash = { x: nx, y: ny }; sfx.crash(); buzz([90, 50, 160]); shake = 8; gameOver(); break;
       }
       SN.segs.unshift({ x: nx, y: ny });
@@ -2228,9 +2233,36 @@ function update() {
         if (!GS && M.random() < .22) GS = { ...(freeCell(true) || { x: -9, y: -9 }), l: 360 };
         const a = M.floor(eaten / 8); if (a !== act) { setAct(a, false); for (let i = 0; i < 2; i++) { const c = freeCell(true); if (c) CR.push({ ...c, born: 30 }) } }
       }
+      if (PU && nx === PU.x && ny === PU.y) {
+        const ty = PU.type; PU = null; sfx.power(); buzz(20); const sx = g.x + (nx + .5) * g.c, sy = g.y + (ny + .5) * g.c;
+        if (ty === 'mask') { const cut = M.min(4, SN.segs.length - 3); for (let i = 0; i < cut; i++) { const s2 = SN.segs.pop(); SN.prev.pop(); burst(g.x + (s2.x + .5) * g.c, g.y + (s2.y + .5) * g.c - T - G, 6, ['#f2c230', '#fff'], 2) } starPts += cut * 30; popup(sx, sy - 14 - T, `Coupé ! +${cut * 30}`, '#9fe0ff') }
+        else { power = { type: ty, t: POWERS[ty].dur, max: POWERS[ty].dur }; popup(sx, sy - 14 - T, POWERS[ty].label + ' !', '#9fe0ff') }
+      }
       if (GS && nx === GS.x && ny === GS.y) { stars++; starPts += 50; sfx.star(); flash = 5; const sx = g.x + (nx + .5) * g.c, sy = g.y + (ny + .5) * g.c; popup(sx, sy - 14 - T, '+50 ★', '#ffe066'); GS = null }
     }
     SN.k = stepAcc;
+    if (power && --power.t <= 0) power = null;
+    if (PU && --PU.l <= 0) PU = null;
+    if (!PU && eaten >= 3 && --puT <= 0) { const c2 = freeCell(true); if (c2) PU = { ...c2, type: ['clock', 'cape', 'mask'][M.random() * 3 | 0], l: 540 }; puT = M.round(rnd(600, 900)) }
+    // the Director crosses the ballroom (from the 2nd act)
+    if (act >= 1 && !DIRB && --dirT <= 0) {
+      const hz = M.random() < .5, line = hz ? M.random() * g.rows | 0 : M.random() * g.cols | 0, from = M.random() < .5;
+      DIRB = { hz, cx: hz ? (from ? -1 : g.cols) : line, cy: hz ? line : (from ? -1 : g.rows), d: from ? 1 : -1, warn: 100, sp: .05 + M.min(.05, act * .008) };
+      dirT = M.round(rnd(700, 1100) - act * 40);
+    }
+    if (DIRB) {
+      if (DIRB.warn > 0) DIRB.warn--;
+      else { if (DIRB.hz) DIRB.cx += DIRB.d * DIRB.sp; else DIRB.cy += DIRB.d * DIRB.sp;
+        const h = SN.segs[0]; if (!ghost() && M.round(DIRB.cx) === h.x && M.round(DIRB.cy) === h.y && M.abs(DIRB.cx - h.x) < .45 && M.abs(DIRB.cy - h.y) < .45) { SN.why = 'dir'; SN.crash = { x: h.x, y: h.y }; sfx.crash(); buzz([90, 50, 160]); shake = 8; gameOver() }
+        if (DIRB.cx < -2 || DIRB.cy < -2 || DIRB.cx > g.cols + 1 || DIRB.cy > g.rows + 1) DIRB = null }
+    }
+    // trapdoors open in the floor (from the 3rd act)
+    if (act >= 2 && --trapT <= 0 && TRAPS.length < 1 + (act >= 4)) {
+      for (let i = 0; i < 30; i++) { const c2 = freeCell(true); if (c2 && c2.x < g.cols - 1 && cellFree(c2.x + 1, c2.y)) { TRAPS.push({ x: c2.x, y: c2.y, t: 0, open: false }); break } }
+      trapT = M.round(rnd(500, 800));
+    }
+    for (const q of TRAPS) { q.t++; q.open = q.t > 110 && q.t < 400; if (q.t > 420) q.done = 1 }
+    TRAPS = TRAPS.filter(q => !q.done);
     if (GS && --GS.l <= 0) GS = null;
     for (const r of CR) if (r.born > 0) r.born--;
     score = starPts;
@@ -2327,7 +2359,7 @@ function render() {
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
       txt('Glisse le doigt pour tourner (ou touche à côté)', mx, 166, 13, '#ddd', 'center', false);
       txt('Attrape les masques, la farandole s’allonge', mx, 184, 13, '#ddd', 'center', false);
-      txt('Ne te cogne ni aux bords, ni aux caisses, ni à toi !', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('Gare au Directeur et aux trappes ! Pouvoirs : ⏱ 👻 ✂', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
@@ -2338,7 +2370,7 @@ function render() {
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
     txt('Glisse le doigt pour tourner (ou touche à côté)', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     txt('Attrape les masques, la farandole s’allonge', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    if (T > 80) txt('Ne te cogne ni aux bords, ni aux caisses, ni à toi !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
+    if (T > 80) txt('Gare au Directeur et aux trappes ! Pouvoirs : ⏱ 👻 ✂', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -2350,7 +2382,7 @@ function render() {
     X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 214, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 138);
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
-    txt('Badaboum !', ox, oy - 4, 34, COL.red);
+    txt(SN && SN.why === 'dir' ? 'Bousculé par le Directeur !' : SN && SN.why === 'trap' ? 'Dans la trappe !' : 'Badaboum !', ox, oy - 4, SN && SN.why ? 22 : 34, COL.red);
     txt(`Farandole de ${SN ? SN.segs.length : 0} polichinelles`, ox, oy + 20, 13, '#ddd', 'center', false);
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
@@ -2416,6 +2448,13 @@ function drawMember(x, y, i, head) {
   const w = head ? 40 : 33, h = w * 166 / 128, bob = head ? 0 : M.sin(t * .25 + i * .9) * 1.2, tilt = head && state === 'over' ? -.5 : M.sin(t * .12 + i * .7) * .08;
   X.save(); X.translate(x, y + 5 + bob); X.rotate(tilt); X.drawImage(spr, -w / 2, -h * .78, w, h); X.restore();
 }
+function drawDirectorMini() {
+  const st = M.sin(t * .3) * 4;
+  line('#1d1d24', 5, [-5, -4, -6 - st, 12]); line('#1d1d24', 5, [5, -4, 6 + st, 12]);
+  X.fillStyle = '#8a1f2a'; X.beginPath(); X.moveTo(-14, -30); X.lineTo(14, -30); X.lineTo(16, -2); X.lineTo(-16, -2); X.closePath(); X.fill(); circ('#f2c230', 0, -22, 1.6); circ('#f2c230', 0, -12, 1.6);
+  circ('#f6dcc0', 0, -40, 11); X.fillStyle = '#1d1d24'; X.beginPath(); X.moveTo(-9, -36); X.quadraticCurveTo(0, -40, 9, -36); X.quadraticCurveTo(0, -33, -9, -36); X.fill(); circ('#1d1d24', -4, -43, 1.5); circ('#1d1d24', 4, -43, 1.5);
+  X.fillStyle = '#1d1d24'; X.fillRect(-14, -52, 28, 4); X.fillRect(-8, -72, 16, 21); X.fillStyle = '#d8402c'; X.fillRect(-8, -56, 16, 3);
+}
 function drawMask(x, y) {
   X.save(); X.translate(x, y + M.sin(t * .12) * 1.5); X.rotate(M.sin(t * .07) * .15);
   X.save(); X.globalAlpha = .35; circ('#fff6c0', 0, 0, 12 + M.sin(t * .2) * 1.5); X.restore();
@@ -2435,12 +2474,23 @@ function drawGame() {
     X.fillStyle = '#a0703c'; X.fillRect(-9, -9, 18, 18); X.strokeStyle = '#5a3a1a'; X.lineWidth = 1.5; X.strokeRect(-8.5, -8.5, 17, 17); X.beginPath(); X.moveTo(-8, -8); X.lineTo(8, 8); X.moveTo(8, -8); X.lineTo(-8, 8); X.stroke();
     X.restore();
   }
+  for (const q of TRAPS) { const x = g.x + q.x * g.c, y = g.y + q.y * g.c;
+    if (!q.open) { if (M.floor(t / 6) % 2) { X.strokeStyle = '#ff6060'; X.lineWidth = 2; X.strokeRect(x + 1, y + 1, g.c * 2 - 2, g.c - 2) } X.fillStyle = 'rgba(90,50,20,.6)'; X.fillRect(x + 2, y + 2, g.c * 2 - 4, g.c - 4) }
+    else { X.fillStyle = '#05030c'; X.fillRect(x + 1, y + 1, g.c * 2 - 2, g.c - 2); X.fillStyle = '#6a4024'; X.fillRect(x, y - 3, g.c * 2, 4); X.fillRect(x, y + g.c - 1, g.c * 2, 4) } }
+  if (PU) { X.save(); if (PU.l < 90 && M.floor(t / 5) % 2) X.globalAlpha = .4; const x = g.x + (PU.x + .5) * g.c, y = g.y + (PU.y + .5) * g.c; if (PU.type === 'mask') { X.save(); X.globalAlpha *= .4; circ('#bfe6ff', x, y, 15); X.restore(); circ('#1c1838', x, y, 11); X.strokeStyle = '#9fe0ff'; X.lineWidth = 2; X.beginPath(); X.arc(x, y, 11, 0, 6.29); X.stroke(); txt('✂', x, y + 5, 13, '#fff', 'center', false) } else drawPowerIcon(PU.type, x, y, .82); X.restore() }
   if (FD) drawMask(g.x + (FD.x + .5) * g.c, g.y + (FD.y + .5) * g.c);
   if (GS) { X.save(); if (GS.l < 90 && M.floor(t / 5) % 2) X.globalAlpha = .4; const x = g.x + (GS.x + .5) * g.c, y = g.y + (GS.y + .5) * g.c; X.save(); X.globalAlpha *= .4; circ('#ffe680', x, y, 13); X.restore(); star(x, y, 9, t * .05); X.restore() }
   // hand in hand: a gold ribbon links the dancers
   const pts = SN.segs.map((_, i) => segPos(i, g));
   X.strokeStyle = '#e6b830'; X.lineWidth = 2.5; X.lineJoin = 'round'; X.beginPath(); for (const [x, y] of pts) X.lineTo(x, y + 3); X.stroke();
+  X.save(); if (ghost()) X.globalAlpha = power.t < 90 && M.floor(t / 5) % 2 ? .8 : .55;
   for (let i = pts.length - 1; i >= 0; i--) drawMember(pts[i][0], pts[i][1], i, i === 0);
+  X.restore();
+  if (DIRB) {
+    const x = g.x + (DIRB.cx + .5) * g.c, y = g.y + (DIRB.cy + .5) * g.c;
+    if (DIRB.warn > 0) { const ex = M.max(g.x + 10, M.min(g.x + g.cols * g.c - 10, x)), ey = M.max(g.y + 10, M.min(g.y + g.rows * g.c - 10, y)); if (M.floor(t / 6) % 2) { X.fillStyle = '#ff6060'; X.beginPath(); X.arc(ex, ey, 10, 0, 6.29); X.fill(); txt('!', ex, ey + 5, 14, '#fff', 'center', false) } }
+    else { X.save(); X.translate(x, y + 8); X.scale(.62, .62); drawDirectorMini(); X.restore() }
+  }
   if (state === 'over' && SN.crash) { const x = g.x + (SN.crash.x + .5) * g.c, y = g.y + (SN.crash.y + .5) * g.c; for (let i = 0; i < 5; i++) { const a = t * .05 + i * 1.257; star(x + M.cos(a) * 12, y - 8 + M.sin(a) * 5, 3, 0, '#ffe066') } }
   X.restore();
 }

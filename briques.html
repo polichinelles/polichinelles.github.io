@@ -759,7 +759,8 @@ function buildLevel(n) {
 }
 function RLOOK() { const eq = {}; for (const c of CATS) { const its = WARD[c].items.filter(i => !i.pass && !i.wheel && !i.quest); eq[c] = c === 'trail' || c === 'dance' ? its[0].id : its[M.random() * its.length | 0].id } return buildLook(eq) }
 function newBall(stuck) { BB.push({ x: BP.x, y: drumY() - 8, vx: 0, vy: 0, stuck: stuck ? 1 : 0, off: 0, r: 6, trail: [], rot: 0 }) }
-function launch() { for (const b of BB) if (b.stuck) { const a = b.off ? M.max(-.9, M.min(.9, b.off / drumW())) : rnd(-.45, .45), s = ballSp(); b.vx = M.sin(a) * s; b.vy = -M.cos(a) * s; b.stuck = 0; b.off = 0; sfx.drum() } }
+function aimA() { return M.sin(playT * .045) * .75 }
+function launch() { for (const b of BB) if (b.stuck) { const a = b.off ? M.max(-.9, M.min(.9, b.off / drumW())) : aimA(), s = ballSp(); b.vx = M.sin(a) * s; b.vy = -M.cos(a) * s; b.stuck = 0; b.off = 0; sfx.drum() } }
 
 let obs = [], items = [], parts = [];
 const crowd = [];
@@ -2646,7 +2647,10 @@ function drawGame() {
   X.strokeStyle = '#c99a2e'; X.lineWidth = 1.5; X.stroke();
   if (pOn('tomato')) for (const s of [-1, 1]) circ('#e0302a', p.x + s * (dw - 4), dy - 3, 3.5);
   X.restore();
-  for (const b of BB) drawJBall(b, pOn('fire'));
+  for (const b of BB) {
+    if (b.stuck && waveT <= 0 && !clearT) { const a = b.off ? M.max(-.9, M.min(.9, b.off / drumW())) : aimA(); X.save(); X.globalAlpha = .7; for (let i = 1; i < 8; i++) circ(i % 2 ? '#fff' : '#ffe066', b.x + M.sin(a) * i * 11, b.y - M.cos(a) * i * 11, 2.2 - i * .15); X.restore() }
+    drawJBall(b, pOn('fire'));
+  }
   const my = (f.y + f.b) / 2 + 20;
   if (waveT > 0 && !clearT) { X.save(); X.globalAlpha = M.min(1, waveT / 20); X.fillStyle = 'rgba(20,16,40,.7)'; X.beginPath(); X.roundRect(W / 2 - 100, my - 26, 200, 52, 12); X.fill(); X.strokeStyle = COL.yellow; X.lineWidth = 2; X.stroke(); txt(isBoss() ? 'Le Directeur !' : `Niveau ${level + 1}`, W / 2, my - 4, 20, COL.yellow); txt(isBoss() ? 'Touche-le avec la balle' : `Acte ${roman(M.floor(level / 4) + 1)} · décor ${level % 4 + 1} / 4`, W / 2, my + 15, 11, '#fff', 'center', false); X.restore() }
   if (clearT > 0) { X.save(); X.globalAlpha = M.min(1, clearT / 15, (150 - clearT) / 10); X.fillStyle = 'rgba(20,16,40,.75)'; X.beginPath(); X.roundRect(W / 2 - 110, my - 34, 220, 68, 12); X.fill(); X.strokeStyle = COL.yellow; X.lineWidth = 2; X.stroke(); txt(BOSS ? 'Acte gagné !' : 'Décor rasé !', W / 2, my - 10, 22, COL.yellow); txt(`Bonus +${clearBonus}`, W / 2, my + 12, 14, '#fff'); txt(`dont ${hearts} vie${hearts > 1 ? 's' : ''} × 50`, W / 2, my + 27, 10, '#c9c2d8', 'center', false); X.restore() }
