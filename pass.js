@@ -1,20 +1,58 @@
 // ===== Les Polichinelles : player level, daily challenges and the season pass (saved on the phone) =====
-const PASS_KEY = 'polichinelles_pass', PASS_MAX = 40, PASS_SEASON = 'Saison 1 · Le Grand Carnaval';
+const PASS_KEY = 'polichinelles_pass', PASS_MAX = 40, TIER_XP = 300;
 const PASS_GAMES = { course: 'La Course', envol: 'L’Envol', trampo: 'Le Trampoline', tir: 'Le Tir Forain', tape: 'Tape-Polichinelle', pyramide: 'La Pyramide', jongleur: 'Le Jongleur' };
 const PASS_DE = { course: 'de La Course', envol: 'de L’Envol', trampo: 'du Trampoline', tir: 'du Tir Forain', tape: 'de Tape-Polichinelle', pyramide: 'de La Pyramide', jongleur: 'du Jongleur' };
 const PASS_A = { course: 'à La Course', envol: 'à L’Envol', trampo: 'au Trampoline', tir: 'au Tir Forain', tape: 'à Tape-Polichinelle', pyramide: 'à La Pyramide', jongleur: 'au Jongleur' };
 const PASS_SCORE = { course: 800, envol: 150, trampo: 200, tir: 1500, tape: 300, pyramide: 120, jongleur: 250 };
-// season pass: one reward per level; levels 10/20/30/40 are the big ones
-const PASS_ITEMS = { 2: 'h_carnaval', 3: 'p_baguette_pain', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 8: 'h_helice', 9: 'k_cravate_or', 10: 'c_carnaval', 11: 'p_poisson', 12: 't_glitter', 13: 'f_3d', 14: 'h_venise', 16: 'l_paillettes', 17: 'h_gateau', 18: 'f_goldmask', 19: 'c_tigre', 20: 'b_plumes', 21: 'p_canard', 22: 'c_paillettes', 23: 'h_theiere', 24: 'h_plumes', 26: 'p_goldfan', 27: 'c_pasteque', 28: 'b_cape_or', 29: 'h_nuage', 30: 'c_venise', 31: 't_bananes', 32: 'b_escargot', 33: 'c_minuit', 34: 'h_poulet', 35: 'h_bocal', 36: 'k_jabot_or', 37: 'p_poele', 38: 'h_licorne_or', 39: 'h_minime', 40: 'c_legende' };
-const PASS_STARS = { 1: 50, 6: 80, 15: 120, 25: 200 };
-function passReward(lvl) { return PASS_ITEMS[lvl] ? { kind: 'item', id: PASS_ITEMS[lvl] } : { kind: 'stars', n: PASS_STARS[lvl] || 50 } }
+// ---- seasons: each one has its own 40 tiers; the player level never resets ----
+const SEASONS = [
+  { id: 1, name: 'Le Grand Carnaval', icon: '🎭', start: [2026, 11, 16], days: 10,
+    items: { 2: 'h_carnaval', 3: 'p_baguette_pain', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 8: 'h_helice', 9: 'k_cravate_or', 10: 'c_carnaval', 11: 'p_poisson', 12: 't_glitter', 13: 'f_3d', 14: 'h_venise', 16: 'l_paillettes', 17: 'h_gateau', 18: 'f_goldmask', 19: 'c_tigre', 20: 'b_plumes', 21: 'p_canard', 22: 'c_paillettes', 23: 'h_theiere', 24: 'h_plumes', 26: 'p_goldfan', 27: 'c_pasteque', 28: 'b_cape_or', 29: 'h_nuage', 30: 'c_venise', 31: 't_bananes', 32: 'b_escargot', 33: 'c_minuit', 34: 'h_poulet', 35: 'h_bocal', 36: 'k_jabot_or', 37: 'p_poele', 38: 'h_licorne_or', 39: 'h_minime', 40: 'c_legende' },
+    stars: { 1: 50, 6: 80, 15: 120, 25: 200 } },
+  { id: 2, name: 'La Ferme', icon: '🐮', start: [2026, 11, 26], days: 10, items: null, stars: {} }
+];
+function seasonStart(se) { return new Date(se.start[0], se.start[1] - 1, se.start[2]) }
+function seasonEnd(se) { const d = seasonStart(se); d.setDate(d.getDate() + se.days); return d }
+function currentSeason() { const now = new Date(); let cur = SEASONS[0]; for (const se of SEASONS) if (seasonStart(se) <= now) cur = se; return cur }
+function nextSeason() { const c = currentSeason(); return SEASONS.find(se => se.id === c.id + 1) || null }
+const PASS_SEASON_OBJ = currentSeason();
+const PASS_SEASON = `Saison ${PASS_SEASON_OBJ.id} · ${PASS_SEASON_OBJ.name}`;
+function seasonLeft(se) {
+  const ms = seasonEnd(se) - new Date(); if (ms <= 0) return 'terminée';
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24;
+  return d >= 1 ? `encore ${d} jour${d > 1 ? 's' : ''}${d < 3 ? ' et ' + h + ' h' : ''}` : `encore ${h} h ${Math.floor(ms / 6e4) % 60} min`;
+}
+function frDate(se) { return seasonStart(se).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) }
+function passReward(lvl, se = PASS_SEASON_OBJ) { return se.items && se.items[lvl] ? { kind: 'item', id: se.items[lvl] } : { kind: 'stars', n: se.stars[lvl] || 50 } }
 function xpNeed(n) { return 250 + 40 * (n - 1) }
 function levelInfo(xp) { let n = 1, x = xp; while (x >= xpNeed(n)) { x -= xpNeed(n); n++ } return { level: n, into: x, need: xpNeed(n) } }
+function tierInfo(sxp) { const tier = Math.min(PASS_MAX, 1 + Math.floor(sxp / TIER_XP)); return { tier, into: tier >= PASS_MAX ? TIER_XP : sxp % TIER_XP, need: TIER_XP } }
 function loadPass() {
-  const d = { xp: 0, claimed: [], day: null, daily: [], gamesDay: [] };
-  try { return Object.assign(d, JSON.parse(localStorage.getItem(PASS_KEY)) || {}) } catch (e) { return d }
+  const d = { xp: 0, seasons: {}, day: null, daily: [], gamesDay: [] };
+  let p; try { p = Object.assign(d, JSON.parse(localStorage.getItem(PASS_KEY)) || {}) } catch (e) { p = d }
+  if (p.claimed) { p.seasons[1] = { xp: p.xp, claimed: p.claimed }; delete p.claimed }   // first version of the pass
+  return p;
 }
+function seasonOf(p, se = PASS_SEASON_OBJ) { return p.seasons[se.id] || (p.seasons[se.id] = { xp: 0, claimed: [] }) }
+function passUnclaimed(p) { if (!PASS_SEASON_OBJ.items) return 0; const s = seasonOf(p), tr = tierInfo(s.xp).tier; let n = 0; for (let i = 1; i <= tr; i++) if (!s.claimed.includes(i)) n++; return n }
 function savePass(p) { try { localStorage.setItem(PASS_KEY, JSON.stringify(p)) } catch (e) {} }
+// rewards reached but not claimed in a finished season are sent to the Loge automatically
+(function settleSeasons() {
+  try {
+    const p = loadPass(); let loge = null, gave = 0;
+    for (const se of SEASONS) {
+      if (se.id === PASS_SEASON_OBJ.id || !se.items || seasonEnd(se) > new Date()) continue;
+      const s = p.seasons[se.id]; if (!s || s.settled) continue;
+      loge = loge || JSON.parse(localStorage.getItem('polichinelles_loge') || 'null');
+      if (!loge) break;
+      for (let i = 1; i <= tierInfo(s.xp).tier; i++) if (!s.claimed.includes(i)) { const r = passReward(i, se); if (r.kind === 'stars') loge.wallet = (loge.wallet || 0) + r.n; else if (!loge.owned.includes(r.id)) loge.owned.push(r.id); s.claimed.push(i); gave++ }
+      s.settled = true;
+    }
+    if (loge) localStorage.setItem('polichinelles_loge', JSON.stringify(loge));
+    if (gave) p.settledMsg = gave;
+    savePass(p);
+  } catch (e) {}
+})();
 function passToday() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() }
 function dailyFor(day) {
   let h = 2166136261; for (const ch of day) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) }
@@ -45,10 +83,9 @@ function passAward(game, earned, score) {
     else if (c.kind === 'score' && c.game === game && score >= c.score) c.prog = 1;
     if (c.prog >= c.goal) { c.prog = c.goal; c.done = true; xp += DAILY_XP; done.push(c.text) }
   }
-  p.xp += xp; savePass(p);
-  return { xp, before, after: levelInfo(p.xp), done };
+  p.xp += xp; const se = seasonOf(p), tb = tierInfo(se.xp).tier; se.xp += xp; savePass(p);
+  return { xp, before, after: levelInfo(p.xp), done, tier: tierInfo(se.xp), tierUp: tierInfo(se.xp).tier > tb };
 }
-function passUnclaimed(p) { const lv = Math.min(PASS_MAX, levelInfo(p.xp).level); let n = 0; for (let i = 1; i <= lv; i++) if (!p.claimed.includes(i)) n++; return n }
 var passResult = null;
 // line drawn in the game-over panel of every game
 function drawXpLine(ox, y) {
@@ -58,6 +95,7 @@ function drawXpLine(ox, y) {
   X.fillStyle = 'rgba(255,255,255,.15)'; X.beginPath(); X.roundRect(ox - 52, y - 5, 120, 10, 5); X.fill();
   X.fillStyle = '#9fe0ff'; X.beginPath(); X.roundRect(ox - 52, y - 5, M.max(10, 120 * a.into / a.need), 10, 5); X.fill();
   txt(`+${r.xp} XP`, ox + 104, y, 11, '#9fe0ff', 'right', false);
+  if (PASS_SEASON_OBJ.items) txt(`Palier ${r.tier.tier} / ${PASS_MAX}` + (r.tierUp ? ' · nouvelle récompense !' : ''), ox, y + 17 + (r.done.length ? 15 : 0), 11, r.tierUp ? '#ffe066' : '#c9c2d8', 'center', false);
   if (r.done.length) txt(`✔ Défi du jour réussi${r.done.length > 1 ? ' ×' + r.done.length : ''} !`, ox, y + 17, 11, '#7dff8a', 'center', false);
   if (up) { X.save(); X.globalAlpha = .75 + M.sin(t * .2) * .25; txt(`⬆ NIVEAU ${a.level} !`, ox, y - 168, 22, COL.yellow); X.restore() }
 }

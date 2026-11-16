@@ -2062,7 +2062,7 @@ function render() {
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
     const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
-    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 180, 12); X.fill(); X.stroke();
+    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 196, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 122);
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
     txt('Temps écoulé !', ox, oy - 4, 28, COL.red);

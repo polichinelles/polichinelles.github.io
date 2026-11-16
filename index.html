@@ -237,11 +237,14 @@ async function loadGeneral() {
 loadGeneral();
 function showPass() {
   try {
-    const p = ensureDaily(loadPass()); savePass(p); const L = levelInfo(p.xp), un = passUnclaimed(p);
-    document.getElementById('mLv').textContent = L.level; document.getElementById('mSe').textContent = `${PASS_SEASON} · ${L.into} / ${L.need} XP`;
-    document.getElementById('mBar').style.width = (L.into / L.need * 100) + '%';
+    const p = ensureDaily(loadPass()), S = seasonOf(p); savePass(p); const L = levelInfo(p.xp), Ti = tierInfo(S.xp), un = passUnclaimed(p), se = PASS_SEASON_OBJ;
+    document.getElementById('mLv').textContent = L.level;
+    document.getElementById('mSe').textContent = se.items ? `${se.icon} ${PASS_SEASON} · palier ${Ti.tier} / ${PASS_MAX} · ${seasonLeft(se)}` : `${se.icon} ${PASS_SEASON} · bientôt`;
+    document.getElementById('mBar').style.width = (Ti.into / Ti.need * 100) + '%';
     const d = document.getElementById('mDot'); d.hidden = !un; d.textContent = un;
-    document.getElementById('mDaily').innerHTML = p.daily.map(c => `<li>${c.done ? '✅' : '🎯'} ${c.text}<span class="p">${c.done ? '+150 XP' : c.prog + ' / ' + c.goal}</span></li>`).join('');
+    if (p.settledMsg) window.__settled = 1;
+    document.getElementById('mDaily').innerHTML = (window.__settled ? `<li>🎁 Les récompenses de la saison passée sont dans ta Loge !</li>` : '') + p.daily.map(c => `<li>${c.done ? '✅' : '🎯'} ${c.text}<span class="p">${c.done ? '+150 XP' : c.prog + ' / ' + c.goal}</span></li>`).join('');
+    if (p.settledMsg) { delete p.settledMsg; savePass(p) }
   } catch (e) {}
 }
 showPass(); addEventListener('pageshow', showPass);

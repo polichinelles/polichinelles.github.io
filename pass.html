@@ -2132,7 +2132,7 @@ function render() {
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
     const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
-    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 180, 12); X.fill(); X.stroke();
+    X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 196, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 122);
     txt(`+${earned} ⭐ pour la Loge` + (tip ? `  (dont ${tip} de pourboire)` : ''), ox, oy + 96, 12, '#ffe9a0', 'center', false);
     txt('RIDEAU !', ox, oy, 40, COL.red);
@@ -2160,31 +2160,37 @@ document.addEventListener('visibilitychange', () => { last = performance.now() }
 </script>
 <div id="pass"><div class="top"><h1>🎟️ Programme de la saison</h1><span class="w">⭐ <b id="pW">0</b></span><button id="pX" aria-label="Fermer">✕</button></div>
 <div class="wrap">
-<div class="hero"><div class="lvl"><small>NIVEAU</small><b id="pL">1</b></div><div class="info"><div class="season" id="pS"></div><div class="bar"><i id="pB"></i></div><div class="xp" id="pXp"></div><button class="all" id="pAll" hidden>Tout réclamer</button></div></div>
+<div class="hero"><div class="lvl"><small>PALIER</small><b id="pL">1</b></div><div class="info"><div class="season" id="pS"></div><div class="xp" id="pEnd" style="color:#ffe9a0"></div><div class="bar"><i id="pB"></i></div><div class="xp" id="pXp"></div><div class="xp" id="pPl" style="margin-top:3px"></div><button class="all" id="pAll" hidden>Tout réclamer</button></div></div>
 <h2>🗓️ Défis du jour <small style="font-size:12px;color:#c9c2d8">(+150 XP chacun, nouveaux chaque jour)</small></h2><div class="daily"><ul id="pD"></ul></div>
-<h2>🎁 Les 40 paliers</h2><div id="pT"></div>
-<p style="text-align:center;color:#c9c2d8;font-size:12px;font-weight:400">Chaque partie rapporte de l’XP, dans tous les jeux du Théâtre. Les récompenses de la saison sont introuvables à la boutique de la Loge.</p>
+<h2 id="pTt">🎁 Les 40 paliers</h2><div id="pT"></div>
+<div id="pNext"></div>
+<p style="text-align:center;color:#c9c2d8;font-size:12px;font-weight:400">Chaque partie rapporte de l’XP, dans tous les jeux du Théâtre : 300 XP par palier. Les récompenses de la saison sont introuvables à la boutique de la Loge. À la fin de la saison, les paliers atteints mais pas réclamés arrivent tout seuls dans ta Loge.</p>
 </div></div>
 <script>
 // ---- the season pass page ----
 const CATNAME = { costume: 'Costume', hat: 'Chapeau', collar: 'Col', face: 'Visage', legs: 'Jambes', prop: 'Objet', back: 'Dos', trail: 'Effet' };
 function passRender(scroll) {
-  const p = ensureDaily(loadPass()); savePass(p);
-  const L = levelInfo(p.xp), lv = L.level;
+  const p = ensureDaily(loadPass()), se = PASS_SEASON_OBJ, S = seasonOf(p); savePass(p);
+  const Ti = tierInfo(S.xp), tr = Ti.tier, L = levelInfo(p.xp);
   document.getElementById('pW').textContent = PROF.wallet;
-  document.getElementById('pL').textContent = lv;
-  document.getElementById('pS').textContent = PASS_SEASON;
-  document.getElementById('pB').style.width = (L.into / L.need * 100) + '%';
-  document.getElementById('pXp').textContent = `${L.into} / ${L.need} XP avant le niveau ${lv + 1}`;
+  document.getElementById('pL').textContent = tr;
+  document.getElementById('pS').textContent = `${se.icon} ${PASS_SEASON}`;
+  document.getElementById('pEnd').textContent = `⏳ Fin de la saison : ${seasonLeft(se)}`;
+  document.getElementById('pB').style.width = (Ti.into / Ti.need * 100) + '%';
+  document.getElementById('pXp').textContent = tr >= PASS_MAX ? 'Tous les paliers sont atteints, bravo !' : `${Ti.into} / ${Ti.need} XP avant le palier ${tr + 1}`;
+  document.getElementById('pPl').textContent = `Ton niveau de joueur : ${L.level} (${L.into} / ${L.need} XP)`;
   const un = passUnclaimed(p), all = document.getElementById('pAll'); all.hidden = !un; all.textContent = `Tout réclamer (${un})`;
   document.getElementById('pD').innerHTML = p.daily.map(c => `<li class="${c.done ? 'done' : ''}"><span style="font-size:22px">${c.done ? '✅' : '🎯'}</span><div class="t">${c.text}<small>${c.done ? 'Réussi ! +150 XP' : `${c.prog} / ${c.goal}`}</small><div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div></div></li>`).join('');
+  const nx = nextSeason();
+  document.getElementById('pNext').innerHTML = nx ? `<div class="hero" style="margin-top:16px;background:linear-gradient(135deg,#2e6a3a,#8a5a2a)"><div class="lvl" style="font-size:34px">${nx.icon}</div><div class="info"><div class="season">Prochaine saison</div><div style="font-size:20px;color:#fff">Saison ${nx.id} · ${nx.name}</div><div class="xp">Ouverture le ${frDate(nx)}, avec 40 nouveaux paliers et des récompenses inédites.</div></div></div>` : '';
   const box = document.getElementById('pT'); box.innerHTML = '';
+  if (!se.items) { document.getElementById('pTt').textContent = '🎁 Les paliers'; box.innerHTML = `<div class="hero"><div class="lvl" style="font-size:34px">${se.icon}</div><div class="info"><div style="font-size:18px">Les récompenses de « ${se.name} » arrivent très vite !</div><div class="xp">Ton XP de la saison est déjà comptée : joue maintenant, tu les débloqueras dès leur arrivée.</div></div></div>`; return }
   for (let i = 1; i <= PASS_MAX; i++) {
-    const r = passReward(i), it = r.kind === 'item' ? ITEM[r.id] : null, got = p.claimed.includes(i), ready = !got && lv >= i;
+    const r = passReward(i), it = r.kind === 'item' ? ITEM[r.id] : null, got = S.claimed.includes(i), ready = !got && tr >= i;
     const el = document.createElement('div');
-    el.className = 'tier ' + (got ? 'got' : ready ? 'ready' : 'lock') + (i % 10 === 0 ? ' big' : '') + (i === M.min(lv, PASS_MAX) ? ' cur' : '');
-    el.innerHTML = `<div class="n">${got ? '✓' : i}</div><canvas></canvas><div class="nm">${it ? it.name : `+${r.n} étoiles`}<small>${it ? CATNAME[it.cat] + ' exclusif' + (i % 10 === 0 ? ' · grand palier' : '') : 'Pour la boutique de la Loge'}</small></div>` +
-      (ready ? `<button>Réclamer</button>` : got ? (it && PROF.eq[it.cat] !== it.id ? `<button class="wear" style="background:#9fe0ff;animation:none">Porter</button>` : `<span class="st">${it ? 'Porté ✓' : 'Reçu ✓'}</span>`) : `<span class="st">🔒 Niv. ${i}</span>`);
+    el.className = 'tier ' + (got ? 'got' : ready ? 'ready' : 'lock') + (i % 10 === 0 ? ' big' : '') + (i === tr ? ' cur' : '');
+    el.innerHTML = `<div class="n">${got ? '✓' : i}</div><canvas></canvas><div class="nm">${it ? it.name : `+${r.n} étoiles`}<small>${it ? CATNAME[it.cat] + ' exclusif' + (i === 40 ? ' · LÉGENDAIRE' : i % 10 === 0 ? ' · grand palier' : '') : 'Pour la boutique de la Loge'}</small></div>` +
+      (ready ? `<button>Réclamer</button>` : got ? (it && PROF.eq[it.cat] !== it.id ? `<button class="wear" style="background:#9fe0ff;animation:none">Porter</button>` : `<span class="st">${it ? 'Porté ✓' : 'Reçu ✓'}</span>`) : `<span class="st">🔒 Palier ${i}</span>`);
     box.appendChild(el);
     const cv = el.querySelector('canvas');
     if (it) thumb(cv, it);
@@ -2192,18 +2198,18 @@ function passRender(scroll) {
     const b = el.querySelector('button');
     if (b && b.classList.contains('wear')) b.onclick = () => { equip(it); passRender() };
     else if (b) b.onclick = () => { passClaim(i); passRender() };
-    if (scroll && i === M.min(lv, PASS_MAX)) setTimeout(() => el.scrollIntoView({ block: 'center' }), 50);
+    if (scroll && i === tr) setTimeout(() => el.scrollIntoView({ block: 'center' }), 50);
   }
 }
 function passClaim(i, quiet) {
-  const p = loadPass(); if (levelInfo(p.xp).level < i || p.claimed.includes(i)) return;
+  const p = loadPass(), S = seasonOf(p); if (!PASS_SEASON_OBJ.items || tierInfo(S.xp).tier < i || S.claimed.includes(i)) return;
   const r = passReward(i);
   if (r.kind === 'stars') PROF.wallet += r.n;
   else { const it = ITEM[r.id]; if (it && !PROF.owned.includes(it.id)) { PROF.owned.push(it.id); PROF.seen.push(it.id) } }
-  p.claimed.push(i); savePass(p); saveProf();
+  S.claimed.push(i); savePass(p); saveProf();
   if (!quiet) { try { sfx.star() } catch (e) {} toast(r.kind === 'stars' ? `⭐ <b>+${r.n} étoiles</b> pour la Loge !` : `🎉 <b>${ITEM[r.id].name}</b> ajouté à ta loge !`) }
 }
-document.getElementById('pAll').onclick = () => { const p = loadPass(), lv = M.min(PASS_MAX, levelInfo(p.xp).level); let n = 0; for (let i = 1; i <= lv; i++) if (!p.claimed.includes(i)) { passClaim(i, true); n++ } try { sfx.star() } catch (e) {} toast(`🎁 <b>${n} récompense${n > 1 ? 's' : ''}</b> réclamée${n > 1 ? 's' : ''} !`); passRender() };
+document.getElementById('pAll').onclick = () => { const p = loadPass(), S = seasonOf(p), tr = tierInfo(S.xp).tier; let n = 0; for (let i = 1; i <= tr; i++) if (!S.claimed.includes(i)) { passClaim(i, true); n++ } try { sfx.star() } catch (e) {} toast(`🎁 <b>${n} récompense${n > 1 ? 's' : ''}</b> réclamée${n > 1 ? 's' : ''} !`); passRender() };
 document.getElementById('pX').onclick = () => { location.href = './' };
 for (const ev of ['pointerdown', 'pointerup', 'touchend', 'keydown']) document.getElementById('pass').addEventListener(ev, e => e.stopPropagation());
 passRender(true);
