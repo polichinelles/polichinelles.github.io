@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#5e0f18">
+<title>La roue du jour · Théâtre des Polichinelles</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:#3a0a10;color:#fff;font-family:Georgia,'Times New Roman',serif;-webkit-tap-highlight-color:transparent}
+  body{background:repeating-linear-gradient(90deg,rgba(0,0,0,.22) 0 9px,rgba(255,255,255,0) 9px 30px,rgba(0,0,0,.12) 30px 38px,rgba(255,255,255,0) 38px 56px),linear-gradient(180deg,#8a1f2a 0%,#6a1520 60%,#3a0a10 100%);background-attachment:fixed;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(20px + env(safe-area-inset-bottom)) env(safe-area-inset-left);min-height:100vh}
+  .valance{height:46px;background:radial-gradient(circle at 20px -2px,#7a1822 20px,transparent 21px) 0 0/40px 40px repeat-x,linear-gradient(#7a1822,#7a1822) 0 0/100% 18px no-repeat;position:relative}
+  .valance::after{content:'';position:absolute;left:0;right:0;top:16px;height:3px;background:#e6b830}
+  .top{max-width:560px;margin:0 auto;padding:0 14px;display:flex;align-items:center;gap:10px}
+  .top a{color:#3a1a0a;background:linear-gradient(#f2c230,#c99a2e);border:2px solid #fff3c0;border-radius:22px;padding:6px 14px;font-weight:700;text-decoration:none}
+  .top .w{margin-left:auto;background:#1c1838;border:2px solid #e6b830;border-radius:22px;padding:6px 14px;color:#ffe9a0;font-weight:700}
+  h1{text-align:center;color:#e6b830;margin:14px 0 2px;font-size:clamp(26px,7vw,40px);text-shadow:0 2px 0 #2a2230,0 4px 12px rgba(0,0,0,.5)}
+  .sub{text-align:center;color:#ffe9a0;font-size:14px;margin-bottom:14px}
+  .stage{position:relative;width:min(88vw,62vh,420px);aspect-ratio:1;margin:0 auto}
+  .stage::before{content:'';position:absolute;inset:-8%;border-radius:50%;background:radial-gradient(rgba(255,230,140,.35),transparent 65%)}
+  canvas{position:relative;width:100%;height:100%;display:block}
+  .pin{position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:0;height:0;border-left:17px solid transparent;border-right:17px solid transparent;border-top:32px solid #fff;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6));z-index:2}
+  .ctr{text-align:center}
+  button{margin-top:18px;font:inherit;font-weight:700;font-size:20px;border:0;border-radius:28px;padding:12px 34px;background:#f2c230;color:#3a1a0a;box-shadow:0 5px 0 #a07a10,0 8px 20px rgba(0,0,0,.4);cursor:pointer}
+  button:active{transform:translateY(3px);box-shadow:0 2px 0 #a07a10}
+  button:disabled{background:#5a5470;color:#c9c2d8;box-shadow:0 5px 0 #34304a;cursor:default}
+  .res{min-height:56px;margin:14px auto 0;max-width:420px;padding:0 14px;font-weight:700;font-size:18px;color:#ffe9a0;text-align:center}
+  .res.win{animation:pop .5s}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  .gains{max-width:420px;width:calc(100% - 28px);margin:6px auto 0;padding:10px 14px;background:rgba(28,24,56,.8);border:2px solid #e6b830;border-radius:14px;font-size:13px;color:#c9c2d8}
+  .gains b{color:#ffe9a0}
+  @media (orientation:landscape) and (max-height:520px){
+    .valance{height:30px}h1{margin:4px 0 0;font-size:26px}.sub{margin-bottom:6px}
+    .main{display:flex;align-items:center;justify-content:center;gap:28px;padding:0 14px}
+    .stage{width:min(70vh,360px);margin:0}.side{flex:0 1 380px}.gains{width:auto}
+  }
+  #conf{position:fixed;inset:0;pointer-events:none;z-index:5}
+</style>
+</head>
+<body>
+<div class="valance"></div>
+<div class="top"><a href="./">◀ Théâtre</a><span class="w">⭐ <b id="wallet">0</b></span></div>
+<h1>🎡 La roue du jour</h1>
+<div class="sub">Un tour gratuit chaque jour</div>
+<div class="main"><div class="stage"><div class="pin"></div><canvas id="wheelC" width="840" height="840"></canvas></div>
+<div class="side"><div class="ctr"><button id="wheelB">Tourner !</button></div>
+<div class="res" id="wheelR"></div>
+<div class="gains">À gagner : <b>des étoiles</b> (jusqu’à 100 ⭐), <b>de l’XP</b> pour le Programme, le <b>JACKPOT</b> (+500 XP +50 ⭐) et, très rare, la danse exclusive <b>« Salto arrière »</b> 🕺</div></div></div>
+<canvas id="conf"></canvas>
+<script src="pass.js"></script>
+<script>
+const ls = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
+function showWallet() { try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {} }
+const DANCE_N = { d_salto: 'Salto arrière' };
+let wheelA = 0;
+function drawWheel() {
+  const c = document.getElementById('wheelC'), x = c.getContext('2d'), C = 420, R = 400, n = WHEEL.length;
+  x.clearRect(0, 0, 840, 840); x.save(); x.translate(C, C); x.rotate(wheelA);
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * 6.2832 - 1.5708, a1 = (i + 1) / n * 6.2832 - 1.5708;
+    x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, R, a0, a1); x.closePath(); x.fillStyle = WHEEL[i].col; x.fill();
+    x.save(); x.clip(); const g = x.createRadialGradient(0, 0, 40, 0, 0, R); g.addColorStop(0, 'rgba(255,255,255,.25)'); g.addColorStop(1, 'rgba(0,0,0,.18)'); x.fillStyle = g; x.fill(); x.restore();
+    x.strokeStyle = '#fff3c0'; x.lineWidth = 7; x.stroke();
+    x.save(); x.rotate((a0 + a1) / 2); x.fillStyle = '#fff'; x.font = 'bold 50px system-ui,sans-serif'; x.textAlign = 'right'; x.textBaseline = 'middle'; x.shadowColor = 'rgba(0,0,0,.55)'; x.shadowBlur = 8; x.fillText(WHEEL[i].label, R - 30, 0); x.restore();
+  }
+  x.beginPath(); x.arc(0, 0, R, 0, 6.2832); x.lineWidth = 20; x.strokeStyle = '#e6b830'; x.stroke();
+  for (let i = 0; i < 24; i++) { const a = i / 24 * 6.2832; x.beginPath(); x.arc(Math.cos(a) * R, Math.sin(a) * R, 8, 0, 6.2832); x.fillStyle = (i + Math.floor(performance.now() / 300)) % 2 ? '#fff8d0' : '#ffcf40'; x.fill() }
+  x.restore();
+  x.beginPath(); x.arc(C, C, 64, 0, 6.2832); x.fillStyle = '#3a1a0a'; x.fill(); x.lineWidth = 12; x.strokeStyle = '#e6b830'; x.stroke();
+  x.fillStyle = '#f2c230'; x.font = 'bold 60px system-ui'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('★', C, C + 4);
+}
+let spinning = false;
+(function idle() { if (!spinning) drawWheel(); requestAnimationFrame(idle) })();
+function wheelUI() {
+  const b = document.getElementById('wheelB'), r = document.getElementById('wheelR'), ok = wheelReady();
+  b.disabled = !ok; b.textContent = ok ? 'Tourner !' : 'Reviens demain';
+  if (!ok && !r.dataset.got) r.textContent = 'Déjà tournée aujourd’hui 🎪 Nouveau tour demain !';
+}
+function confetti() {
+  const c = document.getElementById('conf'), x = c.getContext('2d'); c.width = innerWidth; c.height = innerHeight;
+  const P = Array.from({ length: 120 }, () => ({ x: innerWidth / 2, y: innerHeight * .45, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6, c: ['#d8402c', '#f2c230', '#3070d0', '#2e9a4c', '#f27ab0'][Math.floor(Math.random() * 5)] }));
+  let f = 0; (function st() { x.clearRect(0, 0, c.width, c.height); for (const p of P) { p.vy += .35; p.x += p.vx; p.y += p.vy; p.r += .2; x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-5, -3, 10, 6); x.restore() } if (++f < 140) requestAnimationFrame(st); else x.clearRect(0, 0, c.width, c.height) })();
+}
+document.getElementById('wheelB').onclick = () => {
+  const got = spinWheel(); if (!got) { wheelUI(); return }
+  const b = document.getElementById('wheelB'), r = document.getElementById('wheelR'); b.disabled = true; r.textContent = ''; r.classList.remove('win'); r.dataset.got = 1; spinning = true;
+  const n = WHEEL.length, target = -((got.i + .5) / n) * 6.2832 + (Math.random() - .5) * (4.5 / n);
+  const start = wheelA, end = target - 6.2832 * (6 + Math.ceil((start - target) / 6.2832)), t0 = performance.now(), D = 4600;
+  (function step(now) {
+    const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 4); wheelA = start + (end - start) * e; drawWheel();
+    if (k < 1) return requestAnimationFrame(step);
+    spinning = false;
+    const parts = []; if (got.stars) parts.push(`+${got.stars} ⭐`); if (got.xp) parts.push(`+${got.xp} XP`); if (got.item) parts.push(`🕺 la danse « ${DANCE_N[got.item] || got.item} » est dans ta Loge !`);
+    r.textContent = (WHEEL[got.i].label === 'JACKPOT' ? '🎉 JACKPOT ! ' : '🎉 Gagné : ') + parts.join(' · '); void r.offsetWidth; r.classList.add('win');
+    showWallet(); confetti(); b.textContent = 'Reviens demain';
+  })(t0);
+};
+showWallet(); wheelUI(); addEventListener('pageshow', () => { showWallet(); wheelUI() });
+</script>
+</body>
+</html>
