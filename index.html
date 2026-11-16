@@ -84,6 +84,8 @@
   .card .rec{font-size:13px;color:#ffe9a0}
   .card .play{background:#e6b830;color:#2a2230;font-weight:700;border-radius:10px;padding:9px 18px;font-size:16px}
   .card.soon{border-color:#6a6280;filter:saturate(.35);opacity:.8}
+  .card.soon .art{position:relative}.card.soon .art img{filter:grayscale(1) brightness(.75)}
+  .soonTag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-4deg);background:rgba(20,16,40,.85);color:#ffe9a0;border:2px solid #e6b830;border-radius:12px;padding:6px 14px;font:700 15px Georgia,serif;white-space:nowrap}
   .card.soon .play{background:#4a4460;color:#cfc8e0}
   .badge{position:absolute;top:10px;right:10px;background:#e6b830;color:#2a2230;font-size:11px;font-weight:700;border-radius:10px;padding:3px 8px;z-index:2}
   .soon .badge{background:#4a4460;color:#fff}
@@ -136,7 +138,9 @@ const GAMES = [
   { id: 'tir', name: 'Le Tir Forain', href: 'tir.html', best: 'polichinelles_best_tir', fresh: true, desc: 'Vise les cibles qui défilent avant la fin du temps, enchaîne les séries… mais épargne le directeur !', emoji: '🎯', bg: ['#f2b8a8', '#8a1f2a'] },
   { id: 'tape', name: 'Tape-Polichinelle', href: 'tape.html', best: 'polichinelles_best_tape', desc: 'Ils surgissent des trappes : tape-les vite… mais pas le directeur !', emoji: '🔨', bg: ['#dcb6dc', '#5a1f6e'] },
   { id: 'pyramide', name: 'La Pyramide', href: 'pyramide.html', best: 'polichinelles_best_pyramide', desc: 'Lâche les polichinelles au bon moment pour bâtir la plus haute pyramide.', emoji: '🏛️', bg: ['#c2dcb8', '#1f5a3a'] },
-  { id: 'jongleur', name: 'Le Jongleur', href: 'jongleur.html', best: 'polichinelles_best_jongleur', desc: 'Garde les quilles et les balles en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] }
+  { id: 'jongleur', name: 'Le Jongleur', href: 'jongleur.html', best: 'polichinelles_best_jongleur', desc: 'Garde balles, massues en feu et outils en l’air le plus longtemps possible.', emoji: '🤹', bg: ['#f2c890', '#a0401a'] },
+  { id: 'tracteur', name: 'Le Tracteur', href: 'tracteur.html', best: 'polichinelles_best_tracteur', soon: true, shot: true, desc: 'Grimpe les collines de la ferme en tracteur, fais des saltos et ne tombe pas en panne d’essence !', emoji: '🚜', bg: ['#bfe4f4', '#4e9a3a'] },
+  { id: 'oeufs', name: 'Le Poulailler', href: 'oeufs.html', best: 'polichinelles_best_oeufs', soon: true, shot: true, desc: 'Les poules pondent sans s’arrêter : rattrape les œufs dans ton panier, mais pas les œufs pourris !', emoji: '🥚', bg: ['#c89a4a', '#7a4a2a'] },
 ];
 const ls = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
 try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
@@ -148,7 +152,7 @@ for (const g of GAMES) {
   if (!g.soon) a.href = g.href;
   const rec = g.soon ? '' : `Record : ${+ls(g.best) || 0}`;
   a.innerHTML = `${g.soon ? '<span class="badge">BIENTÔT</span>' : g.fresh ? '<span class="badge">NOUVEAU</span>' : ''}
-    <div class="art" style="background:linear-gradient(${g.bg[0]} 0 62%, ${g.bg[1]} 62% 100%)">${g.soon ? g.emoji : `<img src="shots/${g.id}.jpg" alt="${g.name}" loading="lazy">`}</div>
+    <div class="art" style="background:linear-gradient(${g.bg[0]} 0 62%, ${g.bg[1]} 62% 100%)">${g.soon && !g.shot ? g.emoji : `<img src="shots/${g.id}.jpg" alt="${g.name}" loading="lazy">`}${g.soon ? '<span class="soonTag">🐮 Bientôt · nouveau jeu</span>' : ''}</div>
     <div class="body"><h2>${g.name}</h2><p>${g.desc}</p>
     <div class="row"><span class="rec">${rec}</span><span class="play">${g.soon ? 'Bientôt' : 'Jouer ▶'}</span></div></div>`;
   main.appendChild(a);
