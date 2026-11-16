@@ -43,6 +43,16 @@
   .pass .bar{height:9px;border-radius:5px;background:rgba(0,0,0,.35);overflow:hidden;margin-top:6px}.pass .bar i{display:block;height:100%;background:linear-gradient(90deg,#9fe0ff,#f27ab0)}
   .pass .go{flex:none;background:#f2c230;color:#3a1a0a;border-radius:16px;padding:6px 10px;font-weight:700;font-size:13px;position:relative}
   .pass .go .dot{position:absolute;top:-8px;right:-8px;background:#d8402c;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;border:2px solid #fff}
+  .pass .leg{display:flex;align-items:center;gap:12px;margin-top:12px;padding:8px 10px;border-radius:14px;background:radial-gradient(circle at 18% 50%,rgba(255,215,90,.45),rgba(20,16,40,.55) 60%);border:2px solid #f2c230;box-shadow:0 0 18px rgba(242,194,48,.35) inset}
+  .pass .leg .im{position:relative;width:76px;height:95px;flex:none;overflow:hidden}
+  .pass .leg .im img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 8px rgba(255,220,120,.7));animation:legf 3s ease-in-out infinite}
+  .pass .leg .im::after{content:'';position:absolute;inset:-20% -60%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,240,.85) 50%,transparent 58%);mix-blend-mode:overlay;animation:legs 3.2s linear infinite;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+  .pass .leg .tx{flex:1;min-width:0}
+  .pass .leg .k{font-size:11px;letter-spacing:2px;color:#ffe9a0}
+  .pass .leg .nm{font-size:19px;font-weight:700;background:linear-gradient(90deg,#fff3b8,#f2c230,#fff6d0,#c99a2e);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .pass .leg .rest{font-size:12px;color:#ece6f6;margin-top:2px}
+  @keyframes legf{50%{transform:translateY(-4px)}}
+  @keyframes legs{0%{transform:translateX(-60%)}60%,100%{transform:translateX(60%)}}
   .pass ul{list-style:none;margin:10px 0 0;padding:0;font-size:13px;font-weight:400}.pass li{display:flex;gap:8px;align-items:center;padding:3px 0;color:#ece6f6}.pass li .p{margin-left:auto;color:#9fe0ff;font-weight:700}
   .gen{max-width:760px;margin:16px auto 0;padding:0 14px}
   .gen .box{background:#1c1838;border:3px solid #e6b830;border-radius:16px;box-shadow:0 8px 20px rgba(0,0,0,.45);overflow:hidden}
@@ -94,7 +104,7 @@
   <div class="wallet">⭐ <b id="wallet">0</b> <span>étoiles pour la Loge</span></div><a class="logeBtn" href="loge.html">🎩 La Loge</a>
 </header>
 
-<section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><ul id="mDaily"></ul></a></section>
+<section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 40</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
 <section class="gen"><div class="box">
   <h2>🏆 Classement général</h2>
   <div class="sub">Tous les jeux du Théâtre réunis</div>
@@ -241,6 +251,12 @@ function showPass() {
     document.getElementById('mLv').textContent = L.level;
     document.getElementById('mSe').textContent = se.items ? `${se.icon} ${PASS_SEASON} · palier ${Ti.tier} / ${PASS_MAX} · ${seasonLeft(se)}` : `${se.icon} ${PASS_SEASON} · bientôt`;
     document.getElementById('mBar').style.width = (Ti.into / Ti.need * 100) + '%';
+    const LEG = { 1: 'Polichinelle d’or chromé', 2: 'La Vache légendaire' }, lg = document.getElementById('mLeg');
+    if (se.items && LEG[se.id]) {
+      lg.hidden = false; const src = `shots/legend${se.id}.png`; document.getElementById('mLegImg').src = src; document.getElementById('mLegIm').style.setProperty('--m', `url(${src})`);
+      document.getElementById('mLegN').textContent = LEG[se.id];
+      document.getElementById('mLegR').textContent = Ti.tier >= PASS_MAX ? (S.claimed.includes(PASS_MAX) ? 'Débloqué ! Il est dans ta Loge ✨' : 'Débloqué ! Va le réclamer ✨') : `Encore ${PASS_MAX - Ti.tier} paliers · ${seasonLeft(se)} pour l’obtenir`;
+    } else lg.hidden = true;
     const d = document.getElementById('mDot'); d.hidden = !un; d.textContent = un;
     if (p.settledMsg) window.__settled = 1;
     document.getElementById('mDaily').innerHTML = (window.__settled ? `<li>🎁 Les récompenses de la saison passée sont dans ta Loge !</li>` : '') + p.daily.map(c => `<li>${c.done ? '✅' : '🎯'} ${c.text}<span class="p">${c.done ? '+150 XP' : c.prog + ' / ' + c.goal}</span></li>`).join('');
