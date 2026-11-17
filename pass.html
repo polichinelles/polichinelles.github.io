@@ -602,7 +602,7 @@ function renderBar() {
     const miss = it.price - PROF.wallet;
     wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
   } else if (it.pass) {
-    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass}</small></div>`;
+    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass > 1 ? Math.round(it.pass * 2.5) : it.pass}</small></div>`;
   } else {
     const a = ACH[it.ach], v = M.min(statVal(a.stat), a.goal);
     wdBar.innerHTML = `<div class="info">🔒 ${it.name}<small>Défi : ${a.text} (${v} / ${a.goal})</small><div class="prog"><i style="width:${v / a.goal * 100}%"></i></div></div>`;
@@ -2436,9 +2436,9 @@ document.addEventListener('visibilitychange', () => { last = performance.now() }
 <div class="hero"><div class="lvl"><small>PALIER</small><b id="pL">1</b></div><div class="info"><div class="season" id="pS"></div><div class="xp" id="pEnd" style="color:#ffe9a0"></div><div class="bar"><i id="pB"></i></div><div class="xp" id="pXp"></div><div class="xp" id="pPl" style="margin-top:3px"></div><button class="all" id="pAll" hidden>Tout réclamer</button></div></div>
 <h2>🗓️ Défis du jour <small style="font-size:12px;color:#c9c2d8">(+150 XP chacun, nouveaux chaque jour)</small></h2><div class="daily"><ul id="pD"></ul></div>
 <h2>📅 Quêtes de la semaine <small style="font-size:12px;color:#c9c2d8" id="pWkS"></small></h2><div class="daily"><ul id="pWk"></ul></div>
-<h2 id="pTt">🎁 Les 40 paliers</h2><div id="pT"></div>
+<h2 id="pTt">🎁 Les 100 paliers</h2><div id="pT"></div>
 <div id="pNext"></div>
-<p style="text-align:center;color:#c9c2d8;font-size:12px;font-weight:400">Chaque partie rapporte de l’XP, dans tous les jeux du Théâtre : 300 XP par palier. Les récompenses de la saison sont introuvables à la boutique de la Loge. À la fin de la saison, les paliers atteints mais pas réclamés arrivent tout seuls dans ta Loge.</p>
+<p style="text-align:center;color:#c9c2d8;font-size:12px;font-weight:400">Chaque partie rapporte de l’XP, dans tous les jeux du Théâtre : 120 XP par palier. Les récompenses de la saison sont introuvables à la boutique de la Loge. À la fin de la saison, les paliers atteints mais pas réclamés arrivent tout seuls dans ta Loge.</p>
 </div></div>
 <script>
 // ---- the season pass page ----
@@ -2459,14 +2459,14 @@ function passRender(scroll) {
     document.getElementById('pWk').innerHTML = wk.list.map(c => `<li class="${c.done ? 'done' : ''}"><span style="font-size:22px">${c.done ? '✅' : '📌'}</span><div class="t">${c.text}<small>${c.done ? `Réussie ! +${WEEK_XP} XP +${WEEK_STARS} ⭐` : `${c.prog} / ${c.goal}`}</small><div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div></div></li>`).join('') + `<li class="${wk.bonus ? 'done' : ''}"><span style="font-size:22px">🕺</span><div class="t">${wk.bonus ? `Danse « ${dn} » gagnée !` : `Bonus : les 3 quêtes = la danse « ${dn} »`}<small>${wk.bonus ? 'Elle est dans ta Loge' : 'Introuvable à la boutique'}</small></div></li>` }
   document.getElementById('pD').innerHTML = p.daily.map(c => `<li class="${c.done ? 'done' : ''}"><span style="font-size:22px">${c.done ? '✅' : '🎯'}</span><div class="t">${c.text}<small>${c.done ? 'Réussi ! +150 XP' : `${c.prog} / ${c.goal}`}</small><div class="pb"><i style="width:${c.prog / c.goal * 100}%"></i></div></div></li>`).join('');
   const nx = nextSeason();
-  document.getElementById('pNext').innerHTML = nx ? `<div class="hero" style="margin-top:16px;background:linear-gradient(135deg,#2e6a3a,#8a5a2a)"><div class="lvl" style="font-size:34px">${nx.icon}</div><div class="info"><div class="season">Prochaine saison</div><div style="font-size:20px;color:#fff">Saison ${nx.id} · ${nx.name}</div><div class="xp">Ouverture le ${frDate(nx)}, avec 40 nouveaux paliers et des récompenses inédites.</div></div></div>` : '';
+  document.getElementById('pNext').innerHTML = nx ? `<div class="hero" style="margin-top:16px;background:linear-gradient(135deg,#2e6a3a,#8a5a2a)"><div class="lvl" style="font-size:34px">${nx.icon}</div><div class="info"><div class="season">Prochaine saison</div><div style="font-size:20px;color:#fff">Saison ${nx.id} · ${nx.name}</div><div class="xp">Ouverture le ${frDate(nx)}, avec 100 nouveaux paliers et des récompenses inédites.</div></div></div>` : '';
   const box = document.getElementById('pT'); box.innerHTML = '';
   if (!se.items) { document.getElementById('pTt').textContent = '🎁 Les paliers'; box.innerHTML = `<div class="hero"><div class="lvl" style="font-size:34px">${se.icon}</div><div class="info"><div style="font-size:18px">Les récompenses de « ${se.name} » arrivent très vite !</div><div class="xp">Ton XP de la saison est déjà comptée : joue maintenant, tu les débloqueras dès leur arrivée.</div></div></div>`; return }
   for (let i = 1; i <= PASS_MAX; i++) {
     const r = passReward(i), it = r.kind === 'item' ? ITEM[r.id] : null, got = S.claimed.includes(i), ready = !got && tr >= i;
     const el = document.createElement('div');
     el.className = 'tier ' + (got ? 'got' : ready ? 'ready' : 'lock') + (i % 10 === 0 ? ' big' : '') + (i === tr ? ' cur' : '');
-    el.innerHTML = `<div class="n">${got ? '✓' : i}</div><canvas></canvas><div class="nm">${it ? it.name : `+${r.n} étoiles`}<small>${it ? CATNAME[it.cat] + ' exclusif' + (i === 40 ? ' · LÉGENDAIRE' : i % 10 === 0 ? ' · grand palier' : '') : 'Pour la boutique de la Loge'}</small></div>` +
+    el.innerHTML = `<div class="n">${got ? '✓' : i}</div><canvas></canvas><div class="nm">${it ? it.name : `+${r.n} étoiles`}<small>${it ? CATNAME[it.cat] + ' exclusif' + (i === PASS_MAX ? ' · LÉGENDAIRE' : i % 10 === 0 ? ' · grand palier' : '') : 'Pour la boutique de la Loge'}</small></div>` +
       (ready ? `<button>Réclamer</button>` : got ? (it && PROF.eq[it.cat] !== it.id ? `<button class="wear" style="background:#9fe0ff;animation:none">Porter</button>` : `<span class="st">${it ? 'Porté ✓' : 'Reçu ✓'}</span>`) : `<span class="st">🔒 Palier ${i}</span>`);
     box.appendChild(el);
     const cv = el.querySelector('canvas');

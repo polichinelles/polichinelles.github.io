@@ -577,7 +577,7 @@ function renderBar() {
     const miss = it.price - PROF.wallet;
     wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
   } else if (it.pass) {
-    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass}</small></div>`;
+    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass > 1 ? Math.round(it.pass * 2.5) : it.pass}</small></div>`;
   } else {
     const a = ACH[it.ach], v = M.min(statVal(a.stat), a.goal);
     wdBar.innerHTML = `<div class="info">🔒 ${it.name}<small>Défi : ${a.text} (${v} / ${a.goal})</small><div class="prog"><i style="width:${v / a.goal * 100}%"></i></div></div>`;
