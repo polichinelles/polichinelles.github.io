@@ -706,7 +706,7 @@ const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- Le Trampoline : endless vertical bouncer ----
-let ZM = 1, VH = 600, plats = [], foes = [], picks = [], camY = 0, hiY = 0, y0 = 0, PL = null, holdL = null, holdR = null, keyDir = 0, lastY = 0, nextFoe = 0, stomps = 0, CW = 300;
+let ZM = 1, VH = 600, plats = [], foes = [], picks = [], camY = 0, hiY = 0, y0 = 0, PL = null, holdL = null, holdR = null, HOLDS = new Map(), keyDir = 0, lastY = 0, nextFoe = 0, stomps = 0, CW = 300;
 const PCOL = ['#d8402c', '#3070d0', '#2e9a4c', '#e6b830', '#8a4a9a'];
 function sc2(x, y) { return [(W - CW * ZM) / 2 + x * ZM, (y - camY) * ZM - T] }
 function climbed() { return M.max(0, (y0 - hiY) / 10) }
@@ -735,7 +735,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  ZM = LAND ? M.min(1, H / 560) : 1; VH = H / ZM; CW = M.min(W / ZM, 340); plats = []; foes = []; picks = []; stomps = 0; holdL = holdR = null; keyDir = 0;
+  ZM = LAND ? M.min(1, H / 560) : 1; VH = H / ZM; CW = M.min(W / ZM, 340); plats = []; foes = []; picks = []; stomps = 0; holdL = holdR = null; HOLDS.clear(); keyDir = 0;
   y0 = VH - 70; camY = 0; hiY = y0; lastY = y0; nextFoe = y0 - 900;
   PL = { x: CW / 2, y: y0, vx: 0, vy: -10.6, face: 1, sq: 0, balloon: 0, dead: false };
   plats.push({ x: CW / 2, y: y0, w: CW * .84, kind: 'ground', vx: 0, spring: false, broken: 0 });
@@ -2278,6 +2278,7 @@ function update() {
     playT++;
     if (ambK < 1) { ambK = M.min(1, ambK + 1 / 120); mixAmb() }
     if (actBanner > 0) actBanner--;
+    if (paused) { HOLDS.clear(); holdSync() }
     const p = PL, dir = (holdR !== null ? 1 : 0) - (holdL !== null ? 1 : 0) + keyDir;
     p.vx += (clampT(dir, -1, 1) * 4.4 - p.vx) * .18;
     if (dir) p.face = dir > 0 ? 1 : -1;
@@ -2382,7 +2383,7 @@ function render() {
   if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
   const ob = state === 'over' && stateT > 40 && !entryOpen;
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
-  const hz = IS_IPHONE && OPTS.vib && state === 'play' && !paused;
+  const hz = false;   // trampoline: long presses must not be eaten by the haptic switches
   if (hz !== hzEl.classList.contains('on')) hzEl.classList.toggle('on', hz);
   const ib = false;   // the menu page offers the install button
   if (ib !== installBtn.classList.contains('on')) installBtn.classList.toggle('on', ib);
@@ -2461,7 +2462,7 @@ function render() {
   if (state === 'over') {
     const k = M.min(1, stateT / 20);
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
-    const portrait = T > 80, oy = portrait ? -T + 112 : 84, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
+    const portrait = T > 80, oy = portrait ? -T + 112 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
     X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 214, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 138);
@@ -2479,9 +2480,19 @@ function render() {
 
 function clampT(v, a, b) { return v < a ? a : v > b ? b : v }
 function onKey() {}
-function onPointerDown(e) { if (state !== 'play') return; if (e.clientX / S < W / 2) holdL = e.pointerId; else holdR = e.pointerId }
-function tUp(e) { if (e.pointerId === holdL) holdL = null; if (e.pointerId === holdR) holdR = null }
-addEventListener('pointerup', tUp); addEventListener('pointercancel', tUp);
+// steering: keep a finger on the left or right half of the screen; sliding it across changes side.
+// The last finger put down wins. Touch events are used too, so a long press is never cancelled.
+function holdSet(id, x) { HOLDS.delete(id); HOLDS.set(id, x / S < W / 2 ? -1 : 1); holdSync() }
+function holdEnd(id) { HOLDS.delete(id); holdSync() }
+function holdSync() { const last = [...HOLDS.values()].pop() || 0; holdL = last < 0 ? 1 : null; holdR = last > 0 ? 1 : null }
+function onPointerDown(e) { if (e.pointerType !== 'touch') holdSet('p' + e.pointerId, e.clientX) }
+addEventListener('pointermove', e => { if (e.pointerType !== 'touch' && HOLDS.has('p' + e.pointerId)) { HOLDS.set('p' + e.pointerId, e.clientX / S < W / 2 ? -1 : 1); holdSync() } });
+addEventListener('pointerup', e => holdEnd('p' + e.pointerId));
+addEventListener('touchstart', e => { for (const t of e.changedTouches) holdSet('t' + t.identifier, t.clientX) }, { passive: true });
+addEventListener('touchmove', e => { for (const t of e.changedTouches) if (HOLDS.has('t' + t.identifier)) { HOLDS.set('t' + t.identifier, t.clientX / S < W / 2 ? -1 : 1); holdSync() } }, { passive: true });
+addEventListener('touchend', e => { for (const t of e.changedTouches) holdEnd('t' + t.identifier) }, { passive: true });
+addEventListener('touchcancel', e => { for (const t of e.changedTouches) holdEnd('t' + t.identifier) }, { passive: true });
+addEventListener('blur', () => { HOLDS.clear(); holdSync() });
 addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'q') keyDir = -1; else if (e.key === 'ArrowRight' || e.key === 'd') keyDir = 1 });
 addEventListener('keyup', e => { if ((e.key === 'ArrowLeft' || e.key === 'q') && keyDir < 0 || (e.key === 'ArrowRight' || e.key === 'd') && keyDir > 0) keyDir = 0 });
 function hsh(a, b) { const x = M.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - M.floor(x) }
