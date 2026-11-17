@@ -1,25 +1,20 @@
 // ===== Les Polichinelles : player level, daily challenges and the season pass (saved on the phone) =====
-const PASS_KEY = 'polichinelles_pass', PASS_MAX = 100, TIER_XP = 120;
+const PASS_KEY = 'polichinelles_pass', PASS_MAX = 100, TIER_XP = 300;
 const PASS_GAMES = { course: 'La Course', envol: 'L’Envol', trampo: 'Le Trampoline', tir: 'Le Tir Forain', tape: 'Tape-Polichinelle', pyramide: 'La Pyramide', jongleur: 'Le Jongleur', briques: 'Le Casse-Décor', farandole: 'La Farandole', traversee: 'La Traversée' };
 const PASS_DE = { course: 'de La Course', envol: 'de L’Envol', trampo: 'du Trampoline', tir: 'du Tir Forain', tape: 'de Tape-Polichinelle', pyramide: 'de La Pyramide', jongleur: 'du Jongleur', briques: 'du Casse-Décor', farandole: 'de La Farandole', traversee: 'de La Traversée' };
 const PASS_A = { course: 'à La Course', envol: 'à L’Envol', trampo: 'au Trampoline', tir: 'au Tir Forain', tape: 'à Tape-Polichinelle', pyramide: 'à La Pyramide', jongleur: 'au Jongleur', briques: 'au Casse-Décor', farandole: 'à La Farandole', traversee: 'à La Traversée' };
 const PASS_SCORE = { course: 800, envol: 150, trampo: 200, tir: 1500, tape: 300, pyramide: 120, jongleur: 250, briques: 500, farandole: 250, traversee: 300 };
-// ---- seasons: each one has its own 100 tiers; the player level never resets ----
-// (rewards are written on the old 40-tier scale and spread over 100 tiers below)
+// ---- seasons: each one has 100 tiers (40 + 60 bonus tiers); the player level never resets ----
 const SEASONS = [
   { id: 1, name: 'Le Grand Carnaval', icon: '🎭', start: [2026, 11, 16], days: 10,
-    items: { 2: 'h_carnaval', 3: 'p_baguette_pain', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 8: 'h_helice', 9: 'k_cravate_or', 10: 'c_carnaval', 11: 'p_poisson', 12: 't_glitter', 13: 'f_3d', 14: 'h_venise', 16: 'l_paillettes', 17: 'h_gateau', 18: 'f_goldmask', 19: 'c_tigre', 20: 'b_plumes', 21: 'p_canard', 22: 'c_paillettes', 23: 'h_theiere', 24: 'h_plumes', 26: 'p_goldfan', 27: 'c_pasteque', 28: 'b_cape_or', 29: 'h_nuage', 30: 'c_venise', 31: 't_bananes', 32: 'b_escargot', 33: 'c_minuit', 34: 'h_poulet', 35: 'h_bocal', 36: 'k_jabot_or', 37: 'p_poele', 38: 'h_licorne_or', 39: 'h_minime', 40: 'c_legende' },
+    items: { 2: 'h_carnaval', 3: 'p_baguette_pain', 4: 'l_carnaval', 5: 'f_carnaval', 7: 'p_serpentin', 8: 'h_helice', 9: 'k_cravate_or', 10: 'c_carnaval', 11: 'p_poisson', 12: 't_glitter', 13: 'f_3d', 14: 'h_venise', 16: 'l_paillettes', 17: 'h_gateau', 18: 'f_goldmask', 19: 'c_tigre', 20: 'b_plumes', 21: 'p_canard', 22: 'c_paillettes', 23: 'h_theiere', 24: 'h_plumes', 26: 'p_goldfan', 27: 'c_pasteque', 28: 'b_cape_or', 29: 'h_nuage', 30: 'c_venise', 31: 't_bananes', 32: 'b_escargot', 33: 'c_minuit', 34: 'h_poulet', 35: 'h_bocal', 36: 'k_jabot_or', 37: 'p_poele', 38: 'h_licorne_or', 39: 'h_minime', 40: 'c_legende', 42: 'c_s1_bal', 44: 'h_s1_rubis', 47: 'k_s1_noeud', 49: 'c_s1_nuit', 52: 'h_s1_mage', 54: 'c_s1_bonbon', 57: 'k_s1_cravate', 59: 'h_s1_grelots', 62: 'c_s1_flamme', 64: 'c_s1_paon', 67: 'h_s1_haut_or', 69: 'k_s1_echarpe', 72: 'c_s1_pierrot', 74: 'h_s1_capitaine', 77: 'c_s1_echiquier', 79: 'k_s1_bandit', 82: 'c_s1_reine', 84: 'h_s1_paon', 87: 'c_s1_zebre', 89: 'c_s1_tigre_blanc', 92: 'h_s1_arcenciel', 95: 'c_s1_sirene_or', 100: 'c_s1_diamant' },
     stars: { 1: 50, 6: 80, 15: 120, 25: 200 } },
   { id: 2, name: 'La Ferme', icon: '🐮', start: [2026, 11, 26], days: 10,
-    items: { 2: 'h_paille', 3: 'p_carotte', 4: 'l_bottes_vertes', 5: 'f_paille', 7: 't_plumes', 8: 'h_casquette', 9: 'k_cloche', 10: 'c_salopette', 11: 'p_mais', 12: 'f_groin', 13: 'h_tournesol', 14: 'c_carreaux', 16: 'p_fourche', 17: 'h_foin', 18: 'l_bottes_jaunes', 19: 'c_coccinelle', 20: 'b_moulin', 21: 'p_seau', 22: 'k_marguerites', 23: 'h_cochon', 24: 't_abeilles', 26: 'b_sac', 27: 'c_abeille', 28: 'h_nid', 29: 'f_boue', 30: 'c_epouvantail', 31: 'p_poussin', 32: 'l_salopette', 33: 'h_ruche', 34: 'b_poule', 35: 't_fleurs', 36: 'h_vache', 37: 'c_mouton', 38: 'h_citrouille', 39: 'p_arrosoir', 40: 'c_vache_leg' },
+    items: { 2: 'h_paille', 3: 'p_carotte', 4: 'l_bottes_vertes', 5: 'f_paille', 7: 't_plumes', 8: 'h_casquette', 9: 'k_cloche', 10: 'c_salopette', 11: 'p_mais', 12: 'f_groin', 13: 'h_tournesol', 14: 'c_carreaux', 16: 'p_fourche', 17: 'h_foin', 18: 'l_bottes_jaunes', 19: 'c_coccinelle', 20: 'b_moulin', 21: 'p_seau', 22: 'k_marguerites', 23: 'h_cochon', 24: 't_abeilles', 26: 'b_sac', 27: 'c_abeille', 28: 'h_nid', 29: 'f_boue', 30: 'c_epouvantail', 31: 'p_poussin', 32: 'l_salopette', 33: 'h_ruche', 34: 'b_poule', 35: 't_fleurs', 36: 'h_vache', 37: 'c_mouton', 38: 'h_citrouille', 39: 'p_arrosoir', 40: 'c_vache_leg', 42: 'c_s2_prairie', 44: 'h_s2_cowboy', 47: 'k_s2_bandana', 49: 'c_s2_pommier', 52: 'h_s2_berger', 54: 'c_s2_mouton_noir', 57: 'k_s2_ble', 59: 'h_s2_bonnet', 62: 'c_s2_reine', 64: 'c_s2_salopette', 67: 'h_s2_coq', 69: 'k_s2_ficelle', 72: 'c_s2_ble', 74: 'h_s2_melon', 77: 'c_s2_vache_brune', 79: 'k_s2_trefle', 82: 'c_s2_tournesol', 84: 'h_s2_poule', 87: 'c_s2_cochon', 89: 'h_s2_champs', 92: 'k_s2_rouge', 95: 'c_s2_epouvantail', 100: 'c_s2_emeraude' },
     stars: { 1: 50, 6: 80, 15: 120, 25: 200 } }
 ];
-const TIER100 = n => n <= 1 ? n : Math.round(n * 2.5);
-for (const se of SEASONS) {
-  se.items = Object.fromEntries(Object.entries(se.items).map(([k, v]) => [TIER100(+k), v]));
-  se.stars = Object.fromEntries(Object.entries(se.stars).map(([k, v]) => [TIER100(+k), v])); se.stars[50] = 250;
-}
-function starFill(n) { return n % 10 === 0 ? 100 : n % 5 === 0 ? 60 : 25 }
+const TIER100 = n => n <= 1 ? n : Math.round(n * 2.5);   // scale used for a few hours (100 tiers spread), undone below
+function starFill(n) { return n <= 40 ? 50 : n % 10 === 0 ? 150 : n % 5 === 0 ? 100 : 50 }
 function seasonStart(se) { return new Date(se.start[0], se.start[1] - 1, se.start[2]) }
 function seasonEnd(se) { const d = seasonStart(se); d.setDate(d.getDate() + se.days); return d }
 function currentSeason() { const now = new Date(); let cur = SEASONS[0]; for (const se of SEASONS) if (seasonStart(se) <= now) cur = se; return cur }
@@ -42,7 +37,11 @@ function loadPass() {
   if (p.claimed) { p.seasons[1] = { xp: p.xp, claimed: p.claimed }; delete p.claimed }   // first version of the pass
   return p;
 }
-function seasonOf(p, se = PASS_SEASON_OBJ) { const s = p.seasons[se.id] || (p.seasons[se.id] = { xp: 0, claimed: [], v: 2 }); if (!s.v) { s.claimed = [...new Set(s.claimed.map(TIER100))]; s.v = 2 } return s }
+function seasonOf(p, se = PASS_SEASON_OBJ) {
+  const s = p.seasons[se.id] || (p.seasons[se.id] = { xp: 0, claimed: [], v: 3 });
+  if (s.v === 2) { const inv = {}; for (let k = 1; k <= 40; k++) inv[TIER100(k)] = k; s.claimed = [...new Set(s.claimed.filter(n => n in inv).map(n => inv[n]))] }
+  s.v = 3; return s;
+}
 function passUnclaimed(p) { if (!PASS_SEASON_OBJ.items) return 0; const s = seasonOf(p), tr = tierInfo(s.xp).tier; let n = 0; for (let i = 1; i <= tr; i++) if (!s.claimed.includes(i)) n++; return n }
 function savePass(p) { try { localStorage.setItem(PASS_KEY, JSON.stringify(p)) } catch (e) {} }
 // rewards reached but not claimed in a finished season are sent to the Loge automatically

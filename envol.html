@@ -574,7 +574,7 @@ function renderBar() {
     const miss = it.price - PROF.wallet;
     wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
   } else if (it.pass) {
-    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass > 1 ? Math.round(it.pass * 2.5) : it.pass}</small></div>`;
+    wdBar.innerHTML = `<div class="info">🎟️ ${it.name}<small>Récompense du Programme, ${it.season ? 'saison La Ferme' : 'saison Le Grand Carnaval'}, palier ${it.pass}</small></div>`;
   } else {
     const a = ACH[it.ach], v = M.min(statVal(a.stat), a.goal);
     wdBar.innerHTML = `<div class="info">🔒 ${it.name}<small>Défi : ${a.text} (${v} / ${a.goal})</small><div class="prog"><i style="width:${v / a.goal * 100}%"></i></div></div>`;
@@ -856,7 +856,30 @@ const WARD = {
     { id: 'c_abeille', name: 'Abeille', pass: 27, season: 2, v: { stripes: ['#f2c230', '#1d1d24', '#f2c230'], sleeves: ['#1d1d24', '#f2c230'], trim: '#1d1d24', motif: 'abeille' } },
     { id: 'c_epouvantail', name: 'Épouvantail', pass: 30, season: 2, v: { stripes: ['#a8865a', '#6b5a3a', '#c8a870'], sleeves: ['#7a6a4a', '#a8865a'], trim: '#e6c35a', motif: 'patch' } },
     { id: 'c_mouton', name: 'Mouton', pass: 37, season: 2, v: { stripes: ['#f4f0e8', '#ffffff', '#d8d4cc'], sleeves: ['#f4f0e8', '#d8d4cc'], trim: '#1d1d24', motif: 'laine', belly: 1.25 } },
-    { id: 'c_vache_leg', name: 'La Vache légendaire', pass: 40, season: 2, v: { stripes: ['#f4f0e8', '#1d1d24', '#f4f0e8'], sleeves: ['#f4f0e8', '#1d1d24'], trim: '#1d1d24', cow: 1 } }
+    { id: 'c_vache_leg', name: 'La Vache légendaire', pass: 40, season: 2, v: { stripes: ['#f4f0e8', '#1d1d24', '#f4f0e8'], sleeves: ['#f4f0e8', '#1d1d24'], trim: '#1d1d24', cow: 1 } },
+    { id: 'c_s1_bal', name: 'Bal masqué', pass: 42, v: { stripes: ['#1d1d24', '#f2c230', '#d8402c'], sleeves: ['#1d1d24', '#f2c230'], trim: '#f2c230', motif: 'arlequin' } },
+    { id: 'c_s1_nuit', name: 'Nuit étoilée', pass: 49, v: { stripes: ['#1d2a6b', '#f2d27a', '#3a4a9b'], sleeves: ['#1d2a6b', '#f2d27a'], trim: '#f2d27a', motif: 'etoiles' } },
+    { id: 'c_s1_bonbon', name: 'Bonbon', pass: 54, v: { stripes: ['#f27ab0', '#fff3f8', '#9fe0ff'], sleeves: ['#f27ab0', '#9fe0ff'], trim: '#fff3f8', motif: 'pois' } },
+    { id: 'c_s1_flamme', name: 'Flamme', pass: 62, v: { stripes: ['#d8402c', '#f08a1c', '#f2c230'], sleeves: ['#f08a1c', '#d8402c'], trim: '#f2c230', motif: 'zigzag' } },
+    { id: 'c_s1_paon', name: 'Paon', pass: 64, v: { stripes: ['#2b6ab3', '#2e9a4c', '#f2c230'], sleeves: ['#2e9a4c', '#2b6ab3'], trim: '#f2c230', motif: 'ecailles' } },
+    { id: 'c_s1_pierrot', name: 'Pierrot lunaire', pass: 72, v: { stripes: ['#f4f0f8', '#5b2a86', '#c8c0e0'], sleeves: ['#f4f0f8', '#5b2a86'], trim: '#5b2a86', motif: 'lunes' } },
+    { id: 'c_s1_echiquier', name: 'Échiquier royal', pass: 77, v: { stripes: ['#1d1d24', '#f4f0e8', '#e6b830'], sleeves: ['#f4f0e8', '#1d1d24'], trim: '#e6b830', motif: 'damier' } },
+    { id: 'c_s1_reine', name: 'Cœur de reine', pass: 82, v: { stripes: ['#d8402c', '#fff0f0', '#f27ab0'], sleeves: ['#d8402c', '#fff0f0'], trim: '#f2c230', motif: 'coeurs' } },
+    { id: 'c_s1_zebre', name: 'Zèbre', pass: 87, v: { stripes: ['#f4f0e8', '#1d1d24', '#f4f0e8'], sleeves: ['#1d1d24', '#f4f0e8'], trim: '#1d1d24', motif: 'tigre' } },
+    { id: 'c_s1_tigre_blanc', name: 'Tigre blanc', pass: 89, v: { stripes: ['#f4f0f8', '#1d1d24', '#9fe0ff'], sleeves: ['#f4f0f8', '#1d1d24'], trim: '#9fe0ff', motif: 'tigre' } },
+    { id: 'c_s1_sirene_or', name: 'Sirène dorée', pass: 95, v: { stripes: ['#c99a2e', '#f2d27a', '#fff3c0'], sleeves: ['#f2d27a', '#c99a2e'], trim: '#fff3c0', motif: 'ecailles' } },
+    { id: 'c_s1_diamant', name: 'Polichinelle de diamant', pass: 100, v: { stripes: ['#bfe8ff', '#ffffff', '#9fe0ff'], sleeves: ['#bfe8ff', '#ffffff'], trim: '#ffffff', chrome: 'diamant' } },
+    { id: 'c_s2_prairie', name: 'Prairie', pass: 42, season: 2, v: { stripes: ['#2e9a4c', '#f2c230', '#8a5632'], sleeves: ['#2e9a4c', '#8a5632'], trim: '#f2c230', motif: 'carreaux' } },
+    { id: 'c_s2_pommier', name: 'Pommier', pass: 49, season: 2, v: { stripes: ['#2e9a4c', '#d8402c', '#f4f0e8'], sleeves: ['#2e9a4c', '#d8402c'], trim: '#f4f0e8', motif: 'pois' } },
+    { id: 'c_s2_mouton_noir', name: 'Mouton noir', pass: 54, season: 2, v: { stripes: ['#3a3440', '#6a6070', '#f4f0e8'], sleeves: ['#3a3440', '#6a6070'], trim: '#f4f0e8', motif: 'laine' } },
+    { id: 'c_s2_reine', name: 'Abeille reine', pass: 62, season: 2, v: { stripes: ['#f2c230', '#1d1d24', '#fff3c0'], sleeves: ['#1d1d24', '#f2c230'], trim: '#fff3c0', motif: 'abeille' } },
+    { id: 'c_s2_salopette', name: 'Salopette rouge', pass: 64, season: 2, v: { stripes: ['#d8402c', '#3070d0', '#f4f0e8'], sleeves: ['#3070d0', '#d8402c'], trim: '#f4f0e8', motif: 'salopette' } },
+    { id: 'c_s2_ble', name: 'Champ de blé', pass: 72, season: 2, v: { stripes: ['#f2c230', '#c99a2e', '#8a5632'], sleeves: ['#c99a2e', '#f2c230'], trim: '#8a5632', motif: 'rayures' } },
+    { id: 'c_s2_vache_brune', name: 'Vache brune', pass: 77, season: 2, v: { stripes: ['#8a5632', '#f4f0e8', '#f27ab0'], sleeves: ['#8a5632', '#f4f0e8'], trim: '#f27ab0', motif: 'patch' } },
+    { id: 'c_s2_tournesol', name: 'Tournesol', pass: 82, season: 2, v: { stripes: ['#f2c230', '#8a5632', '#2e9a4c'], sleeves: ['#f2c230', '#2e9a4c'], trim: '#8a5632', motif: 'etoiles' } },
+    { id: 'c_s2_cochon', name: 'Petit cochon', pass: 87, season: 2, v: { stripes: ['#f8b0c0', '#f27ab0', '#fff0f4'], sleeves: ['#f8b0c0', '#f27ab0'], trim: '#f27ab0', motif: 'coeurs' } },
+    { id: 'c_s2_epouvantail', name: 'Épouvantail doré', pass: 95, season: 2, v: { stripes: ['#c99a2e', '#8a5632', '#f2c230'], sleeves: ['#8a5632', '#c99a2e'], trim: '#f2c230', motif: 'patch' } },
+    { id: 'c_s2_emeraude', name: 'Polichinelle d’émeraude', pass: 100, season: 2, v: { stripes: ['#2e9a4c', '#ffffff', '#9fe0ff'], sleeves: ['#2e9a4c', '#ffffff'], trim: '#ffffff', chrome: 'emeraude' } }
   ] },
   hat: { label: 'Chapeau', items: [
     { id: 'h_classic', name: 'Rouge', free: 1, v: { hat: '#d8402c', knob: 'ball', pattern: 0 } },
@@ -915,7 +938,21 @@ const WARD = {
     { id: 'h_nid', name: 'Nid et poussin', pass: 28, season: 2, v: { hat: '#8a6a40', pattern: '#f2c230', knob: 'ball', hatShape: 'nid' } },
     { id: 'h_ruche', name: 'Ruche', pass: 33, season: 2, v: { hat: '#e6b830', pattern: '#c8902a', knob: 'ball', hatShape: 'ruche' } },
     { id: 'h_vache', name: 'Cornes de vache', pass: 36, season: 2, v: { hat: '#f4f0e8', pattern: '#1d1d24', knob: 'ball', hatShape: 'vache' } },
-    { id: 'h_citrouille', name: 'Citrouille', pass: 38, season: 2, v: { hat: '#f08a1c', pattern: '#2e7a3a', knob: 'ball', hatShape: 'citrouille' } }
+    { id: 'h_citrouille', name: 'Citrouille', pass: 38, season: 2, v: { hat: '#f08a1c', pattern: '#2e7a3a', knob: 'ball', hatShape: 'citrouille' } },
+    { id: 'h_s1_rubis', name: 'Couronne de rubis', pass: 44, v: { hat: '#d8304a', pattern: '#f2c230', knob: 'ball', hatShape: 'crown' } },
+    { id: 'h_s1_mage', name: 'Mage des étoiles', pass: 52, v: { hat: '#1d2a6b', pattern: '#f2d27a', knob: 'ball', hatShape: 'wizard' } },
+    { id: 'h_s1_grelots', name: 'Grelots d’or', pass: 59, v: { hat: '#f2c230', pattern: '#d8402c', knob: 'bell', hatShape: 'jester' } },
+    { id: 'h_s1_haut_or', name: 'Haut-de-forme doré', pass: 67, v: { hat: '#e6b830', pattern: 0, knob: 'ball', hatShape: 'tophat' } },
+    { id: 'h_s1_capitaine', name: 'Tricorne du capitaine', pass: 74, v: { hat: '#1d1d24', pattern: '#e6b830', knob: 'ball', hatShape: 'tricorn' } },
+    { id: 'h_s1_paon', name: 'Plume de paon', pass: 84, v: { hat: '#2bb3c0', pattern: '#2e9a4c', knob: 'ball', hatShape: 'plume' } },
+    { id: 'h_s1_arcenciel', name: 'Licorne arc-en-ciel', pass: 92, v: { hat: '#f27ab0', pattern: '#9fe0ff', knob: 'ball', hatShape: 'unicorn' } },
+    { id: 'h_s2_cowboy', name: 'Chapeau de rodéo', pass: 44, season: 2, v: { hat: '#8a5632', pattern: '#d8402c', knob: 'ball', hatShape: 'cowboy' } },
+    { id: 'h_s2_berger', name: 'Béret de berger', pass: 52, season: 2, v: { hat: '#2e9a4c', pattern: '#8a5632', knob: 'ball', hatShape: 'beret' } },
+    { id: 'h_s2_bonnet', name: 'Bonnet de la ferme', pass: 59, season: 2, v: { hat: '#f2c230', pattern: '#8a5632', knob: 'ball', hatShape: 'bonnet' } },
+    { id: 'h_s2_coq', name: 'Plumes de coq', pass: 67, season: 2, v: { hat: '#c8503a', pattern: '#2e9a4c', knob: 'ball', hatShape: 'plume' } },
+    { id: 'h_s2_melon', name: 'Melon du marché', pass: 74, season: 2, v: { hat: '#5a3418', pattern: '#2e9a4c', knob: 'ball', hatShape: 'melon' } },
+    { id: 'h_s2_poule', name: 'Poule rousse', pass: 84, season: 2, v: { hat: '#c8503a', pattern: '#f2c230', knob: 'ball', hatShape: 'poulet' } },
+    { id: 'h_s2_champs', name: 'Bouffon des champs', pass: 89, season: 2, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } }
   ] },
   collar: { label: 'Col', items: [
     { id: 'k_aucun', name: 'Aucun', free: 1, v: { collar: 'none' } },
@@ -940,7 +977,16 @@ const WARD = {
     { id: 'k_cravate_or', name: 'Cravate dorée', pass: 9, v: { collar: 'tie', collarColor: '#e6b830' } },
     { id: 'k_jabot_or', name: 'Médaille du Carnaval', pass: 36, v: { collar: 'medal', collarColor: '#8a4a9a' } },
     { id: 'k_cloche', name: 'Cloche de vache', pass: 9, season: 2, v: { collar: 'cowbell', collarColor: '#8a1f2a' } },
-    { id: 'k_marguerites', name: 'Collier de marguerites', pass: 22, season: 2, v: { collar: 'daisies' } }
+    { id: 'k_marguerites', name: 'Collier de marguerites', pass: 22, season: 2, v: { collar: 'daisies' } },
+    { id: 'k_s1_noeud', name: 'Nœud rose bonbon', pass: 47, v: { collar: 'bow', collarColor: '#f27ab0' } },
+    { id: 'k_s1_cravate', name: 'Cravate turquoise', pass: 57, v: { collar: 'tie', collarColor: '#2bb3c0' } },
+    { id: 'k_s1_echarpe', name: 'Écharpe violette', pass: 69, v: { collar: 'scarf', collarColor: '#8a4a9a' } },
+    { id: 'k_s1_bandit', name: 'Bandana de bandit', pass: 79, v: { collar: 'bandana', collarColor: '#1d1d24' } },
+    { id: 'k_s2_bandana', name: 'Bandana vert', pass: 47, season: 2, v: { collar: 'bandana', collarColor: '#2e9a4c' } },
+    { id: 'k_s2_ble', name: 'Écharpe de blé', pass: 57, season: 2, v: { collar: 'scarf', collarColor: '#c99a2e' } },
+    { id: 'k_s2_ficelle', name: 'Nœud de ficelle', pass: 69, season: 2, v: { collar: 'bow', collarColor: '#8a5632' } },
+    { id: 'k_s2_trefle', name: 'Cravate trèfle', pass: 79, season: 2, v: { collar: 'tie', collarColor: '#2e9a4c' } },
+    { id: 'k_s2_rouge', name: 'Bandana du fermier', pass: 92, season: 2, v: { collar: 'bandana', collarColor: '#d8402c' } }
   ] },
   legs: { label: 'Jambes', items: [
     { id: 'l_classic', name: 'Menthe', free: 1, v: { legs: '#9ed8c8', socks: '#2a62c8', shoes: '#6b4430' } },
@@ -1683,8 +1729,9 @@ function drawPoliChrome(pose, look) {
   CHROME_BUSY = true; try { withCtx(ga, () => drawPoli(pose, look)) } finally { CHROME_BUSY = false }
   gb.drawImage(chromeA, 0, 0);
   // gold colour, keeping the light and shadows of the drawing
-  gb.globalCompositeOperation = 'color'; gb.fillStyle = '#d9a520'; gb.fillRect(0, 0, cw, ch);
-  gb.globalCompositeOperation = 'multiply'; let g = gb.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, '#fff3b8'); g.addColorStop(.55, '#ffd256'); g.addColorStop(1, '#b87a08'); gb.fillStyle = g; gb.fillRect(0, 0, cw, ch);
+  const CHR = { diamant: ['#7cc8f0', '#ffffff', '#cdeeff', '#2a6a9a'], emeraude: ['#2e9a4c', '#e8ffe8', '#6ad88a', '#0e4a22'] }[look.chrome] || ['#d9a520', '#fff3b8', '#ffd256', '#b87a08'];
+  gb.globalCompositeOperation = 'color'; gb.fillStyle = CHR[0]; gb.fillRect(0, 0, cw, ch);
+  gb.globalCompositeOperation = 'multiply'; let g = gb.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, CHR[1]); g.addColorStop(.55, CHR[2]); g.addColorStop(1, CHR[3]); gb.fillStyle = g; gb.fillRect(0, 0, cw, ch);
   // chrome reflections
   gb.globalCompositeOperation = 'overlay'; gb.globalAlpha = .55; g = gb.createLinearGradient(0, 0, cw * .7, ch);
   for (const [s, c] of [[0, '#fff'], [.22, '#6a4a00'], [.4, '#fff'], [.52, '#7a5a10'], [.7, '#fff'], [.85, '#5a3a00'], [1, '#fff']]) g.addColorStop(s, c);

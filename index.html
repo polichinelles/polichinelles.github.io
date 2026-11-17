@@ -135,7 +135,7 @@
   <div class="champ" id="champ"><div class="k">👑 N°1 DU THÉÂTRE</div><img id="champImg" alt=""><div class="nm" id="champN">…</div><div class="pt" id="champP"></div></div>
 </div>
 
-<section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 100</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
+<section class="pass"><a href="pass.html"><div class="row1"><div class="lv"><small>NIVEAU</small><b id="mLv">1</b></div><div class="mid"><h3>🎟️ Programme de la saison</h3><div class="s" id="mSe"></div><div class="bar"><i id="mBar"></i></div></div><span class="go">Voir ▶<span class="dot" id="mDot" hidden></span></span></div><div class="leg" id="mLeg" hidden><div class="im" id="mLegIm"><img id="mLegImg" alt=""></div><div class="tx"><div class="k">🏆 LÉGENDAIRE · PALIER 40</div><div class="nm" id="mLegN"></div><div class="rest" id="mLegR"></div></div></div><ul id="mDaily"></ul></a></section>
 <section class="news"><div class="box"><h2>📣 Les nouvelles du Théâtre</h2><ul id="newsL"><li class="msg">Chargement…</li></ul></div></section>
 <section class="gen"><div class="box">
   <h2>🏆 Classement général</h2>
@@ -353,7 +353,7 @@ function showPass() {
     if (se.items && LEG[se.id]) {
       lg.hidden = false; const src = `shots/legend${se.id}.png`; document.getElementById('mLegImg').src = src; document.getElementById('mLegIm').style.setProperty('--m', `url(${src})`);
       document.getElementById('mLegN').textContent = LEG[se.id];
-      document.getElementById('mLegR').textContent = Ti.tier >= PASS_MAX ? (S.claimed.includes(PASS_MAX) ? 'Débloqué ! Il est dans ta Loge ✨' : 'Débloqué ! Va le réclamer ✨') : `Encore ${PASS_MAX - Ti.tier} paliers · ${seasonLeft(se)} pour l’obtenir`;
+      document.getElementById('mLegR').textContent = Ti.tier >= 40 ? (S.claimed.includes(40) ? 'Débloqué ! Il est dans ta Loge ✨' : 'Débloqué ! Va le réclamer ✨') : `Encore ${40 - Ti.tier} paliers · ${seasonLeft(se)} pour l’obtenir`;
     } else lg.hidden = true;
     const d = document.getElementById('mDot'); d.hidden = !un; d.textContent = un;
     if (p.settledMsg) window.__settled = 1;
