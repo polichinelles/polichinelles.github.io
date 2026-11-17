@@ -88,7 +88,7 @@ function streakState(p) {
 // called at the end of every game
 function passAward(game, earned, score) {
   const p = ensureDaily(loadPass()), before = levelInfo(p.xp).level;
-  let xp = 30 + earned * 6; const done = [];
+  let xp = 20 + earned * 3; const done = [];
   let streak = null;
   { const today = passToday(), y = new Date(); y.setDate(y.getDate() - 1); const st = p.streak || { last: null, n: 0 };
     if (st.last !== today) { st.n = st.last === dayStr(y) ? st.n + 1 : 1; st.last = today; const b = streakBonus(st.n); xp += b.xp; streak = { n: st.n, xp: b.xp, stars: b.stars } }
