@@ -115,6 +115,7 @@ function passAward(game, earned, score) {
   }
   if (!wk.bonus && wk.list.every(c => c.done)) { wk.bonus = true; weekItem = questDance(p) }
   p.xp += xp; const se = seasonOf(p), tb = tierInfo(se.xp).tier; se.xp += xp; savePass(p);
+  setTimeout(uploadLevel, 1500);
   return { xp, before, after: levelInfo(p.xp), done, tier: tierInfo(se.xp), tierUp: tierInfo(se.xp).tier > tb, streak, streakStars: streak ? streak.stars : 0, weekDone, weekStars, weekItem };
 }
 // ---- quests of the week (Monday to Sunday) ----
@@ -169,3 +170,16 @@ function drawXpLine(ox, y) {
   if (r.streak) txt(`🔥 ${r.streak.n} jour${r.streak.n > 1 ? 's' : ''} d’affilée : +${r.streak.xp} XP` + (r.streak.stars ? ` +${r.streak.stars} ⭐` : ''), ox, y - 16, 11, '#ffb060', 'center', false);
   if (up) { X.save(); X.globalAlpha = .75 + M.sin(t * .2) * .25; txt(`⬆ NIVEAU ${a.level} !`, ox, y - 184, 22, COL.yellow); X.restore() }
 }
+
+// ---- the player level is shown beside the name in the leaderboards ----
+function uploadLevel() {
+  try {
+    const name = localStorage.getItem('polichinelles_name'); if (!name) return;
+    const k = name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').slice(0, 32) || 'x';
+    const lv = levelInfo(loadPass().xp).level, mark = k + ':' + lv;
+    if (localStorage.getItem('polichinelles_lvl_up') === mark) return;
+    fetch(`https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app/levels/${k}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: String(lv) })
+      .then(r => { if (r.ok) localStorage.setItem('polichinelles_lvl_up', mark) }).catch(() => {});
+  } catch (e) {}
+}
+setTimeout(uploadLevel, 2500);

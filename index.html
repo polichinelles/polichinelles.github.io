@@ -81,6 +81,8 @@
   .gen .nm{flex:1;min-width:0;font-weight:700;white-space:normal;overflow-wrap:anywhere;line-height:1.15}
   .gen .nm small{display:block;font-size:11px;font-weight:400;letter-spacing:1px;margin-top:2px}
   .gen .gm{font-size:13px;letter-spacing:1px;flex:none}
+  .gen .nm .lv{margin-left:7px;font-size:11px;color:#fff;background:#3070d0;border-radius:8px;padding:1px 6px;vertical-align:2px}
+  .champ .lvc{display:inline-block;margin-top:2px;font-size:11px;color:#fff;background:#3070d0;border-radius:8px;padding:1px 7px}
   .gen .pt{font-weight:700;color:#ffe9a0;flex:none;font-variant-numeric:tabular-nums}
   .gen .msg{text-align:center;color:#c9c2d8;padding:16px;background:none}
   .gen details{padding:0 14px 12px;font-size:12px;color:#c9c2d8}
@@ -307,9 +309,17 @@ async function loadGeneral() {
   if (!rows.length) { list.innerHTML = '<li class="msg">Personne pour l’instant : joue pour entrer au classement !</li>'; document.getElementById('champN').textContent = 'Sois le premier !'; return }
   const medal = ['🥇', '🥈', '🥉'];
   let me = ''; try { me = norm(localStorage.getItem('polichinelles_name') || '') } catch (e) {}
-  list.innerHTML = rows.map((r, i) => `<li data-n="${esc(r.name)}" class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}<small class="gm">${r.games.join('')}</small></span><span class="pt">${r.pts} pts</span></li>`).join('');
+  list.innerHTML = rows.map((r, i) => `<li data-n="${esc(r.name)}" class="${i === 0 ? 'r1' : ''}" ${norm(r.name) === me ? 'style="outline:1px solid #e6b830"' : ''}><span class="rk">${medal[i] || i + 1}</span><img class="av" alt=""><span class="nm">${esc(r.name)}<b class="lv" data-k="${nameKey(r.name)}" hidden></b><small class="gm">${r.games.join('')}</small></span><span class="pt">${r.pts} pts</span></li>`).join('');
   document.getElementById('champN').textContent = rows[0].name; document.getElementById('champP').textContent = `${rows[0].pts} points · tous les jeux`;
-  showSkins(rows);
+  showSkins(rows); showLevels(rows);
+}
+async function showLevels(rows) {
+  let cache = {}; try { cache = JSON.parse(localStorage.getItem('polichinelles_genlv')) || {} } catch (e) {}
+  const fresh = cache.t && Date.now() - cache.t < 180000 ? cache.v || {} : {};
+  await Promise.all(rows.map(async r => { const k = nameKey(r.name); if (k in fresh) return; try { const q = await fetch(`${RTDB}/levels/${k}.json`); fresh[k] = q.ok ? await q.json() : null } catch (e) { fresh[k] = (cache.v || {})[k] || null } }));
+  try { localStorage.setItem('polichinelles_genlv', JSON.stringify({ t: cache.t && Date.now() - cache.t < 180000 ? cache.t : Date.now(), v: fresh })) } catch (e) {}
+  document.querySelectorAll('#genList .lv').forEach(el => { const v = fresh[el.dataset.k]; if (v) { el.textContent = 'Niv. ' + v; el.hidden = false } });
+  const v0 = fresh[nameKey(rows[0].name)], cp = document.getElementById('champP'); if (v0 && !cp.dataset.lv) { cp.dataset.lv = 1; cp.insertAdjacentHTML('afterend', `<div class="lvc">Niveau ${v0}</div>`) }
 }
 loadGeneral();
 
