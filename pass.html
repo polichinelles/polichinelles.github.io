@@ -137,6 +137,15 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #quitP .b{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 #quitP button{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:14px;padding:11px 6px;cursor:pointer}
 #quitP .no{background:#2e9a4c;color:#fff}#quitP .yes{background:#d8402c;color:#fff}
+#pauseBtn{position:fixed;left:calc(122px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;width:48px;height:48px;border-radius:50%;border:2px solid #e6b830;background:rgba(28,24,56,.82);color:#fff;font:700 18px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent}
+#pauseBtn[hidden]{display:none}#pauseBtn:active{transform:scale(.92)}
+#pauseBtn i{display:block;width:5px;height:17px;background:#fff;border-radius:2px;margin:0 2.5px}
+#pauseP{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.7);z-index:8}
+#pauseP.on{display:flex}
+#pauseP .p{background:#1c1838;border:3px solid #e6b830;border-radius:18px;padding:20px 16px;width:min(300px,86vw);text-align:center;color:#fff;font-family:Georgia,serif;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+#pauseP h3{margin:0 0 4px;color:#e6b830;font-size:26px}#pauseP p{margin:0 0 16px;font-size:15px;color:#c9c2d8}
+#pauseP button{display:block;width:100%;font:inherit;font-weight:700;font-size:17px;border:0;border-radius:14px;padding:12px 6px;margin-top:10px;cursor:pointer}
+#pauseP .go{background:#2e9a4c;color:#fff}#pauseP .out{background:#d8402c;color:#fff}
 #toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9;background:#1c1838;border:2px solid #e6b830;color:#fff;border-radius:14px;padding:10px 16px;font:600 15px Georgia,serif;box-shadow:0 6px 18px rgba(0,0,0,.5);transition:transform .35s;pointer-events:none;max-width:86vw;text-align:center}
 #toast.on{transform:translate(-50%,0)}
 #toast b{color:#e6b830}
@@ -193,6 +202,8 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 </div></div>
 <div id="hz" aria-hidden="true"><label class="l"><input type="checkbox" switch tabindex="-1"></label><label class="r"><input type="checkbox" switch tabindex="-1"></label></div>
 <a id="menuBtn" href="./#jeux" aria-label="Quitter le jeu" title="Quitter le jeu">✕</a>
+<button id="pauseBtn" aria-label="Pause" title="Pause" hidden><i></i><i></i></button>
+<div id="pauseP"><div class="p"><h3>⏸ Pause</h3><p></p><button class="go">▶ Reprendre</button><button class="out">✕ Quitter le jeu</button></div></div>
 <div id="quitP"><div class="p"><h3>Quitter la partie ?</h3><p>Tu retournes au choix des jeux. Cette partie ne sera pas comptée.</p><div class="b"><button class="no">Continuer</button><button class="yes">Quitter</button></div></div></div>
 <div id="toast"></div>
 <button id="setBtn" aria-label="Réglages" title="Réglages">⚙️</button>
@@ -2377,12 +2388,27 @@ function quitResume() { quitP.classList.remove('on'); if (paused && !lbEl.classL
 quitP.querySelector('.no').onclick = quitResume;
 quitP.querySelector('.yes').onclick = () => { location.href = './#jeux' };
 quitP.addEventListener('click', e => { if (e.target === quitP) quitResume() });
+// ---------- pause button ----------
+const pauseBtn = document.getElementById('pauseBtn'), pauseP = document.getElementById('pauseP');
+function pauseGame() {
+  if (state !== 'play') return;
+  try { if (!paused) { paused = true; try { P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false; P.duck = false } catch (e2) {} } } catch (e3) {}
+  pauseP.querySelector('p').textContent = `Score : ${score}`; pauseP.classList.add('on');
+}
+function pauseResume() { pauseP.classList.remove('on'); if (paused && !lbEl.classList.contains('on')) { paused = false; resumeT = 90 } }
+pauseBtn.addEventListener('click', e => { e.preventDefault(); pauseGame() });
+pauseP.querySelector('.go').onclick = pauseResume;
+pauseP.querySelector('.out').onclick = () => { location.href = './#jeux' };
+for (const el of [pauseBtn, pauseP]) for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) el.addEventListener(ev, e => e.stopPropagation());
+addEventListener('keydown', e => { if (e.key === 'p' || e.key === 'Escape') { if (pauseP.classList.contains('on')) pauseResume(); else if (state === 'play' && !paused) pauseGame() } });
+
 for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) quitP.addEventListener(ev, e => e.stopPropagation());
 
 const hzEl = document.getElementById('hz');
 function render() {
   const bs = state === 'title' || (state === 'over' && stateT > 30) ? 'show' : 'hide';
   { const mv = bs === 'show' || state === 'play'; if (menuBtn.classList.contains('hide') === mv) menuBtn.classList.toggle('hide', !mv) }
+  { const pv = state === 'play'; if (pauseBtn.hidden === pv) pauseBtn.hidden = !pv }
   if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
   const ob = state === 'over' && stateT > 40 && !entryOpen;
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
