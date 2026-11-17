@@ -2279,9 +2279,10 @@ function update() {
     if (ambK < 1) { ambK = M.min(1, ambK + 1 / 120); mixAmb() }
     if (actBanner > 0) actBanner--;
     if (paused) { HOLDS.clear(); holdSync() }
-    const p = PL, dir = (holdR !== null ? 1 : 0) - (holdL !== null ? 1 : 0) + keyDir;
-    p.vx += (clampT(dir, -1, 1) * 4.4 - p.vx) * .18;
-    if (dir) p.face = dir > 0 ? 1 : -1;
+    const p = PL;
+    if (holdL !== null) { const tx = clampT(holdL, 6, CW - 6), want = clampT((tx - p.x) * .22, -6.5, 6.5); p.vx += (want - p.vx) * .4 }
+    else p.vx += (clampT(keyDir, -1, 1) * 4.4 - p.vx) * .18;
+    if (M.abs(p.vx) > .4) p.face = p.vx > 0 ? 1 : -1;
     p.x += p.vx; if (p.x < -10) p.x += CW + 20; else if (p.x > CW + 10) p.x -= CW + 20;
     const py = p.y;
     if (p.balloon > 0) { p.balloon--; p.vy = -7.5; if (p.balloon === 0) p.vy = -6 } else p.vy = M.min(11, p.vy + .32);
@@ -2383,7 +2384,7 @@ function render() {
   if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
   const ob = state === 'over' && stateT > 40 && !entryOpen;
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
-  const hz = false;   // trampoline: long presses must not be eaten by the haptic switches
+  const hz = false;   // trampoline: the finger is followed, the haptic switches would eat the touches
   if (hz !== hzEl.classList.contains('on')) hzEl.classList.toggle('on', hz);
   const ib = false;   // the menu page offers the install button
   if (ib !== installBtn.classList.contains('on')) installBtn.classList.toggle('on', ib);
@@ -2442,7 +2443,7 @@ function render() {
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('Le Trampoline', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Garde le doigt à gauche ou à droite pour te diriger', mx, 166, 13, '#ddd', 'center', false);
+      txt('Le polichinelle suit ton doigt : glisse-le où tu veux', mx, 166, 13, '#ddd', 'center', false);
       txt('Rebondis toujours plus haut · gare aux chauves-souris !', mx, 184, 13, '#ddd', 'center', false);
       txt('🎈 Ballon = envol · ressorts = super saut', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
@@ -2453,7 +2454,7 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 330 ? 22 : W < 400 ? 26 : 34, COL.yellow);
     txt('Le Trampoline', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Garde le doigt à gauche ou à droite pour te diriger', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Le polichinelle suit ton doigt : glisse-le où tu veux', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     txt('Rebondis toujours plus haut · gare aux chauves-souris !', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     if (T > 80) txt('🎈 Ballon = envol · ressorts = super saut', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
@@ -2480,16 +2481,16 @@ function render() {
 
 function clampT(v, a, b) { return v < a ? a : v > b ? b : v }
 function onKey() {}
-// steering: keep a finger on the left or right half of the screen; sliding it across changes side.
-// The last finger put down wins. Touch events are used too, so a long press is never cancelled.
-function holdSet(id, x) { HOLDS.delete(id); HOLDS.set(id, x / S < W / 2 ? -1 : 1); holdSync() }
+// steering: the polichinelle follows the finger (its last position on screen, converted to the stage)
+function fingerX(cx) { return (cx / S - (W - CW * ZM) / 2) / ZM }
+function holdSet(id, x) { HOLDS.delete(id); HOLDS.set(id, fingerX(x)); holdSync() }
 function holdEnd(id) { HOLDS.delete(id); holdSync() }
-function holdSync() { const last = [...HOLDS.values()].pop() || 0; holdL = last < 0 ? 1 : null; holdR = last > 0 ? 1 : null }
+function holdSync() { const v = [...HOLDS.values()]; holdL = v.length ? v[v.length - 1] : null; holdR = null }
 function onPointerDown(e) { if (e.pointerType !== 'touch') holdSet('p' + e.pointerId, e.clientX) }
-addEventListener('pointermove', e => { if (e.pointerType !== 'touch' && HOLDS.has('p' + e.pointerId)) { HOLDS.set('p' + e.pointerId, e.clientX / S < W / 2 ? -1 : 1); holdSync() } });
+addEventListener('pointermove', e => { if (e.pointerType !== 'touch' && HOLDS.has('p' + e.pointerId)) { HOLDS.set('p' + e.pointerId, fingerX(e.clientX)); holdSync() } });
 addEventListener('pointerup', e => holdEnd('p' + e.pointerId));
 addEventListener('touchstart', e => { for (const t of e.changedTouches) holdSet('t' + t.identifier, t.clientX) }, { passive: true });
-addEventListener('touchmove', e => { for (const t of e.changedTouches) if (HOLDS.has('t' + t.identifier)) { HOLDS.set('t' + t.identifier, t.clientX / S < W / 2 ? -1 : 1); holdSync() } }, { passive: true });
+addEventListener('touchmove', e => { for (const t of e.changedTouches) if (HOLDS.has('t' + t.identifier)) { HOLDS.set('t' + t.identifier, fingerX(t.clientX)); holdSync() } }, { passive: true });
 addEventListener('touchend', e => { for (const t of e.changedTouches) holdEnd('t' + t.identifier) }, { passive: true });
 addEventListener('touchcancel', e => { for (const t of e.changedTouches) holdEnd('t' + t.identifier) }, { passive: true });
 addEventListener('blur', () => { HOLDS.clear(); holdSync() });
@@ -2680,10 +2681,7 @@ function drawGame() {
 function drawHud() {
   X.save(); X.translate(0, -T);
   txt(M.floor(climbed()) + ' m', W / 2, LAND ? 40 : (T > 60 ? 70 : 60), 26, '#fff');
-  X.globalAlpha = .4;
-  const by = H - 40;
-  circ(holdL !== null || keyDir < 0 ? '#ffe680' : '#1c1838', 40, by, 26); circ(holdR !== null || keyDir > 0 ? '#ffe680' : '#1c1838', W - 40, by, 26);
-  X.globalAlpha = .9; txt('◀', 40, by, 20, '#fff'); txt('▶', W - 40, by, 20, '#fff');
+  if (holdL !== null && state === 'play') { const fx = (W - CW * ZM) / 2 + clampT(holdL, 6, CW - 6) * ZM, by = H - 34; X.globalAlpha = .55; X.strokeStyle = '#ffe680'; X.lineWidth = 3; X.beginPath(); X.arc(fx, by, 16, 0, 6.29); X.stroke(); X.globalAlpha = .35; circ('#ffe680', fx, by, 9) }
   X.restore();
 }
 
