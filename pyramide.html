@@ -128,6 +128,14 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
 #hz .l{display:none}#hz .r{left:0;width:100%}
 #menuBtn{position:fixed;left:calc(66px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));z-index:4;width:48px;height:48px;border-radius:50%;border:2px solid #e6b830;background:rgba(28,24,56,.82);font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 3px 10px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent}
 #menuBtn.hide{display:none}#menuBtn:active{transform:scale(.92)}
+#menuBtn{color:#fff;font-weight:700;font-size:22px;font-family:system-ui,sans-serif}
+#quitP{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,8,24,.65);z-index:8}
+#quitP.on{display:flex}
+#quitP .p{background:#1c1838;border:3px solid #e6b830;border-radius:18px;padding:18px 16px;width:min(300px,86vw);text-align:center;color:#fff;font-family:Georgia,serif;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+#quitP h3{margin:0 0 6px;color:#e6b830;font-size:21px}#quitP p{margin:0 0 14px;font-size:14px;color:#c9c2d8}
+#quitP .b{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#quitP button{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:14px;padding:11px 6px;cursor:pointer}
+#quitP .no{background:#2e9a4c;color:#fff}#quitP .yes{background:#d8402c;color:#fff}
 #toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:9;background:#1c1838;border:2px solid #e6b830;color:#fff;border-radius:14px;padding:10px 16px;font:600 15px Georgia,serif;box-shadow:0 6px 18px rgba(0,0,0,.5);transition:transform .35s;pointer-events:none;max-width:86vw;text-align:center}
 #toast.on{transform:translate(-50%,0)}
 #toast b{color:#e6b830}
@@ -152,7 +160,8 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
   <footer id="wdBar"></footer>
 </div></div>
 <div id="hz" aria-hidden="true"><label class="l"><input type="checkbox" switch tabindex="-1"></label><label class="r"><input type="checkbox" switch tabindex="-1"></label></div>
-<a id="menuBtn" href="./" aria-label="Retour au menu des jeux" title="Menu des jeux">🎪</a>
+<a id="menuBtn" href="./#jeux" aria-label="Quitter le jeu" title="Quitter le jeu">✕</a>
+<div id="quitP"><div class="p"><h3>Quitter la partie ?</h3><p>Tu retournes au choix des jeux. Cette partie ne sera pas comptée.</p><div class="b"><button class="no">Continuer</button><button class="yes">Quitter</button></div></div></div>
 <div id="toast"></div>
 <button id="setBtn" aria-label="Réglages" title="Réglages">⚙️</button>
 <div id="setP" role="dialog" aria-modal="true"><div class="box"><h2>⚙️ Réglages</h2>
@@ -2300,10 +2309,25 @@ function gameOver() {
 let lastBtnState = '';
 const menuBtn = document.getElementById('menuBtn');
 for (const ev of ['pointerdown', 'pointerup']) menuBtn.addEventListener(ev, e => e.stopPropagation());
+// ---------- the cross: leave the game and go back to the games of the theatre ----------
+const quitP = document.getElementById('quitP');
+menuBtn.addEventListener('click', e => {
+  if (state !== 'play') return;   // title and game over: the link goes straight to the games
+  e.preventDefault();
+  try { if (!paused) { paused = true; try { P.hold = false; duckPointers.clear(); jumpPointers.clear(); keyDuck = false; P.duck = false } catch (e2) {} } } catch (e3) {}
+  quitP.classList.add('on');
+});
+function quitResume() { quitP.classList.remove('on'); if (paused && !lbEl.classList.contains('on')) { paused = false; resumeT = 90 } }
+quitP.querySelector('.no').onclick = quitResume;
+quitP.querySelector('.yes').onclick = () => { location.href = './#jeux' };
+quitP.addEventListener('click', e => { if (e.target === quitP) quitResume() });
+for (const ev of ['pointerdown', 'pointerup', 'keydown', 'keyup']) quitP.addEventListener(ev, e => e.stopPropagation());
+
 const hzEl = document.getElementById('hz');
 function render() {
   const bs = state === 'title' || (state === 'over' && stateT > 30) ? 'show' : 'hide';
-  if (bs !== lastBtnState) { menuBtn.classList.toggle('hide', bs === 'hide'); wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
+  { const mv = bs === 'show' || state === 'play'; if (menuBtn.classList.contains('hide') === mv) menuBtn.classList.toggle('hide', !mv) }
+  if (bs !== lastBtnState) { wdBtn.hidden = bs === 'hide'; setBtn.hidden = bs === 'hide'; if (bs === 'hide') setP.classList.remove('on'); lastBtnState = bs; if (bs === 'hide' && wdEl.classList.contains('on')) closeWd() }
   const ob = state === 'over' && stateT > 40 && !entryOpen;
   if (ob !== overBtns.classList.contains('on')) overBtns.classList.toggle('on', ob);
   const hz = IS_IPHONE && OPTS.vib && state === 'play' && !paused;
@@ -2385,7 +2409,7 @@ function render() {
   if (state === 'over') {
     const k = M.min(1, stateT / 20);
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
-    const portrait = T > 80, oy = portrait ? -T + 130 : 110, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
+    const portrait = T > 80, oy = portrait ? -T + 112 : 84, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
     X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 214, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 138);
@@ -2394,7 +2418,7 @@ function render() {
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
     else txt('Ton record : ' + best, ox, oy + 70, 16, '#ddd');
-    if (portrait) drawBoard(W / 2, G + 50, 7, false); else drawBoard(W - 110, 132, 5, false);
+    if (portrait) { const by = oy + 192, room = H - T - 92 - by; drawBoard(W / 2, by, M.max(3, M.min(10, M.floor((room - 34) / 19))), false) } else drawBoard(W - 110, 132, 5, false);
 
   }
 }
