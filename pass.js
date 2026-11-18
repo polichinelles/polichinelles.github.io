@@ -91,7 +91,7 @@ function passAward(game, earned, score) {
   let xp = 20 + earned * 3; const done = [];
   let streak = null;
   { const today = passToday(), y = new Date(); y.setDate(y.getDate() - 1); const st = p.streak || { last: null, n: 0 };
-    if (st.last !== today) { st.n = st.last === dayStr(y) ? st.n + 1 : 1; st.last = today; const b = streakBonus(st.n); xp += b.xp; streak = { n: st.n, xp: b.xp, stars: b.stars } }
+    if (st.last !== today) { if (st.last !== dayStr(y) && st.n > 0) p.streakLost = { n: st.n, last: st.last, day: today }; st.n = st.last === dayStr(y) ? st.n + 1 : 1; st.last = today; const b = streakBonus(st.n); xp += b.xp; streak = { n: st.n, xp: b.xp, stars: b.stars } }
     p.streak = st }
   if (!p.gamesDay.includes(game)) p.gamesDay.push(game);
   for (const c of p.daily) {
@@ -142,8 +142,33 @@ const WHEEL = [
   { label: '100 ⭐', stars: 100, w: 5, col: '#2bb3c0' }, { label: 'JACKPOT', xp: 500, stars: 50, w: 4, col: '#f27ab0' }
 ];
 function wheelReady(p = loadPass()) { return p.wheelDay !== passToday() }
+// extra spins paid with stars: 2nd spin 100 ★, 3rd spin 200 ★, then come back tomorrow
+const WHEEL_EXTRA = [100, 200];
+function wheelExtraCost(p = loadPass()) { if (wheelReady(p)) return 0; const n = p.wheelExtra && p.wheelExtra.day === passToday() ? p.wheelExtra.n : 0; return n < WHEEL_EXTRA.length ? WHEEL_EXTRA[n] : null }
+function walletGet() { try { return (JSON.parse(localStorage.getItem('polichinelles_loge')) || {}).wallet || 0 } catch (e) { return 0 } }
+function walletPay(n) {
+  let loge; try { loge = JSON.parse(localStorage.getItem('polichinelles_loge')) } catch (e) {}
+  if (!loge || (loge.wallet || 0) < n) return false;
+  loge.wallet -= n; try { localStorage.setItem('polichinelles_loge', JSON.stringify(loge)) } catch (e) { return false } return true;
+}
+// a series of days broken by one forgotten day can be saved for 80 ★
+const STREAK_SAVE = 80;
+function streakRescue(p = loadPass()) {
+  const y2 = new Date(); y2.setDate(y2.getDate() - 2); const d2 = dayStr(y2), today = passToday(), st = p.streak || {};
+  if (p.rescueDay === today) return null;
+  if (st.n > 0 && st.last === d2) return { n: st.n, cost: STREAK_SAVE };
+  if (p.streakLost && p.streakLost.day === today && p.streakLost.last === d2 && st.last === today && st.n === 1) return { n: p.streakLost.n, cost: STREAK_SAVE };
+  return null;
+}
+function streakSave() {
+  const p = loadPass(), r = streakRescue(p); if (!r || !walletPay(r.cost)) return false;
+  const y = new Date(); y.setDate(y.getDate() - 1); const today = passToday();
+  if (p.streak.last === today) p.streak.n = p.streakLost.n + 1; else p.streak.last = dayStr(y);
+  delete p.streakLost; p.rescueDay = today; savePass(p); return true;
+}
 function spinWheel() {
-  const p = loadPass(); if (!wheelReady(p)) return null;
+  const p = loadPass(), free = wheelReady(p);
+  if (!free) { const c = wheelExtraCost(p); if (c === null || !walletPay(c)) return null; const today = passToday(); p.wheelExtra = { day: today, n: (p.wheelExtra && p.wheelExtra.day === today ? p.wheelExtra.n : 0) + 1 } }
   let r = Math.random() * WHEEL.reduce((a, s) => a + s.w, 0), i = 0; while (r >= WHEEL[i].w) { r -= WHEEL[i].w; i++ }
   const seg = WHEEL[i], got = { i, xp: seg.xp || 0, stars: seg.stars || 0, item: null };
   let loge; try { loge = JSON.parse(localStorage.getItem('polichinelles_loge')) } catch (e) {}

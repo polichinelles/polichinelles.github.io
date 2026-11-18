@@ -378,7 +378,7 @@ showPass(); addEventListener('pageshow', showPass);
 // ---------- buttons of the wheel and the challenges ----------
 function funDots() {
   try { document.getElementById('roueDot').hidden = !wheelReady() } catch (e) {}
-  try { const p = ensureDaily(loadPass()); const n = p.daily.filter(c => !c.done).length + weekQuests(p).list.filter(c => !c.done).length; const d = document.getElementById('defisDot'); d.hidden = !n; d.textContent = n } catch (e) {}
+  try { const p = ensureDaily(loadPass()); const n = p.daily.filter(c => !c.done).length + weekQuests(p).list.filter(c => !c.done).length, sv = streakRescue(p); const d = document.getElementById('defisDot'); d.hidden = !(n || sv); d.textContent = sv ? '🔥' : n } catch (e) {}
 }
 funDots(); addEventListener('pageshow', funDots);
 

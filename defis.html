@@ -43,7 +43,7 @@
 <h1>🎯 Les défis</h1>
 <div class="sub">Chaque partie, dans tous les jeux, fait avancer tes défis</div>
 <div class="wrap">
-<div class="card"><h2>🔥 Série de jours</h2><div class="s" id="skS"></div><div class="days" id="skD"></div></div>
+<div class="card"><h2>🔥 Série de jours</h2><div class="s" id="skS"></div><div id="skR" hidden style="margin:4px 0 10px;padding:10px 12px;border-radius:12px;background:rgba(216,64,44,.22);border:2px solid #ff8070;font-size:14px"></div><div class="days" id="skD"></div></div>
 <div class="card"><h2>🗓️ Défis du jour</h2><div class="s">+150 XP chacun · nouveaux chaque jour · <span id="dL"></span></div><ul id="dList"></ul></div>
 <div class="card"><h2>📅 Quêtes de la semaine</h2><div class="s" id="wkS"></div><ul id="wkL"></ul><div class="bonus" id="wkB"></div></div>
 <a class="go" href="./#jeux">🎮 Jouer</a>
@@ -56,7 +56,11 @@ const row = (c, ok, sub) => `<li class="${c.done ? 'done' : ''}"><span class="i"
 function render() {
   try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
   const p = ensureDaily(loadPass()), wk = weekQuests(p); savePass(p);
-  const sk = streakState(p), nb = streakBonus(sk.next);
+  const R = streakRescue(p), rb = document.getElementById('skR');
+  if (R) { const w = walletGet(); rb.hidden = false; rb.innerHTML = `💔 Tu as oublié de jouer hier : ta série de <b>${R.n} jour${R.n > 1 ? 's' : ''}</b> s’est arrêtée.<br><button id="skSave" ${w < R.cost ? 'disabled' : ''} style="margin-top:8px;font:700 15px Georgia,serif;border:0;border-radius:12px;padding:9px 16px;background:${w < R.cost ? '#5a5470' : '#f2c230'};color:#3a1a0a;cursor:pointer">🔥 Sauver ma série · ${R.cost} ⭐</button>${w < R.cost ? `<div style="font-size:12px;margin-top:4px;color:#ffd0c8">Il te faut ${R.cost} ⭐ (tu en as ${w})</div>` : ''}`;
+    const bt = document.getElementById('skSave'); if (bt) bt.onclick = () => { if (streakSave()) { if (navigator.vibrate) try { navigator.vibrate(30) } catch (e) {} render() } } }
+  else rb.hidden = true;
+  const sk = streakState(loadPass()), nb = streakBonus(sk.next);
   document.getElementById('skS').innerHTML = sk.doneToday ? `<b style="color:#ffb060">${sk.n} jour${sk.n > 1 ? 's' : ''} d’affilée !</b> Reviens demain : +${nb.xp} XP${nb.stars ? ' +' + nb.stars + ' ⭐' : ''}`
     : `${sk.n ? `<b style="color:#ffb060">${sk.n} jour${sk.n > 1 ? 's' : ''} d’affilée</b> · ` : ''}Joue une partie aujourd’hui : +${nb.xp} XP${nb.stars ? ' +' + nb.stars + ' ⭐' : ''}`;
   const base = sk.doneToday ? sk.n : sk.n + 1, start = Math.floor((base - 1) / 7) * 7;
