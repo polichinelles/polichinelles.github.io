@@ -1010,7 +1010,15 @@ const WARD = {
     { id: 'h_s2_champs', name: 'Bouffon des champs', pass: 89, season: 2, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } },
     { id: 'h_roue_jackpot', name: 'Haut-de-forme Jackpot', wheel: 1, v: { hat: '#d8402c', pattern: '#f2c230', knob: 'ball', hatShape: 'tophat' } },
     { id: 'h_roue_croupier', name: 'Visière du croupier', wheel: 1, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'ball', hatShape: 'casquette' } },
-    { id: 'h_roue_chance', name: 'Grelots de la chance', wheel: 1, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } }
+    { id: 'h_roue_chance', name: 'Grelots de la chance', wheel: 1, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } },
+    { id: 'h_roue_cone', name: 'Cône de chantier', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'cone' } },
+    { id: 'h_roue_pizza', name: 'Part de pizza', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'pizza' } },
+    { id: 'h_roue_canard', name: 'Canard de bain géant', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'canard' } },
+    { id: 'h_roue_ovni', name: 'Soucoupe volante', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'ovni' } },
+    { id: 'h_roue_ventouse', name: 'Ventouse', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'ventouse' } },
+    { id: 'h_roue_oeuf', name: 'Œuf au plat', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'oeuf' } },
+    { id: 'h_roue_requin', name: 'Requin affamé', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'requin' } },
+    { id: 'h_roue_burger', name: 'Burger géant', wheel: 1, v: { hat: '#d8402c', pattern: 0, knob: 'ball', hatShape: 'burger' } }
   ] },
   collar: { label: 'Col', items: [
     { id: 'k_aucun', name: 'Aucun', free: 1, v: { collar: 'none' } },
@@ -1097,7 +1105,11 @@ const WARD = {
     { id: 'f_3d', name: 'Lunettes 3D', pass: 13, v: { face: 'glasses3d' } },
     { id: 'f_paille', name: 'Brin de paille', pass: 5, season: 2, v: { face: 'strawmouth' } },
     { id: 'f_groin', name: 'Groin de cochon', pass: 12, season: 2, v: { face: 'snout' } },
-    { id: 'f_boue', name: 'Taches de boue', pass: 29, season: 2, v: { face: 'mud' } }
+    { id: 'f_boue', name: 'Taches de boue', pass: 29, season: 2, v: { face: 'mud' } },
+    { id: 'f_roue_googly', name: 'Yeux qui roulent', wheel: 1, v: { face: 'googly' } },
+    { id: 'f_roue_3d', name: 'Lunettes 3D', wheel: 1, v: { face: 'glasses3d' } },
+    { id: 'f_roue_moust', name: 'Moustache en spirale', wheel: 1, v: { face: 'spiralmoust' } },
+    { id: 'f_roue_cyclope', name: 'Œil de cyclope', wheel: 1, v: { face: 'cyclope' } }
   ] },
   prop: { label: 'Objet', items: [
     { id: 'p_canne', name: 'Canne', free: 1, v: { prop: 'cane' } },
@@ -1127,7 +1139,10 @@ const WARD = {
     { id: 'p_fourche', name: 'Fourche', pass: 16, season: 2, v: { prop: 'pitchfork' } },
     { id: 'p_seau', name: 'Seau de lait', pass: 21, season: 2, v: { prop: 'bucket' } },
     { id: 'p_poussin', name: 'Poussin', pass: 31, season: 2, v: { prop: 'chick' } },
-    { id: 'p_arrosoir', name: 'Arrosoir', pass: 39, season: 2, v: { prop: 'wateringcan' } }
+    { id: 'p_arrosoir', name: 'Arrosoir', pass: 39, season: 2, v: { prop: 'wateringcan' } },
+    { id: 'p_roue_poulet', name: 'Poulet en caoutchouc', wheel: 1, v: { prop: 'poulet' } },
+    { id: 'p_roue_banane', name: 'Banane', wheel: 1, v: { prop: 'banane' } },
+    { id: 'p_roue_micro', name: 'Micro de star', wheel: 1, v: { prop: 'micro' } }
   ] },
   back: { label: 'Dos', items: [
     { id: 'b_aucun', name: 'Rien', free: 1, v: { back: 'none' } },
@@ -1148,7 +1163,11 @@ const WARD = {
     { id: 'b_escargot', name: 'Coquille d’escargot', pass: 32, v: { back: 'snail' } },
     { id: 'b_moulin', name: 'Moulin à vent', pass: 20, season: 2, v: { back: 'windmill' } },
     { id: 'b_sac', name: 'Sac de blé', pass: 26, season: 2, v: { back: 'sack' } },
-    { id: 'b_poule', name: 'Ailes de poule', pass: 34, season: 2, v: { back: 'chickenwings' } }
+    { id: 'b_poule', name: 'Ailes de poule', pass: 34, season: 2, v: { back: 'chickenwings' } },
+    { id: 'b_roue_clef', name: 'Clé de jouet', wheel: 1, v: { back: 'clef' } },
+    { id: 'b_roue_aileron', name: 'Aileron de requin', wheel: 1, v: { back: 'aileron' } },
+    { id: 'b_roue_arcenciel', name: 'Arc-en-ciel', wheel: 1, v: { back: 'arcenciel' } },
+    { id: 'b_roue_tentacules', name: 'Tentacules de poulpe', wheel: 1, v: { back: 'tentacules' } }
   ] },
   trail: { label: 'Effet', items: [
     { id: 't_aucun', name: 'Aucun', free: 1, v: { trail: 'none' } },
@@ -1299,6 +1318,7 @@ function drawLeg(hx, hy, fx, fy, out) {
 function drawProp(type, t0) {
   // drawn in the left hand's frame: the stick goes from y=-34 (top) to y=26 (bottom)
   if (type === 'none') return;
+  if (drawPropCrazy(type, t0)) return;
   if (type === 'cane') { line(COL.cane, 3.5, [0, -34, 0, 26]); circ('#7d7d7d', 0, -35, 2.6); return }
   if (type === 'flower') {
     line('#3c8a3c', 2.5, [0, -22, 0, 18]); poly('#3c8a3c', [0, -4, 7, -9, 2, -2]);
@@ -1518,8 +1538,124 @@ function drawBow() {
   poly(k, [0, -31, -8, -35, -8, -27]); poly(k, [0, -31, 8, -35, 8, -27]);
   poly('rgba(0,0,0,.18)', [0, -31, -8, -27, -5, -29]); circ(k, 0, -31, 2.3);
 }
+// ---------- crazy wheel exclusives: hats, faces, back items and hand items ----------
+function drawHatCrazy(sh, L, flop) {
+  if (sh === 'cone') {   // traffic cone
+    X.fillStyle = '#f08a1c'; X.beginPath(); X.moveTo(-11, -47); X.lineTo(11, -47); X.lineTo(2.5, -76 + flop); X.lineTo(-2.5, -76 + flop); X.closePath(); X.fill();
+    X.fillStyle = '#fff'; poly('#fff', [-8.4, -55, 8.4, -55, 6.8, -60, -6.8, -60]); poly('#fff', [-5.2, -65, 5.2, -65, 3.9, -69, -3.9, -69]);
+    X.fillStyle = '#d06a10'; X.fillRect(-13, -49, 26, 3); return true;
+  }
+  if (sh === 'pizza') {   // slice of pizza pointing up
+    X.fillStyle = '#e0a050'; X.beginPath(); X.moveTo(-12, -47); X.quadraticCurveTo(0, -51, 12, -47); X.lineTo(1, -78 + flop); X.lineTo(-1, -78 + flop); X.closePath(); X.fill();
+    X.fillStyle = '#f2c230'; X.beginPath(); X.moveTo(-9.5, -49); X.lineTo(9.5, -49); X.lineTo(.8, -74 + flop); X.lineTo(-.8, -74 + flop); X.closePath(); X.fill();
+    for (const [x, y] of [[-3, -54], [3, -58], [-1, -64], [4, -51], [-5, -50]]) circ('#c8302a', x, y + (y < -60 ? flop * .5 : 0), 2);
+    circ('#2e6a2e', 1, -52, 1); circ('#2e6a2e', -2, -59, .9);
+    X.fillStyle = '#f2c230'; X.beginPath(); X.moveTo(5, -50); X.quadraticCurveTo(6, -44, 5.5, -40); X.quadraticCurveTo(4.5, -44, 4, -50); X.fill(); return true;
+  }
+  if (sh === 'canard') {   // giant rubber duck sitting on the head
+    const b = M.sin(t * .1) * .8;
+    X.fillStyle = '#f2c230'; X.beginPath(); X.ellipse(0, -54 + b, 12, 7.5, 0, 0, 6.29); X.fill(); X.beginPath(); X.moveTo(-12, -55 + b); X.lineTo(-16, -60 + b); X.lineTo(-9, -58 + b); X.fill();
+    circ('#f2c230', 6, -64 + b, 6); poly('#f08a1c', [11, -64 + b, 17, -62.5 + b, 11, -61 + b]); circ('#1d1d24', 8, -65.5 + b, 1.1); circ('#fff', 8.4, -65.9 + b, .4);
+    X.fillStyle = '#e0a810'; X.beginPath(); X.ellipse(-2, -54 + b, 5, 3, -.3, 0, 6.29); X.fill(); return true;
+  }
+  if (sh === 'ovni') {   // flying saucer with its little green pilot
+    const h = M.sin(t * .12) * 1.5;
+    X.save(); X.globalAlpha = .25 + M.sin(t * .3) * .1; X.fillStyle = '#9fe0ff'; X.beginPath(); X.moveTo(-6, -50 + h); X.lineTo(6, -50 + h); X.lineTo(10, -44); X.lineTo(-10, -44); X.fill(); X.restore();
+    X.fillStyle = 'rgba(190,230,255,.75)'; X.beginPath(); X.arc(0, -56 + h, 6.5, M.PI, 0); X.fill();
+    circ('#6ad06a', 0, -57 + h, 3.2); circ('#1d1d24', -1.2, -57.6 + h, .8); circ('#1d1d24', 1.2, -57.6 + h, .8); line('#6ad06a', .8, [0, -60 + h, 0, -62.5 + h]); circ('#ff6060', 0, -63 + h, .9);
+    X.fillStyle = '#a8a8b8'; X.beginPath(); X.ellipse(0, -54 + h, 15, 4, 0, 0, 6.29); X.fill(); X.fillStyle = '#7a7a8a'; X.beginPath(); X.ellipse(0, -53 + h, 15, 2.2, 0, 0, M.PI); X.fill();
+    for (let i = 0; i < 5; i++) circ(M.floor(t / 8 + i) % 2 ? '#ffe066' : '#ff6060', -10 + i * 5, -53.5 + h, 1.1); return true;
+  }
+  if (sh === 'ventouse') {   // toilet plunger stuck on the head
+    X.fillStyle = '#d8302a'; X.beginPath(); X.moveTo(-9, -46); X.quadraticCurveTo(-10, -56, 0, -57); X.quadraticCurveTo(10, -56, 9, -46); X.closePath(); X.fill();
+    X.fillStyle = 'rgba(255,255,255,.3)'; X.beginPath(); X.ellipse(-4, -52, 2, 3.5, -.4, 0, 6.29); X.fill();
+    X.save(); X.translate(0, -57); X.rotate(M.sin(t * .15) * .08 + flop * .01); X.fillStyle = '#b07a44'; X.fillRect(-1.8, -26, 3.6, 26); X.fillStyle = '#8a5a2a'; X.fillRect(-1.8, -26, 3.6, 3); X.restore(); return true;
+  }
+  if (sh === 'oeuf') {   // fried egg
+    X.fillStyle = '#fbfaf4'; X.beginPath(); X.moveTo(-13, -47); X.bezierCurveTo(-15, -54, -6, -55, -3, -52); X.bezierCurveTo(0, -57, 10, -56, 12, -50); X.bezierCurveTo(14, -46, 4, -45, 0, -46); X.closePath(); X.fill();
+    circ('#f2b020', 1, -51, 4.4); circ('rgba(255,255,255,.6)', -.4, -52.6, 1.3); return true;
+  }
+  if (sh === 'requin') {   // a shark swallowing the head
+    X.fillStyle = '#7a8aa8'; X.beginPath(); X.moveTo(-15, -40); X.quadraticCurveTo(-16, -62, 0, -64); X.quadraticCurveTo(16, -62, 15, -40); X.quadraticCurveTo(12, -48, 0, -49); X.quadraticCurveTo(-12, -48, -15, -40); X.fill();
+    poly('#6a7a98', [-2, -63, 2, -73 + flop, 6, -62]);
+    X.fillStyle = '#e8ecf4'; X.beginPath(); X.moveTo(-14, -42); X.quadraticCurveTo(0, -50, 14, -42); X.quadraticCurveTo(0, -47, -14, -42); X.fill();
+    for (let i = -12; i <= 10; i += 4) poly('#fff', [i, -45 - M.abs(i) * .12, i + 2, -41.5 - M.abs(i) * .12, i + 4, -45 - M.abs(i) * .12]);
+    circ('#1d1d24', -9, -54, 1.4); circ('#1d1d24', 9, -54, 1.4); circ('#fff', -8.6, -54.4, .5); circ('#fff', 9.4, -54.4, .5); return true;
+  }
+  if (sh === 'burger') {   // giant burger
+    X.fillStyle = '#c8823a'; X.beginPath(); X.ellipse(0, -48, 12, 2.6, 0, 0, 6.29); X.fill();
+    X.fillStyle = '#5a2e14'; X.beginPath(); X.roundRect(-12, -53, 24, 4.5, 2); X.fill();
+    X.fillStyle = '#f2c230'; X.beginPath(); X.moveTo(-12, -54); X.lineTo(12, -54); X.lineTo(9, -51.5); X.lineTo(5, -54); X.lineTo(0, -51); X.lineTo(-5, -54); X.lineTo(-9, -51.5); X.closePath(); X.fill();
+    X.fillStyle = '#4aa84a'; X.beginPath(); for (let i = -12; i <= 12; i += 3) X.lineTo(i, -55.5 + (i / 3 % 2 ? 1.4 : -.4)); X.lineTo(12, -57); X.lineTo(-12, -57); X.fill();
+    X.fillStyle = '#d8402c'; X.fillRect(-10, -58.5, 20, 2);
+    X.fillStyle = '#d8923a'; X.beginPath(); X.ellipse(0, -59, 12, 9 + flop * .1, 0, M.PI, 0); X.fill();
+    for (const [x, y] of [[-5, -63], [0, -65], [5, -62], [-2, -61], [3, -66]]) { X.fillStyle = '#fff6d8'; X.beginPath(); X.ellipse(x, y, 1, .6, .4, 0, 6.29); X.fill() } return true;
+  }
+  return false;
+}
+function drawFaceCrazy(f) {
+  if (f === 'googly') {   // googly eyes that wobble
+    for (const [ex, ph] of [[-3, 0], [3.3, 2]]) { circ('#1d1d24', ex, -42.6, 3.5); circ('#fff', ex, -42.6, 3); const a = t * .21 + ph; circ('#1d1d24', ex + M.cos(a) * 1.4, -42.6 + M.abs(M.sin(a)) * 1.4, 1.4) } return true;
+  }
+  if (f === 'glasses3d') {   // red and blue 3D glasses
+    X.fillStyle = '#f4f0e8'; X.fillRect(-7.2, -45.2, 14.4, 5.4); X.fillStyle = 'rgba(216,48,42,.85)'; X.fillRect(-6.2, -44.4, 5.4, 3.8); X.fillStyle = 'rgba(48,112,208,.85)'; X.fillRect(.8, -44.4, 5.4, 3.8);
+    line('#f4f0e8', 1, [-7.2, -43, -9, -44]); line('#f4f0e8', 1, [7.2, -43, 9, -44]); return true;
+  }
+  if (f === 'spiralmoust') {   // giant curly moustache
+    X.strokeStyle = '#2a2230'; X.lineWidth = 1.9; X.lineCap = 'round';
+    for (const s of [-1, 1]) { X.beginPath(); X.moveTo(0, -38.4); X.quadraticCurveTo(s * 5, -40.5, s * 9, -38.5); X.quadraticCurveTo(s * 12, -36.5, s * 10.5, -34.5); X.quadraticCurveTo(s * 9, -33.2, s * 8.2, -34.6); X.quadraticCurveTo(s * 7.8, -35.8, s * 9.2, -36); X.stroke() } return true;
+  }
+  if (f === 'cyclope') {   // one huge eye in the middle
+    circ('#fff', 0, -42.5, 4.2); X.strokeStyle = '#1d1d24'; X.lineWidth = .8; X.beginPath(); X.arc(0, -42.5, 4.2, 0, 6.29); X.stroke();
+    const lx = M.sin(t * .03) * 1.4; circ('#3a8a4a', lx, -42.4, 2.2); circ('#1d1d24', lx, -42.4, 1.1); circ('#fff', lx + .6, -43, .5);
+    X.fillStyle = COL.face; X.fillRect(-6.5, -44.8, 2.6, 3); X.fillRect(3.9, -44.8, 2.6, 3); return true;
+  }
+  return false;
+}
+function drawBackCrazy(type) {
+  if (type === 'clef') {   // wind-up toy key sticking out on the side, turning
+    line('#a8a8b8', 3, [14, -20, 24, -20]); X.save(); X.translate(26, -20); X.scale(1, M.cos(t * .12));
+    X.fillStyle = '#c99a2e'; X.fillRect(0, -1.5, 6, 3); for (const s of [-1, 1]) { X.fillStyle = '#c99a2e'; X.beginPath(); X.ellipse(9, s * 7, 5, 7, 0, 0, 6.29); X.fill(); X.fillStyle = '#8a6a1a'; X.beginPath(); X.ellipse(9, s * 7, 2, 3, 0, 0, 6.29); X.fill() } X.restore(); return true;
+  }
+  if (type === 'aileron') {   // shark fin rising above the shoulder
+    X.fillStyle = '#7a8aa8'; X.beginPath(); X.moveTo(6, -30); X.quadraticCurveTo(12, -58, 32, -66); X.quadraticCurveTo(22, -48, 26, -26); X.closePath(); X.fill();
+    X.fillStyle = 'rgba(255,255,255,.22)'; X.beginPath(); X.moveTo(10, -32); X.quadraticCurveTo(15, -52, 28, -61); X.quadraticCurveTo(18, -48, 16, -32); X.fill(); return true;
+  }
+  if (type === 'arcenciel') {   // rainbow arching over the back
+    const cs = ['#d8402c', '#f08a1c', '#f2c230', '#2e9a4c', '#3070d0', '#8a4a9a'];
+    X.lineWidth = 3; for (let i = 0; i < cs.length; i++) { X.strokeStyle = cs[i]; X.beginPath(); X.arc(0, -16, 36 - i * 3, M.PI * 1.05, M.PI * 1.95); X.stroke() }
+    for (const s of [-1, 1]) for (const [dx, dy, r] of [[0, 0, 5], [4, 2, 4], [-4, 2, 4]]) circ('#fff', s * 33 + dx, -14 + dy, r); return true;
+  }
+  if (type === 'tentacules') {   // octopus tentacles waving behind
+    for (let k = 0; k < 4; k++) {
+      const s = k < 2 ? -1 : 1, base = k % 2 ? -30 : -14, w = M.sin(t * .15 + k) * 6;
+      X.strokeStyle = '#b05a9a'; X.lineWidth = 5; X.lineCap = 'round'; X.beginPath(); X.moveTo(s * 8, base); X.quadraticCurveTo(s * 24, base - 8 + w, s * 30, base + 6 - w); X.stroke();
+      for (let j = 0; j < 3; j++) circ('#f0b0e0', s * (14 + j * 5), base - 2 + (j - 1) * 1.5 + w * .3, 1.1);
+    } return true;
+  }
+  return false;
+}
+function drawPropCrazy(type, t0) {
+  if (type === 'poulet') {   // rubber chicken held by the neck
+    const sw = M.sin(t0 * .15) * .15;
+    X.save(); X.rotate(sw); line('#f2c230', 2.5, [0, -6, 0, -18]); circ('#fbf6ea', 0, -22, 3.4); poly('#f08a1c', [2.5, -22, 6, -21, 2.5, -20]); poly('#d8302a', [-1, -25, 0, -28, 1.5, -25.5]); line('#1d1d24', .8, [-1, -23, 1, -22]);
+    X.fillStyle = '#fbf6ea'; X.beginPath(); X.ellipse(0, 4, 6.5, 10, 0, 0, 6.29); X.fill(); X.fillStyle = '#e8e0d0'; X.beginPath(); X.ellipse(-2, 3, 3, 6, .2, 0, 6.29); X.fill();
+    line('#f2c230', 1.8, [-2, 13, -3, 22]); line('#f2c230', 1.8, [2, 13, 3, 22]); X.restore(); return true;
+  }
+  if (type === 'banane') {
+    X.save(); X.rotate(-.2); X.fillStyle = '#f2d030'; X.beginPath(); X.moveTo(-2, 12); X.quadraticCurveTo(-8, -6, 2, -26); X.quadraticCurveTo(-2, -6, 4, 12); X.closePath(); X.fill();
+    X.strokeStyle = '#c8a020'; X.lineWidth = .8; X.beginPath(); X.moveTo(0, 10); X.quadraticCurveTo(-4, -6, 1.5, -22); X.stroke(); X.fillStyle = '#6a4a1a'; X.fillRect(1, -28, 2.4, 3); X.fillRect(-1.5, 11, 5, 2.5); X.restore(); return true;
+  }
+  if (type === 'micro') {   // star microphone
+    X.fillStyle = '#2a2230'; X.beginPath(); X.moveTo(-2.2, 14); X.lineTo(2.2, 14); X.lineTo(3, -14); X.lineTo(-3, -14); X.closePath(); X.fill();
+    circ('#a8a8b8', 0, -19, 6); X.strokeStyle = '#6a6a7a'; X.lineWidth = .7; for (let i = -4; i <= 4; i += 2) { X.beginPath(); X.moveTo(i, -24); X.lineTo(i, -14); X.stroke() }
+    circ('rgba(255,255,255,.5)', -2, -21, 1.6); if (M.floor(t0 / 20) % 2) txt('♪', 9, -24, 9, '#f2c230', 'center', false); return true;
+  }
+  return false;
+}
 function drawHatShape(flop) {
   const L = DL, sh = L.hatShape;
+  if (drawHatCrazy(sh, L, flop)) return;
   if (sh === 'jester') {
     const tails = [[-7, -49, -16, -66 + flop, -22, -50], [-2, -49, 2, -74 + flop, 10, -70 + flop], [5, -49, 16, -64 + flop, 21, -51]];
     X.lineCap = 'round'; X.lineWidth = 7;
@@ -1681,6 +1817,7 @@ function drawHatShape(flop) {
   }
 }
 function drawFaceExtra(f) {
+  if (drawFaceCrazy(f)) return;
   if (f === 'glasses' || f === 'monocle') {
     X.strokeStyle = f === 'monocle' ? '#c99a2e' : '#2a2230'; X.lineWidth = 1;
     if (f === 'glasses') { X.beginPath(); X.arc(-3.1, -42.3, 2.5, 0, 6.29); X.moveTo(5.6, -42.3); X.arc(3.1, -42.3, 2.5, 0, 6.29); X.moveTo(-.6, -42.5); X.lineTo(.6, -42.5); X.stroke() }
@@ -1711,6 +1848,7 @@ function drawFaceExtra(f) {
 }
 
 function drawBackExtra(type) {
+  if (drawBackCrazy(type)) return true;
   const f = M.sin(t * .25) * .14;
   if (type === 'cape') {
     const w = M.sin(t * .2) * 2;

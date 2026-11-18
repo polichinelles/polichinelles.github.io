@@ -138,7 +138,7 @@ function questDance(p) { const k = weekKey(); let n = 0; for (const ch of k) n +
 const WHEEL = [
   { label: '10 ⭐', stars: 10, w: 22, col: '#d8402c' }, { label: '+100 XP', xp: 100, w: 18, col: '#3070d0' },
   { label: '25 ⭐', stars: 25, w: 16, col: '#2e9a4c' }, { label: '+250 XP', xp: 250, w: 12, col: '#8a4a9a' },
-  { label: '50 ⭐', stars: 50, w: 10, col: '#f08a1c' }, { label: 'CADEAU !', gift: 1, w: 7, col: '#c99a2e' },
+  { label: '50 ⭐', stars: 50, w: 10, col: '#f08a1c' }, { label: 'CADEAU !', gift: 1, w: 9, col: '#c99a2e' },
   { label: '100 ⭐', stars: 100, w: 5, col: '#2bb3c0' }, { label: 'JACKPOT', xp: 500, stars: 50, w: 4, col: '#f27ab0', rare: 1 }
 ];
 // prizes that only the wheel gives (the ruby polichinelle only comes with a JACKPOT)
@@ -147,7 +147,26 @@ const WHEEL_GIFTS = [
   { id: 'c_roue_casino', name: 'le costume « Tapis de casino »' }, { id: 'c_roue_trefle', name: 'le costume « Trèfle à quatre feuilles »' },
   { id: 'h_roue_jackpot', name: 'le « Haut-de-forme Jackpot »' }, { id: 'h_roue_croupier', name: 'la « Visière du croupier »' },
   { id: 'h_roue_chance', name: 'les « Grelots de la chance »' }, { id: 'k_roue_noeud', name: 'le « Nœud porte-bonheur »' },
-  { id: 'k_roue_cravate', name: 'la « Cravate Jackpot »' }
+  { id: 'k_roue_cravate', name: 'la « Cravate Jackpot »' },
+  { id: 'h_roue_cone', name: 'le chapeau « Cône de chantier »' },
+  { id: 'h_roue_pizza', name: 'le chapeau « Part de pizza »' },
+  { id: 'h_roue_canard', name: 'le chapeau « Canard de bain géant »' },
+  { id: 'h_roue_ovni', name: 'le chapeau « Soucoupe volante »' },
+  { id: 'h_roue_ventouse', name: 'le chapeau « Ventouse »' },
+  { id: 'h_roue_oeuf', name: 'le chapeau « Œuf au plat »' },
+  { id: 'h_roue_requin', name: 'le chapeau « Requin affamé »' },
+  { id: 'h_roue_burger', name: 'le chapeau « Burger géant »' },
+  { id: 'f_roue_googly', name: 'le visage « Yeux qui roulent »' },
+  { id: 'f_roue_3d', name: 'le visage « Lunettes 3D »' },
+  { id: 'f_roue_moust', name: 'le visage « Moustache en spirale »' },
+  { id: 'f_roue_cyclope', name: 'le visage « Œil de cyclope »' },
+  { id: 'b_roue_clef', name: 'le dos « Clé de jouet »' },
+  { id: 'b_roue_aileron', name: 'le dos « Aileron de requin »' },
+  { id: 'b_roue_arcenciel', name: 'le dos « Arc-en-ciel »' },
+  { id: 'b_roue_tentacules', name: 'le dos « Tentacules de poulpe »' },
+  { id: 'p_roue_poulet', name: 'l’objet « Poulet en caoutchouc »' },
+  { id: 'p_roue_banane', name: 'l’objet « Banane »' },
+  { id: 'p_roue_micro', name: 'l’objet « Micro de star »' }
 ];
 const WHEEL_RARE = { id: 'c_roue_rubis', name: 'le légendaire « Polichinelle de rubis »' };
 function wheelReady(p = loadPass()) { return p.wheelDay !== passToday() }
