@@ -51,7 +51,7 @@
 <div class="main"><div class="stage"><div class="pin"></div><canvas id="wheelC" width="840" height="840"></canvas></div>
 <div class="side"><div class="ctr"><button id="wheelB">Tourner !</button><div id="extraN" hidden style="margin-top:8px;font-size:13px;color:#ffe9a0"></div></div>
 <div class="res" id="wheelR"></div>
-<div class="gains">À gagner : <b>des étoiles</b> (jusqu’à 100 ⭐), <b>de l’XP</b> pour le Programme, le <b>JACKPOT</b> (+500 XP +50 ⭐) et, très rare, la danse exclusive <b>« Salto arrière »</b> 🕺</div></div></div>
+<div class="gains">À gagner : <b>des étoiles</b> (jusqu’à 100 ⭐), <b>de l’XP</b>, le <b>JACKPOT</b> (+500 XP +50 ⭐) et des <b>cadeaux exclusifs</b> 🎁 introuvables ailleurs : 4 costumes, 3 chapeaux, 2 cols et la danse « Salto arrière ». Avec un peu de chance, le JACKPOT offre le légendaire <b>Polichinelle de rubis</b> 👑</div></div></div>
 <canvas id="conf"></canvas>
 <script src="pass.js"></script>
 <script>
@@ -98,10 +98,10 @@ document.getElementById('wheelB').onclick = () => {
     const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 4); wheelA = start + (end - start) * e; drawWheel();
     if (k < 1) return requestAnimationFrame(step);
     spinning = false;
-    const parts = []; if (got.stars) parts.push(`+${got.stars} ⭐`); if (got.xp) parts.push(`+${got.xp} XP`); if (got.item) parts.push(`🕺 la danse « ${DANCE_N[got.item] || got.item} » est dans ta Loge !`);
-    r.textContent = (WHEEL[got.i].label === 'JACKPOT' ? '🎉 JACKPOT ! ' : '🎉 Gagné : ') + parts.join(' · '); void r.offsetWidth; r.classList.add('win');
+    const parts = []; if (got.stars) parts.push(`+${got.stars} ⭐`); if (got.xp) parts.push(`+${got.xp} XP`); if (got.item) parts.push(`${got.legend ? '👑' : '🎁'} ${got.itemName} est dans ta Loge !`);
+    r.textContent = (WHEEL[got.i].label === 'JACKPOT' ? '🎉 JACKPOT ! ' : got.item ? '🎁 CADEAU EXCLUSIF ! ' : '🎉 Gagné : ') + parts.join(' · '); void r.offsetWidth; r.classList.add('win');
     showWallet(); confetti(); wheelUI();
-    if (WHEEL[got.i].label === 'JACKPOT' || got.item) try { const n = localStorage.getItem('polichinelles_name'); if (n) fetch('https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app/feed.json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n, g: 'roue', k: got.item ? 'danse' : 'jackpot', ts: { '.sv': 'timestamp' } }) }).catch(() => {}) } catch (e) {}
+    if (WHEEL[got.i].label === 'JACKPOT' || got.item) try { const n = localStorage.getItem('polichinelles_name'); if (n) fetch('https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app/feed.json', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n, g: 'roue', k: got.item ? 'danse' : 'jackpot', i: got.itemName || '', ts: { '.sv': 'timestamp' } }) }).catch(() => {}) } catch (e) {}
   })(t0);
 };
 showWallet(); wheelUI(); addEventListener('pageshow', () => { showWallet(); wheelUI() });

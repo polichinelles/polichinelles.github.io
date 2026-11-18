@@ -602,7 +602,7 @@ function renderBar() {
   if (!it) { wdBar.innerHTML = `<div class="info">Touche une tenue pour l’essayer.<small>Gagne des ⭐ en jouant pour acheter des tenues.</small></div>`; return }
   const own = PROF.owned.includes(it.id), eq = PROF.eq[it.cat] === it.id;
   if (eq) wdBar.innerHTML = `<div class="info">${it.name}<small>Déjà porté ✓</small></div>`;
-  else if (own) wdBar.innerHTML = `<div class="info">${it.name}<small>Dans ta loge</small></div><button class="wear">Porter</button>`;
+  else if (own) wdBar.innerHTML = `<div class="info">${it.name}<small>${it.wheel ? '🎡 Exclusif de la roue · ' : ''}Dans ta loge</small></div><button class="wear">Porter</button>`;
   else if (it.price) {
     const miss = it.price - PROF.wallet;
     wdBar.innerHTML = `<div class="info">${it.name} — ⭐ ${it.price}<small>${miss > 0 ? `Il te manque ${miss} ⭐` : 'Tu peux l’acheter !'}</small></div><button class="buy" ${miss > 0 ? 'disabled' : ''}>Acheter</button>`;
@@ -988,7 +988,11 @@ const WARD = {
     { id: 'c_s2_tournesol', name: 'Tournesol', pass: 82, season: 2, v: { stripes: ['#f2c230', '#8a5632', '#2e9a4c'], sleeves: ['#f2c230', '#2e9a4c'], trim: '#8a5632', motif: 'etoiles' } },
     { id: 'c_s2_cochon', name: 'Petit cochon', pass: 87, season: 2, v: { stripes: ['#f8b0c0', '#f27ab0', '#fff0f4'], sleeves: ['#f8b0c0', '#f27ab0'], trim: '#f27ab0', motif: 'coeurs' } },
     { id: 'c_s2_epouvantail', name: 'Épouvantail doré', pass: 95, season: 2, v: { stripes: ['#c99a2e', '#8a5632', '#f2c230'], sleeves: ['#8a5632', '#c99a2e'], trim: '#f2c230', motif: 'patch' } },
-    { id: 'c_s2_emeraude', name: 'Polichinelle d’émeraude', pass: 100, season: 2, v: { stripes: ['#2e9a4c', '#ffffff', '#9fe0ff'], sleeves: ['#2e9a4c', '#ffffff'], trim: '#ffffff', chrome: 'emeraude' } }
+    { id: 'c_s2_emeraude', name: 'Polichinelle d’émeraude', pass: 100, season: 2, v: { stripes: ['#2e9a4c', '#ffffff', '#9fe0ff'], sleeves: ['#2e9a4c', '#ffffff'], trim: '#ffffff', chrome: 'emeraude' } },
+    { id: 'c_roue_fortune', name: 'Roue de la fortune', wheel: 1, v: { stripes: ['#f27ab0', '#f2c230', '#3070d0'], sleeves: ['#f2c230', '#f27ab0'], trim: '#fff3c0', motif: 'etoiles' } },
+    { id: 'c_roue_casino', name: 'Tapis de casino', wheel: 1, v: { stripes: ['#1a6a3a', '#d8402c', '#1d1d24'], sleeves: ['#1a6a3a', '#1d1d24'], trim: '#f2c230', motif: 'damier' } },
+    { id: 'c_roue_trefle', name: 'Trèfle à quatre feuilles', wheel: 1, v: { stripes: ['#2e9a4c', '#7dd88a', '#f4f0e8'], sleeves: ['#2e9a4c', '#7dd88a'], trim: '#f2c230', motif: 'coeurs' } },
+    { id: 'c_roue_rubis', name: 'Polichinelle de rubis', wheel: 1, v: { stripes: ['#d8304a', '#ffffff', '#ff8090'], sleeves: ['#d8304a', '#ffffff'], trim: '#ffffff', chrome: 'rubis' } }
   ] },
   hat: { label: 'Chapeau', items: [
     { id: 'h_classic', name: 'Rouge', free: 1, v: { hat: '#d8402c', knob: 'ball', pattern: 0 } },
@@ -1061,7 +1065,10 @@ const WARD = {
     { id: 'h_s2_coq', name: 'Plumes de coq', pass: 67, season: 2, v: { hat: '#c8503a', pattern: '#2e9a4c', knob: 'ball', hatShape: 'plume' } },
     { id: 'h_s2_melon', name: 'Melon du marché', pass: 74, season: 2, v: { hat: '#5a3418', pattern: '#2e9a4c', knob: 'ball', hatShape: 'melon' } },
     { id: 'h_s2_poule', name: 'Poule rousse', pass: 84, season: 2, v: { hat: '#c8503a', pattern: '#f2c230', knob: 'ball', hatShape: 'poulet' } },
-    { id: 'h_s2_champs', name: 'Bouffon des champs', pass: 89, season: 2, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } }
+    { id: 'h_s2_champs', name: 'Bouffon des champs', pass: 89, season: 2, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } },
+    { id: 'h_roue_jackpot', name: 'Haut-de-forme Jackpot', wheel: 1, v: { hat: '#d8402c', pattern: '#f2c230', knob: 'ball', hatShape: 'tophat' } },
+    { id: 'h_roue_croupier', name: 'Visière du croupier', wheel: 1, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'ball', hatShape: 'casquette' } },
+    { id: 'h_roue_chance', name: 'Grelots de la chance', wheel: 1, v: { hat: '#2e9a4c', pattern: '#f2c230', knob: 'bell', hatShape: 'jester' } }
   ] },
   collar: { label: 'Col', items: [
     { id: 'k_aucun', name: 'Aucun', free: 1, v: { collar: 'none' } },
@@ -1095,7 +1102,9 @@ const WARD = {
     { id: 'k_s2_ble', name: 'Écharpe de blé', pass: 57, season: 2, v: { collar: 'scarf', collarColor: '#c99a2e' } },
     { id: 'k_s2_ficelle', name: 'Nœud de ficelle', pass: 69, season: 2, v: { collar: 'bow', collarColor: '#8a5632' } },
     { id: 'k_s2_trefle', name: 'Cravate trèfle', pass: 79, season: 2, v: { collar: 'tie', collarColor: '#2e9a4c' } },
-    { id: 'k_s2_rouge', name: 'Bandana du fermier', pass: 92, season: 2, v: { collar: 'bandana', collarColor: '#d8402c' } }
+    { id: 'k_s2_rouge', name: 'Bandana du fermier', pass: 92, season: 2, v: { collar: 'bandana', collarColor: '#d8402c' } },
+    { id: 'k_roue_noeud', name: 'Nœud porte-bonheur', wheel: 1, v: { collar: 'bow', collarColor: '#2e9a4c' } },
+    { id: 'k_roue_cravate', name: 'Cravate Jackpot', wheel: 1, v: { collar: 'tie', collarColor: '#f2c230' } }
   ] },
   legs: { label: 'Jambes', items: [
     { id: 'l_classic', name: 'Menthe', free: 1, v: { legs: '#9ed8c8', socks: '#2a62c8', shoes: '#6b4430' } },
@@ -1840,7 +1849,7 @@ function drawPoliChrome(pose, look) {
   CHROME_BUSY = true; try { withCtx(ga, () => drawPoli(pose, look)) } finally { CHROME_BUSY = false }
   gb.drawImage(chromeA, 0, 0);
   // gold colour, keeping the light and shadows of the drawing
-  const CHR = { diamant: ['#7cc8f0', '#ffffff', '#cdeeff', '#2a6a9a'], emeraude: ['#2e9a4c', '#e8ffe8', '#6ad88a', '#0e4a22'] }[look.chrome] || ['#d9a520', '#fff3b8', '#ffd256', '#b87a08'];
+  const CHR = { diamant: ['#7cc8f0', '#ffffff', '#cdeeff', '#2a6a9a'], emeraude: ['#2e9a4c', '#e8ffe8', '#6ad88a', '#0e4a22'], rubis: ['#d8304a', '#ffe0e4', '#ff6a7a', '#6a0818'] }[look.chrome] || ['#d9a520', '#fff3b8', '#ffd256', '#b87a08'];
   gb.globalCompositeOperation = 'color'; gb.fillStyle = CHR[0]; gb.fillRect(0, 0, cw, ch);
   gb.globalCompositeOperation = 'multiply'; let g = gb.createLinearGradient(0, 0, 0, ch); g.addColorStop(0, CHR[1]); g.addColorStop(.55, CHR[2]); g.addColorStop(1, CHR[3]); gb.fillStyle = g; gb.fillRect(0, 0, cw, ch);
   // chrome reflections

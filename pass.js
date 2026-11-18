@@ -138,9 +138,18 @@ function questDance(p) { const k = weekKey(); let n = 0; for (const ch of k) n +
 const WHEEL = [
   { label: '10 ⭐', stars: 10, w: 22, col: '#d8402c' }, { label: '+100 XP', xp: 100, w: 18, col: '#3070d0' },
   { label: '25 ⭐', stars: 25, w: 16, col: '#2e9a4c' }, { label: '+250 XP', xp: 250, w: 12, col: '#8a4a9a' },
-  { label: '50 ⭐', stars: 50, w: 10, col: '#f08a1c' }, { label: 'Danse !', item: 'd_salto', w: 3, col: '#c99a2e' },
-  { label: '100 ⭐', stars: 100, w: 5, col: '#2bb3c0' }, { label: 'JACKPOT', xp: 500, stars: 50, w: 4, col: '#f27ab0' }
+  { label: '50 ⭐', stars: 50, w: 10, col: '#f08a1c' }, { label: 'CADEAU !', gift: 1, w: 7, col: '#c99a2e' },
+  { label: '100 ⭐', stars: 100, w: 5, col: '#2bb3c0' }, { label: 'JACKPOT', xp: 500, stars: 50, w: 4, col: '#f27ab0', rare: 1 }
 ];
+// prizes that only the wheel gives (the ruby polichinelle only comes with a JACKPOT)
+const WHEEL_GIFTS = [
+  { id: 'd_salto', name: 'la danse « Salto arrière »' }, { id: 'c_roue_fortune', name: 'le costume « Roue de la fortune »' },
+  { id: 'c_roue_casino', name: 'le costume « Tapis de casino »' }, { id: 'c_roue_trefle', name: 'le costume « Trèfle à quatre feuilles »' },
+  { id: 'h_roue_jackpot', name: 'le « Haut-de-forme Jackpot »' }, { id: 'h_roue_croupier', name: 'la « Visière du croupier »' },
+  { id: 'h_roue_chance', name: 'les « Grelots de la chance »' }, { id: 'k_roue_noeud', name: 'le « Nœud porte-bonheur »' },
+  { id: 'k_roue_cravate', name: 'la « Cravate Jackpot »' }
+];
+const WHEEL_RARE = { id: 'c_roue_rubis', name: 'le légendaire « Polichinelle de rubis »' };
 function wheelReady(p = loadPass()) { return p.wheelDay !== passToday() }
 // extra spins paid with stars: 2nd spin 100 ★, 3rd spin 200 ★, then come back tomorrow
 const WHEEL_EXTRA = [100, 200];
@@ -173,7 +182,8 @@ function spinWheel() {
   const seg = WHEEL[i], got = { i, xp: seg.xp || 0, stars: seg.stars || 0, item: null };
   let loge; try { loge = JSON.parse(localStorage.getItem('polichinelles_loge')) } catch (e) {}
   loge = Object.assign({ wallet: 0, owned: [], eq: {}, stats: { games: 0, totalStars: 0, maxAct: 1, maxCombo: 0, masks: 0, traps: 0 }, seen: [] }, loge || {});
-  if (seg.item) { if (loge.owned.includes(seg.item)) got.stars += 100; else { loge.owned.push(seg.item); got.item = seg.item } }
+  if (seg.gift) { const left = WHEEL_GIFTS.filter(g => !loge.owned.includes(g.id)); if (!left.length) got.stars += 150; else { const g = left[Math.random() * left.length | 0]; loge.owned.push(g.id); got.item = g.id; got.itemName = g.name } }
+  if (seg.rare && !loge.owned.includes(WHEEL_RARE.id) && Math.random() < .25) { loge.owned.push(WHEEL_RARE.id); got.item = WHEEL_RARE.id; got.itemName = WHEEL_RARE.name; got.legend = 1 }
   loge.wallet = (loge.wallet || 0) + got.stars;
   try { localStorage.setItem('polichinelles_loge', JSON.stringify(loge)) } catch (e) {}
   if (got.xp) { p.xp += got.xp; seasonOf(p).xp += got.xp }

@@ -346,7 +346,7 @@ async function loadNews() {
     if (e.k === 'top1') { ic = '👑'; tx = mine ? `${n} t’a pris la 1re place ${g} ! À toi de la reprendre` : `${n} devient N°1 ${g}${s}${e.p ? ` et détrône ${esc(String(e.p))}` : ''}` }
     else if (e.k === 'top3') { ic = ['', '', '🥈', '🥉'][e.r] || '🥉'; tx = `${n} monte sur le podium ${g}${s}` }
     else if (e.k === 'jackpot') { ic = '🎡'; tx = `${n} gagne le JACKPOT de la roue !` }
-    else if (e.k === 'danse') { ic = '🕺'; tx = `${n} gagne la danse Salto arrière à la roue` }
+    else if (e.k === 'danse') { ic = '🎁'; tx = `${n} gagne ${e.i ? esc(String(e.i)) : 'un cadeau exclusif'} à la roue !` }
     else if (e.k === 'boss') { ic = '🎩'; tx = `${n} a battu le Directeur au Casse-Décor (niveau ${+e.s || '?'})` }
     return `<li class="${mine ? 'me' : ''} ${id > seen && seen && !self ? 'new' : ''}"><span class="ic">${ic}</span><span>${tx}<small>${e.ts ? ago(e.ts) : ''}</small></span></li>`;
   }).join('');
