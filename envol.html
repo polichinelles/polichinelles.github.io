@@ -2561,8 +2561,8 @@ function render() {
   drawCurtains(curtain);
   if (flash) { X.fillStyle = `rgba(255,240,180,${flash / 20})`; X.fillRect(0, -T, W, H) }
 
-  // HUD
-  if (state === 'play' || state === 'over') {
+  // HUD (hidden on game-over: the panel shows the score)
+  if (state === 'play') {
     const hy = T > 60 ? -T + 64 : 78;
     txt(String(score).padStart(5, '0'), W - 12, hy, 20, '#fff', 'right');
     star(W - 22, hy + 26, 8); txt('× ' + stars, W - 34, hy + 27, 14, '#fff', 'right');
@@ -2618,7 +2618,7 @@ function render() {
   if (state === 'over') {
     const k = M.min(1, stateT / 20);
     X.fillStyle = `rgba(20,16,40,${.55 * k})`; X.fillRect(0, -T, W, H);
-    const portrait = T > 80, oy = portrait ? -T + 112 : 84, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
+    const portrait = W < 400, oy = portrait ? -T + (H < 560 ? 84 : 112) : 84, ox = portrait || boardStatus === 'off' ? W / 2 : W * .36;
     X.fillStyle = 'rgba(20,16,40,.78)'; X.strokeStyle = COL.yellow; X.lineWidth = 2;
     X.beginPath(); X.roundRect(ox - 130, oy - 34, 260, 214, 12); X.fill(); X.stroke();
     drawXpLine(ox, oy + 138);
@@ -2627,7 +2627,7 @@ function render() {
     txt('Score : ' + score, ox, oy + 42, 22, '#fff');
     if (score >= best && score > 0) txt('Nouveau record perso !', ox, oy + 70, 16, COL.yellow);
     else txt('Ton record : ' + best, ox, oy + 70, 16, '#ddd');
-    if (portrait) { const by = oy + 192, room = H - T - 92 - by; drawBoard(W / 2, by, M.max(3, M.min(10, M.floor((room - 34) / 19))), false) } else drawBoard(W - 110, 132, 5, false);
+    if (portrait) { const by = oy + 190, room = H - T - 62 - by; drawBoard(W / 2, by, M.max(3, M.min(10, M.floor((room - 34) / 19))), false) } else drawBoard(W - 124, 132, 5, false);
 
   }
 }
