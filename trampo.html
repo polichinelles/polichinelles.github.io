@@ -2427,7 +2427,7 @@ function update() {
     if (actBanner > 0) actBanner--;
     if (paused) { HOLDS.clear(); holdSync() }
     const p = PL;
-    if (holdL !== null) { const tx = clampT(holdL, 6, CW - 6), want = clampT((tx - p.x) * .22, -6.5, 6.5); p.vx += (want - p.vx) * .4 }
+    if (holdL !== null) { const EDGE = 22; if (holdL <= EDGE || holdL >= CW - EDGE) p.vx += ((holdL <= EDGE ? -1 : 1) * 5 - p.vx) * .25; /* finger on a screen edge: keep running that way and wrap around */ else { const tx = clampT(holdL, 6, CW - 6), want = clampT((tx - p.x) * .22, -6.5, 6.5); p.vx += (want - p.vx) * .4 } }
     else p.vx += (clampT(keyDir, -1, 1) * 4.4 - p.vx) * .18;
     if (M.abs(p.vx) > .4) p.face = p.vx > 0 ? 1 : -1;
     p.x += p.vx; if (p.x < -10) p.x += CW + 20; else if (p.x > CW + 10) p.x -= CW + 20;
@@ -2590,7 +2590,7 @@ function render() {
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('Le Trampoline', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Le polichinelle suit ton doigt : glisse-le où tu veux', mx, 166, 13, '#ddd', 'center', false);
+      txt('Il suit ton doigt · doigt au bord = traverse l’écran', mx, 166, 13, '#ddd', 'center', false);
       txt('Rebondis toujours plus haut · gare aux chauves-souris !', mx, 184, 13, '#ddd', 'center', false);
       txt('🎈 Ballon = envol · ressorts = super saut', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
@@ -2601,7 +2601,7 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 330 ? 22 : W < 400 ? 26 : 34, COL.yellow);
     txt('Le Trampoline', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Le polichinelle suit ton doigt : glisse-le où tu veux', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Il suit ton doigt · doigt au bord = traverse l’écran', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     txt('Rebondis toujours plus haut · gare aux chauves-souris !', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     if (T > 80) txt('🎈 Ballon = envol · ressorts = super saut', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
