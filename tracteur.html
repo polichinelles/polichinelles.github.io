@@ -347,8 +347,8 @@ const sfx = {
 
 // ---------- storage ----------
 let best = 0;
-try { best = +localStorage.getItem('polichinelles_best_tracteur') || 0 } catch (e) {}
-function saveBest() { try { localStorage.setItem('polichinelles_best_tracteur', best) } catch (e) {} }
+try { best = +localStorage.getItem('polichinelles_best_tracteur2') || 0 } catch (e) {}
+function saveBest() { try { localStorage.setItem('polichinelles_best_tracteur2', best) } catch (e) {} }
 
 // ---------- shared leaderboard (Firebase Firestore, REST, no SDK) ----------
 const FIREBASE = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
@@ -712,23 +712,23 @@ const PXM = 20, WHEELS = [[-24, 16, 15], [25, 19, 10]];
 // rigid-body physics (units: px and frames): chassis + two wheels on suspension, motor on the rear wheel
 const SUB = 8, GV = .28, MC = 1, MW = .16;
 // hill-climb style: binary pedals, motor torque with its reaction on the chassis, strong air control
-let IC = 360, AIRT = .0024, MU0 = 1.15, OMAX = .3, TMAX = 2.6, FWD = 0, FUELK = 1, KS = .03, CS = .055, SUSP = 11, thr = 0, warnT = 0;
+let IC = 360, AIRT = .0024, MU0 = 1.15, OMAX = .3, TMAX = 2.6, FWD = 0, FUELK = 1, KS = .018, CS = .018, SUSP = 20, SUSC = 12, thr = 0, warnT = 0;
 // ---- garage: upgrades bought with écus (kept on the phone) ----
 const UPS = [
   { k: 'eng', ic: '🔧', n: 'Moteur', d: 'Plus de puissance dans les côtes' },
   { k: 'tyr', ic: '🛞', n: 'Pneus', d: 'Accroche mieux, même dans la boue' },
   { k: 'tank', ic: '⛽', n: 'Réservoir', d: 'Consomme moins d’essence' },
-  { k: 'sus', ic: '🌀', n: 'Suspension', d: 'Amortit mieux les bosses et les réceptions' },
+  { k: 'sus', ic: '🌀', n: 'Suspension', d: 'Moins molle : absorbe les bosses sans rebondir' },
   { k: 'awd', ic: '⚙️', n: '4 roues motrices', d: 'La roue avant tire aussi : grimpe mieux' }];
 const UP_COST = [100, 250, 500, 900, 1500, 2500], UP_MAX = UP_COST.length;
-function upGet() { const d = { eng: 0, tyr: 0, tank: 0, sus: 0, awd: 0 }; try { return Object.assign(d, JSON.parse(localStorage.getItem('polichinelles_tracteur_up') || '{}')) } catch (e) { return d } }
-function upSave(u) { try { localStorage.setItem('polichinelles_tracteur_up', JSON.stringify(u)) } catch (e) {} }
-function ecusGet() { return +(localStorage.getItem('polichinelles_tracteur_ecus') || 0) }
-function ecusSet(v) { try { localStorage.setItem('polichinelles_tracteur_ecus', v) } catch (e) {} }
+function upGet() { const d = { eng: 0, tyr: 0, tank: 0, sus: 0, awd: 0 }; try { return Object.assign(d, JSON.parse(localStorage.getItem('polichinelles_tracteur2_up') || '{}')) } catch (e) { return d } }
+function upSave(u) { try { localStorage.setItem('polichinelles_tracteur2_up', JSON.stringify(u)) } catch (e) {} }
+function ecusGet() { return +(localStorage.getItem('polichinelles_tracteur2_ecus') || 0) }
+function ecusSet(v) { try { localStorage.setItem('polichinelles_tracteur2_ecus', v) } catch (e) {} }
 function upCost(lv) { return lv >= UP_MAX ? 0 : UP_COST[lv] }
 function upAffordable() { const u = upGet(), e = ecusGet(); return UPS.some(x => u[x.k] < UP_MAX && e >= upCost(u[x.k])) }
 let UPV = { eng: 0, tyr: 0, tank: 0, sus: 0, awd: 0 };
-function applyUps() { const u = upGet(); UPV = u; FWD = .15 * u.awd; TMAX = 2.6 * (1 + .05 * u.eng); OMAX = .3 * (1 + .1 * u.eng); MU0 = 1.05 + .08 * u.tyr; FUELK = 1 - .09 * u.tank; KS = .03 + .002 * u.sus; CS = .055 + .012 * u.sus; SUSP = 11 + u.sus }
+function applyUps() { const u = upGet(); UPV = u; FWD = .15 * u.awd; TMAX = 2.6 * (1 + .05 * u.eng); OMAX = .3 * (1 + .1 * u.eng); MU0 = 1.05 + .08 * u.tyr; FUELK = 1 - .09 * u.tank; KS = .018 + .002 * u.sus; CS = .018 + .011 * u.sus; SUSP = 20 - u.sus; SUSC = 12 - u.sus * .5 }
 // ---- zones: every ZLEN metres the landscape (and the grip) changes ----
 const ZLEN = 400, ZONES = [
   { n: 'Les Prés', ic: '🌾', grass: ['#4e9a3a', '#6ac04a'], soil: ['#9a6a3c', '#5a3a20'], hills: ['#9cc8a8', '#7ab07a'], dust: '#b89a70', grip: 1 },
@@ -2501,7 +2501,7 @@ function update() {
         // suspension spring and end stops
         const sp = dx * ux + dy * uy, cu = rAx * uy - rAy * ux;
         apply((-KS * sp - CS * relv(ux, uy)) * h, ux, uy);
-        if (sp > SUSP || sp < -7) { const tgt = sp > SUSP ? sp - SUSP : sp + 7, v = relv(ux, uy); if (tgt * v > 0 || true) apply(-(v + .3 * tgt * SUB) / (1 / MW + 1 / MC + cu * cu / IC), ux, uy) }
+        if (sp > SUSP || sp < -SUSC) { const tgt = sp > SUSP ? sp - SUSP : sp + SUSC, v = relv(ux, uy); if (tgt * v > 0 || true) apply(-(v + .3 * tgt * SUB) / (1 / MW + 1 / MC + cu * cu / IC), ux, uy) }
       }
       // motor on the rear wheel, brakes on both
       const rear = T0.wh[0];
@@ -2569,7 +2569,7 @@ function update() {
     maxX = M.max(maxX, T0.x);
     score = meters() + starPts;
     const a = M.floor(meters() / ZLEN); if (a !== act) { setAct(a, false); starPts += 50 }
-    if ((crashT && ++crashT > 70) || emptyT > 90) { ecusRun = ecusCoins + M.floor(meters() / 10) + flips * 25 + perfects * 10 + wheelies * 5; ecusSet(ecusGet() + ecusRun); try { if (meters() > +(localStorage.getItem('polichinelles_tracteur_m') || 0)) localStorage.setItem('polichinelles_tracteur_m', meters()) } catch (e) {} gameOver() }
+    if ((crashT && ++crashT > 70) || emptyT > 90) { ecusRun = ecusCoins + M.floor(meters() / 10) + flips * 25 + perfects * 10 + wheelies * 5; ecusSet(ecusGet() + ecusRun); try { if (meters() > +(localStorage.getItem('polichinelles_tracteur2_m') || 0)) localStorage.setItem('polichinelles_tracteur2_m', meters()) } catch (e) {} gameOver() }
   }
   for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g || .05; p.l-- }
   for (const q of popups) { q.y -= .7; q.l-- } popups = popups.filter(q => q.l > 0);
@@ -2961,7 +2961,7 @@ function drawGame() {
   // zone gates
   for (let zn = M.max(1, zoneN(x0)); 120 + zn * ZLEN * PXM < x1 + 60; zn++) { const gx = 120 + zn * ZLEN * PXM, gy = ground(gx), Z = ZONES[zoneOfN(zn)]; if (gx < x0 - 60) continue; line('#6b4430', 4, [gx - 34, gy, gx - 34, gy - 66]); line('#6b4430', 4, [gx + 34, gy, gx + 34, gy - 66]); X.fillStyle = '#c89a60'; X.beginPath(); X.roundRect(gx - 50, gy - 84, 100, 22, 5); X.fill(); X.strokeStyle = '#6b4430'; X.lineWidth = 2; X.stroke(); txt(Z.ic + ' ' + Z.n, gx, gy - 73, Z.n.length > 12 ? 9 : 11, '#3a2010', 'center', false) }
   // best distance flag
-  const bx = (+(localStorage.getItem('polichinelles_tracteur_m') || 0)) * PXM + 120;
+  const bx = (+(localStorage.getItem('polichinelles_tracteur2_m') || 0)) * PXM + 120;
   if (bx > 300 && bx > x0 && bx < x1) { const by = ground(bx); line('#5a3a1c', 2, [bx, by, bx, by - 44]); poly(COL.yellow, [bx, by - 44, bx + 22, by - 38, bx, by - 32]); txt('Record', bx, by - 52, 10, '#3a2010', 'center', false) }
   // the ground, zone by zone
   for (let zn = zoneN(x0); ; zn++) {
