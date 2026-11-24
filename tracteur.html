@@ -183,7 +183,7 @@ canvas{display:block;width:100vw;height:100vh;height:100dvh}
   <button class="ok">OK</button></div></div>
 <div id="overBtns"><button class="home" aria-label="Accueil">🏠</button><button class="gar">🔧 Garage<span class="dot"></span></button><button class="again">↻ Rejouer</button></div>
 <button id="garBtn" hidden>🔧 Le Garage<span class="dot"></span></button>
-<div id="gar" role="dialog" aria-modal="true" aria-label="Le Garage"><div class="box"><header><h2>🔧 Le Garage</h2><span class="wallet">🪙 <b id="garEcus">0</b></span><button class="close" aria-label="Fermer">✕</button></header><div id="garList"></div><p class="note">Chaque partie rapporte des écus 🪙 : distance, étoiles, saltos, wheelies et atterrissages parfaits.</p></div></div>
+<div id="gar" role="dialog" aria-modal="true" aria-label="Le Garage"><div class="box"><header><h2>🔧 Le Garage</h2><span class="wallet">🪙 <b id="garEcus">0</b></span><button class="close" aria-label="Fermer">✕</button></header><div id="garList"></div><p class="note">Ramasse les pièces 🪙 sur la route · bonus pour la distance, les saltos, wheelies et atterrissages parfaits.</p></div></div>
 <button id="installBtn">📲 Ajouter le jeu à l’écran d’accueil</button>
 <div id="inst" role="dialog" aria-modal="true"><div class="box"><h2>📲 Installer le jeu</h2><div id="instBody"></div><button>J’ai compris</button></div></div>
 <div id="entry"><form class="box" autocomplete="off">
@@ -710,22 +710,24 @@ const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0
 // ---- Le Tracteur : hill-climb on the farm ----
 const PXM = 20, WHEELS = [[-24, 16, 15], [25, 19, 10]];
 // rigid-body physics (units: px and frames): chassis + two wheels on suspension, motor on the rear wheel
-const SUB = 8, GV = .28, MC = 1, IC = 520, MW = .16, AIRT = .0016;
-let MU0 = 1.15, OMAX = .36, TMAX = 2.2, FUELK = 1, KS = .03, CS = .055, SUSP = 11, REACT = .0035, LIFT = .05, thr = 0, warnT = 0;
+const SUB = 8, GV = .28, MC = 1, MW = .16;
+// hill-climb style: binary pedals, motor torque with its reaction on the chassis, strong air control
+let IC = 360, AIRT = .0024, MU0 = 1.15, OMAX = .3, TMAX = 2.6, FWD = 0, FUELK = 1, KS = .03, CS = .055, SUSP = 11, thr = 0, warnT = 0;
 // ---- garage: upgrades bought with écus (kept on the phone) ----
 const UPS = [
   { k: 'eng', ic: '🔧', n: 'Moteur', d: 'Plus de puissance dans les côtes' },
   { k: 'tyr', ic: '🛞', n: 'Pneus', d: 'Accroche mieux, même dans la boue' },
   { k: 'tank', ic: '⛽', n: 'Réservoir', d: 'Consomme moins d’essence' },
-  { k: 'sus', ic: '🌀', n: 'Suspension', d: 'Amortit mieux les bosses et les réceptions' }];
+  { k: 'sus', ic: '🌀', n: 'Suspension', d: 'Amortit mieux les bosses et les réceptions' },
+  { k: 'awd', ic: '⚙️', n: '4 roues motrices', d: 'La roue avant tire aussi : grimpe mieux' }];
 const UP_COST = [100, 250, 500, 900, 1500, 2500], UP_MAX = UP_COST.length;
-function upGet() { const d = { eng: 0, tyr: 0, tank: 0, sus: 0 }; try { return Object.assign(d, JSON.parse(localStorage.getItem('polichinelles_tracteur_up') || '{}')) } catch (e) { return d } }
+function upGet() { const d = { eng: 0, tyr: 0, tank: 0, sus: 0, awd: 0 }; try { return Object.assign(d, JSON.parse(localStorage.getItem('polichinelles_tracteur_up') || '{}')) } catch (e) { return d } }
 function upSave(u) { try { localStorage.setItem('polichinelles_tracteur_up', JSON.stringify(u)) } catch (e) {} }
 function ecusGet() { return +(localStorage.getItem('polichinelles_tracteur_ecus') || 0) }
 function ecusSet(v) { try { localStorage.setItem('polichinelles_tracteur_ecus', v) } catch (e) {} }
 function upCost(lv) { return lv >= UP_MAX ? 0 : UP_COST[lv] }
 function upAffordable() { const u = upGet(), e = ecusGet(); return UPS.some(x => u[x.k] < UP_MAX && e >= upCost(u[x.k])) }
-function applyUps() { const u = upGet(); TMAX = 2.2 * (1 + .12 * u.eng); OMAX = .28 * (1 + .1 * u.eng); MU0 = 1.05 + .08 * u.tyr; FUELK = 1 - .09 * u.tank; KS = .03 + .002 * u.sus; CS = .055 + .012 * u.sus; SUSP = 11 + u.sus }
+function applyUps() { const u = upGet(); FWD = .15 * u.awd; TMAX = 2.6 * (1 + .12 * u.eng); OMAX = .3 * (1 + .1 * u.eng); MU0 = 1.05 + .08 * u.tyr; FUELK = 1 - .09 * u.tank; KS = .03 + .002 * u.sus; CS = .055 + .012 * u.sus; SUSP = 11 + u.sus }
 // ---- zones: every ZLEN metres the landscape (and the grip) changes ----
 const ZLEN = 400, ZONES = [
   { n: 'Les Prés', ic: '🌾', grass: ['#4e9a3a', '#6ac04a'], soil: ['#9a6a3c', '#5a3a20'], hills: ['#9cc8a8', '#7ab07a'], dust: '#b89a70', grip: 1 },
@@ -742,7 +744,7 @@ function zoneCol(x, key, i) { const m = M.max(0, (x - 120) / PXM), z = M.floor(m
 const BODY = [[-36, 10], [38, 4], [36, -10], [-34, -4]], ROOF = [[-10, -34], [-24, -42], [2, -42]];
 function placeWheels() { TR.wh = WHEELS.map(([ox, oy, r]) => { const c = M.cos(TR.a), s = M.sin(TR.a); return { x: TR.x + ox * c - oy * s, y: TR.y + ox * s + oy * c, vx: TR.vx, vy: TR.vy, ang: 0, om: 0, r, I: .5 * MW * r * r, ax: ox, ay: oy } }) }
 let TR = null, ZM = 1, VW = 400, VH = 600, camX = 0, camY = 0, gasOn = false, brakeOn = false, keyGas = false, keyBrake = false, gasId = null, brakeId = null;
-let ecusRun = 0, perfects = 0, wheelieT = 0, wheelies = 0, landT = 0;
+let ecusCoins = 0, ecusRun = 0, perfects = 0, wheelieT = 0, wheelies = 0, landT = 0;
 let cans = [], coins = [], smoke = [], flips = 0, airT = 0, airRot = 0, maxX = 0, crashT = 0, emptyT = 0, nextCan = 0, nextCoin = 0, lastSign = 0, engSnd = null;
 function hsh(a, b) { const x = M.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - M.floor(x) }
 function ground(x) {
@@ -760,7 +762,7 @@ function bumps(d, k) {
 function washb(d, k) {
   // stretches of small bumps (ruts, stones) that make the tractor bounce if it goes too fast
   const z = M.sin(d * .0009 + 1.3); if (z < .35) return 0;
-  return M.min(1, (z - .35) * 4) * (4 + 6 * k) * M.abs(M.sin(d * .045));
+  return M.min(1, (z - .35) * 4) * (2.5 + 4 * k) * M.abs(M.sin(d * .045));
 }
 function slope(x) { return (ground(x + 1) - ground(x - 1)) / 2 }
 function trPoint(ox, oy) { const c = M.cos(TR.a), s = M.sin(TR.a); return [TR.x + ox * c - oy * s, TR.y + ox * s + oy * c] }
@@ -775,7 +777,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  applyUps(); thr = 0; warnT = 0; ecusRun = 0; perfects = 0; wheelieT = 0; wheelies = 0; landT = 0;
+  applyUps(); thr = 0; ecusCoins = 0; warnT = 0; ecusRun = 0; perfects = 0; wheelieT = 0; wheelies = 0; landT = 0;
   TR = { x: 120, y: 262, vx: 0, vy: 0, a: 0, w: 0, fuel: 100, ground: 2, dead: false }; placeWheels();
   cans = []; coins = []; smoke = []; flips = 0; airT = 0; airRot = 0; maxX = 120; crashT = 0; emptyT = 0; nextCan = 1300; nextCoin = 600; lastSign = 0;
   gasOn = brakeOn = keyGas = keyBrake = false; gasId = brakeId = null;
@@ -2466,11 +2468,10 @@ function update() {
     if (ambK < 1) { ambK = M.min(1, ambK + 1 / 120); mixAmb() }
     if (actBanner > 0) actBanner--;
     const T0 = TR, gas = (gasOn || keyGas) && T0.fuel > 0 && !T0.dead, brk = (brakeOn || keyBrake) && !T0.dead;
-    // the pedal: pressing it opens the throttle little by little, releasing closes it fast
-    thr = gas ? M.min(1, thr + 1 / 55) : M.max(0, thr - 1 / 8);
+    thr = gas ? 1 : 0;
     // spawn fuel cans and star arcs ahead
-    while (nextCan < camX + VW * 2) { cans.push({ x: nextCan, got: false }); nextCan += 2200 + nextCan * .22 + rnd(-200, 200) }
-    while (nextCoin < camX + VW * 2) { const n = 5; for (let i = 0; i < n; i++) coins.push({ x: nextCoin + i * 26, h: 34 + M.sin(i / (n - 1) * M.PI) * 22, got: false }); nextCoin += rnd(500, 900) }
+    while (nextCan < camX + VW * 2) { cans.push({ x: nextCan, got: false }); nextCan += 2000 + nextCan * .17 + rnd(-200, 200) }
+    while (nextCoin < camX + VW * 2) { const isStar = M.random() < .3, n = isStar ? 5 : 6 + M.floor(M.random() * 4), big = !isStar && M.random() < .2; for (let i = 0; i < n; i++) coins.push({ x: nextCoin + i * 26, h: 34 + M.sin(i / (n - 1) * M.PI) * 22, got: false, e: isStar ? 0 : big && i === M.floor(n / 2) ? 25 : 5 }); nextCoin += rnd(420, 760) }
     // physics: sub-steps with impulses (suspension, tyre grip, motor torque and its reaction on the chassis)
     let contacts = 0;
     const hitBody = (px, py, rx, ry, mu) => {
@@ -2503,12 +2504,14 @@ function update() {
       }
       // motor on the rear wheel, brakes on both
       const rear = T0.wh[0];
-      if (thr > 0 && T0.fuel > 0 && !T0.dead) { const d = M.max(-TMAX * thr * h / rear.I, M.min(TMAX * thr * h / rear.I, OMAX * thr - rear.om)); rear.om += d; T0.w -= d * rear.I / IC;
-        // the engine lifts the nose while it pulls hard (starting, climbing): too much throttle = backflip
+      // motor on the wheel joints (rear, plus the front with the 4x4 upgrade): the same torque turns the chassis the other way
+      // gas = forward (the nose lifts), brake = slow down then reverse (the nose dips)
+      for (const wh of T0.wh) {
+        const share = wh === rear ? 1 : FWD;
+        if (gas && share > 0) { const d = M.max(-TMAX * share * h / wh.I, M.min(TMAX * share * h / wh.I, OMAX - wh.om)); wh.om += d; T0.w -= d * wh.I / IC }
+        else if (brk) { const tgt = -OMAX * .45, d = M.max(-TMAX * 1.3 * h / wh.I, M.min(TMAX * 1.3 * h / wh.I, tgt - wh.om)); wh.om += d; T0.w -= d * wh.I / IC }
+        else wh.om *= .9985;
       }
-      // braking with the wheels on the ground pitches the nose down
-      if (brk && (T0.wh[0].wasT || T0.wh[1].wasT)) T0.w += REACT * .7 * h;
-      for (const wh of T0.wh) if (brk) { const tgt = M.abs(T0.vx) < .4 ? -OMAX * .35 : 0, d = M.max(-TMAX * 1.6 * h / wh.I, M.min(TMAX * 1.6 * h / wh.I, tgt - wh.om)); wh.om += d; T0.w -= d * wh.I / IC } else if (thr === 0 || wh !== rear) wh.om *= .9995;
       // tyres on the ground
       for (const wh of T0.wh) {
         const sl = slope(wh.x), len = M.hypot(1, sl), nx = sl / len, ny = -1 / len, pen = wh.r - (ground(wh.x) - wh.y) / len;
@@ -2520,8 +2523,6 @@ function update() {
         const tx = -ny, ty = nx, vt = (wh.vx - wh.om * rcy) * tx + (wh.vy + wh.om * rcx) * ty, ct = rcx * ty - rcy * tx;
         const mu = MU0 * zoneAt(wh.x).grip, jt = M.max(-mu * jn, M.min(mu * jn, -vt / (1 / MW + ct * ct / wh.I)));
         wh.vx += jt * tx / MW; wh.vy += jt * ty / MW; wh.om += ct * jt / wh.I;
-        // the rear tyre pushing hard (starting, climbing) lifts the nose: too much throttle = backflip
-        if (wh === T0.wh[0] && thr > 0 && jt > 0) T0.w -= jt * LIFT;
         if (jn > .5 && sub === 0) { sfx.land(); shake = M.min(6, jn * 4) }
       }
       // the bodywork can scrape on the ground; the roof or the driver's head = crash
@@ -2552,10 +2553,10 @@ function update() {
     // wheelie: only the rear wheel on the ground, nose up
     if (!T0.dead && T0.wh[0].touch && !T0.wh[1].touch && T0.a - M.atan(slope(T0.x)) < -.22) { if (++wheelieT % 60 === 0) { wheelies++; starPts += 20; sfx.star(); popup(W / 2, 200 - T, `Wheelie ! +20`, '#ffb0e0') } } else wheelieT = 0;
     // fuel
-    if (!T0.dead) { T0.fuel = M.max(0, T0.fuel - (.028 + .06 * thr) * FUELK); if (T0.fuel === 0 && emptyT === 0) { emptyT = 1; sfx.empty(); popup(W / 2, 200 - T, 'Panne sèche !', '#ffb060') } }
+    if (!T0.dead) { T0.fuel = M.max(0, T0.fuel - .062 * FUELK); if (T0.fuel === 0 && emptyT === 0) { emptyT = 1; sfx.empty(); popup(W / 2, 200 - T, 'Panne sèche !', '#ffb060') } }
     if (emptyT && M.hypot(T0.vx, T0.vy) < .25) emptyT++;
     for (const cn of cans) if (!cn.got && M.abs(cn.x - T0.x) < 34 && M.abs(ground(cn.x) - 22 - T0.y) < 60) { cn.got = true; T0.fuel = 100; emptyT = 0; sfx.can(); buzz(20); popup(W / 2, 200 - T, 'Plein d’essence !', '#7dff8a') }
-    for (const co of coins) if (!co.got && M.abs(co.x - T0.x) < 30 && M.abs(ground(co.x) - co.h - (T0.y - 6)) < 36) { co.got = true; stars++; starPts += 10; sfx.star() }
+    for (const co of coins) if (!co.got && M.abs(co.x - T0.x) < 30 && M.abs(ground(co.x) - co.h - (T0.y - 6)) < 36) { co.got = true; if (co.e) { ecusCoins += co.e; starPts += co.e > 5 ? 10 : 2; sfx.can(); if (co.e > 5) popup(W / 2, 230 - T, '+25 🪙', '#ffe066') } else { stars++; starPts += 10; sfx.star() } }
     cans = cans.filter(c => c.x > camX - 200); coins = coins.filter(c => c.x > camX - 200 && !c.got);
     // exhaust smoke
     if (playT % (gas ? 4 : 9) === 0 && !T0.dead) { const [px, py] = trPoint(21, -24); smoke.push({ x: px, y: py, vx: rnd(-.3, .3) - T0.vx * .2, vy: rnd(-1, -.5), l: 50, s: rnd(3, 5) }) }
@@ -2567,7 +2568,7 @@ function update() {
     maxX = M.max(maxX, T0.x);
     score = meters() + starPts;
     const a = M.floor(meters() / ZLEN); if (a !== act) { setAct(a, false); starPts += 50 }
-    if ((crashT && ++crashT > 70) || emptyT > 90) { ecusRun = M.floor(meters() / 3) + stars * 2 + flips * 20 + perfects * 5 + wheelies * 5; ecusSet(ecusGet() + ecusRun); try { if (meters() > +(localStorage.getItem('polichinelles_tracteur_m') || 0)) localStorage.setItem('polichinelles_tracteur_m', meters()) } catch (e) {} gameOver() }
+    if ((crashT && ++crashT > 70) || emptyT > 90) { ecusRun = ecusCoins + M.floor(meters() / 10) + flips * 25 + perfects * 10 + wheelies * 5; ecusSet(ecusGet() + ecusRun); try { if (meters() > +(localStorage.getItem('polichinelles_tracteur_m') || 0)) localStorage.setItem('polichinelles_tracteur_m', meters()) } catch (e) {} gameOver() }
   }
   for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += p.g || .05; p.l-- }
   for (const q of popups) { q.y -= .7; q.l-- } popups = popups.filter(q => q.l > 0);
@@ -2688,8 +2689,8 @@ function render() {
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('Le Tracteur', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Dose le GAZ : trop d’un coup et tu te cabres !', mx, 166, 13, '#ddd', 'center', false);
-      txt('FREIN = piquer du nez · relâche dans les bosses', mx, 184, 13, '#ddd', 'center', false);
+      txt('GAZ = avancer et se cabrer · FREIN = freiner et piquer', mx, 166, 13, '#ddd', 'center', false);
+      txt('Dans les côtes, lâche le gaz pour ne pas te retourner', mx, 184, 13, '#ddd', 'center', false);
       txt('🔧 Gagne des écus 🪙 et améliore ton tracteur au garage', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
@@ -2699,8 +2700,8 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 400 ? 26 : 34, COL.yellow);
     txt('Le Tracteur', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Dose le GAZ : trop d’un coup et tu te cabres !', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    txt('FREIN = piquer du nez · relâche dans les bosses', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('GAZ = avancer et se cabrer · FREIN = freiner et piquer', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Dans les côtes, lâche le gaz pour ne pas te retourner', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     if (T > 80) txt('🔧 Gagne des écus 🪙 et améliore ton tracteur au garage', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
@@ -2909,7 +2910,7 @@ function drawGame() {
   }
   // fuel cans and stars
   for (const cn of cans) if (!cn.got) { const y = ground(cn.x) - 4 + M.sin(t * .1) * 2; X.save(); X.globalAlpha = .3; circ('#fff3a0', cn.x, y - 12, 20); X.restore(); X.fillStyle = '#d8402c'; X.beginPath(); X.roundRect(cn.x - 9, y - 24, 18, 22, 3); X.fill(); X.fillStyle = '#2a2a33'; X.fillRect(cn.x - 2, y - 28, 6, 4); X.fillStyle = '#f2c230'; txt('⛽', cn.x, y - 13, 11, '#fff', 'center', false) }
-  for (const co of coins) star(co.x, ground(co.x) - co.h + M.sin(t * .1 + co.x) * 2, 7, t * .05);
+  for (const co of coins) { const cy = ground(co.x) - co.h + M.sin(t * .1 + co.x) * 2; if (!co.e) { star(co.x, cy, 7, t * .05); continue } const r = co.e > 5 ? 10 : 7, sq = M.abs(M.cos(t * .06 + co.x * .05)); X.save(); X.translate(co.x, cy); X.scale(M.max(.25, sq), 1); circ('#b8860b', 0, 0, r + 1.5); circ('#ffd54a', 0, 0, r); circ('#ffe98a', -r * .3, -r * .3, r * .35); X.restore(); if (sq > .6) txt(String(co.e), co.x, cy + .5, co.e > 5 ? 9 : 7, '#8a5a00', 'center', false) }
   for (const p of smoke) { X.save(); X.globalAlpha = p.l / 50 * (p.c ? .7 : .45); circ(p.c || '#8a8a92', p.x, p.y, p.s); X.restore() }
   drawTractor();
   X.restore();
@@ -2942,6 +2943,7 @@ function drawHud() {
     X.fillStyle = 'rgba(20,16,40,.6)'; X.beginPath(); X.roundRect(fx, fy, fw, 10, 5); X.fill();
     X.fillStyle = low ? (M.floor(t / 10) % 2 ? '#ff4f4f' : '#ffb060') : '#7dff8a'; X.beginPath(); X.roundRect(fx, fy, M.max(4, fw * TR.fuel / 100), 10, 5); X.fill();
     const nc = cans.find(c => !c.got && c.x > TR.x - 10), ncx = nc ? nc.x : nextCan; txt(`prochain ⛽ ${M.max(0, M.round((ncx - TR.x) / PXM))} m`, W / 2, fy + 25, 12, low ? '#ffb060' : '#fff', 'center', true);
+    txt(`🪙 ${ecusCoins}`, 28, fy + 25, 14, '#ffe066', 'left', true);
   }
   // pedals
   const big = LAND ? M.min(40, H * .12) : 46, py = H - 22 - big;
@@ -2950,9 +2952,6 @@ function drawHud() {
     X.strokeStyle = COL.yellow; X.lineWidth = 3; X.stroke(); X.fillStyle = 'rgba(0,0,0,.25)'; for (let i = -2; i <= 2; i++) X.fillRect(x - big * .7, py + i * big * .25, big * 1.4, 3);
     txt(lab, x, py, 17, '#fff'); X.restore();
   }
-  // how far the pedal is pushed (the throttle opens slowly)
-  { const gx = W - 22 - big * 2 - 14, gh = big * 1.6, gy = py - big * .8; X.fillStyle = 'rgba(20,16,40,.6)'; X.beginPath(); X.roundRect(gx, gy, 9, gh, 4); X.fill();
-    X.fillStyle = thr > .85 ? '#ff6a4a' : thr > .55 ? '#ffc040' : '#7dff8a'; X.beginPath(); X.roundRect(gx, gy + gh * (1 - thr), 9, M.max(3, gh * thr), 4); X.fill() }
   // about to tip over backwards
   if (state === 'play' && warnT > 6 && M.floor(t / 8) % 2) txt('⚠️ Lâche le gaz !', W / 2, H - T * 0 - big * 2 - 40, 20, '#ff6a4a');
   X.restore();
