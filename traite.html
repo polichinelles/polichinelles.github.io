@@ -767,6 +767,12 @@ function tapLane(lane, pid, y) {
   press[lane] = 9;
   const next = rows.filter(t => !t.done && !t.held).sort((a, b) => a.r - b.r)[0];
   if (!next) return;
+  // a tap on a long tile that is still going by is never a mistake: it resumes the hold if the finger had lifted
+  const lt = rows.find(h => h.hold && h.lane === lane && (h.held || h.early) && pos < h.r + h.len - .2 && pos > h.r - 4);
+  if (lt && next.lane !== lane) {
+    if (lt.early && !lt.held) { lt.done = false; lt.early = false; lt.held = true; lt.pid = pid; lt.snd = piano(lt.f, 0, true); holdBy[pid] = lt }
+    return;
+  }
   if (next.lane !== lane) {
     lives--; combo = 0; wrongs.push({ lane, y, l: 40 }); sfx.moo(); buzz([60, 40, 60]); shake = 5;
     if (lives <= 0) lose('Trop de fausses notes !', { lane, y }); else popup(laneX(lane), y - 20 - T, 'Fausse note !', '#ff8a8a');
