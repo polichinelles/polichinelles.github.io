@@ -173,6 +173,8 @@ const GAMES = [
   { id: 'traversee', name: 'La Traversée', href: 'traversee.html', best: 'polichinelles_best_traversee', fresh: true, desc: 'Traverse la scène en plein changement de décor : chariots, fosse d’orchestre… et le rideau qui tombe !', emoji: '🚦', bg: ['#e8c890', '#7a4a2a'] },
   { id: 'tracteur', name: 'Le Tracteur', href: 'tracteur.html', best: 'polichinelles_best_tracteur2', fresh: true, shot: true, desc: 'Grimpe les collines de la ferme en tracteur, fais des saltos et ne tombe pas en panne d’essence !', emoji: '🚜', bg: ['#bfe4f4', '#4e9a3a'] },
   { id: 'oeufs', name: 'Le Poulailler', href: 'oeufs.html', best: 'polichinelles_best_oeufs', fresh: true, shot: true, desc: 'Les poules pondent sans s’arrêter : rattrape les œufs dans ton panier, mais pas les œufs pourris !', emoji: '🥚', bg: ['#c89a4a', '#7a4a2a'] },
+  { id: 'traite', name: 'La Traite', href: 'traite.html', best: 'polichinelles_best_traite', soon: true, shot: true, desc: 'Trais la vache en rythme : touche à gauche ou à droite pile au bon moment, sinon… « Meuh ! »', emoji: '🐄', bg: ['#4a3a78', '#3e6a44'] },
+  { id: 'berger', name: 'Le Berger', href: 'berger.html', best: 'polichinelles_best_berger', soon: true, shot: true, desc: 'Guide ton chien pour faire rentrer tout le troupeau dans l’enclos, malgré la rivière et les loups !', emoji: '🐑', bg: ['#5aa04a', '#2e6a34'] },
 ];
 const ls = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
 try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
