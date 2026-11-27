@@ -173,8 +173,8 @@ const GAMES = [
   { id: 'traversee', name: 'La Traversée', href: 'traversee.html', best: 'polichinelles_best_traversee', fresh: true, desc: 'Traverse la scène en plein changement de décor : chariots, fosse d’orchestre… et le rideau qui tombe !', emoji: '🚦', bg: ['#e8c890', '#7a4a2a'] },
   { id: 'tracteur', name: 'Le Tracteur', href: 'tracteur.html', best: 'polichinelles_best_tracteur2', fresh: true, shot: true, desc: 'Grimpe les collines de la ferme en tracteur, fais des saltos et ne tombe pas en panne d’essence !', emoji: '🚜', bg: ['#bfe4f4', '#4e9a3a'] },
   { id: 'oeufs', name: 'Le Poulailler', href: 'oeufs.html', best: 'polichinelles_best_oeufs', fresh: true, shot: true, desc: 'Les poules pondent sans s’arrêter : rattrape les œufs dans ton panier, mais pas les œufs pourris !', emoji: '🥚', bg: ['#c89a4a', '#7a4a2a'] },
-  { id: 'traite', name: 'La Traite', href: 'traite.html', best: 'polichinelles_best_traite', soon: true, shot: true, desc: 'Le piano de la ferme : touche les tuiles noires pour jouer des airs célèbres, de plus en plus vite… sinon « Meuh ! »', emoji: '🐄', bg: ['#4a3a78', '#3e6a44'] },
-  { id: 'berger', name: 'Le Berger', href: 'berger.html', best: 'polichinelles_best_berger', soon: true, shot: true, desc: 'Guide ton chien pour faire rentrer tout le troupeau dans l’enclos, malgré la rivière et les loups !', emoji: '🐑', bg: ['#5aa04a', '#2e6a34'] },
+  { id: 'traite', name: 'La Traite', href: 'traite.html', best: 'polichinelles_best_traite', fresh: true, shot: true, desc: 'Le piano de la ferme : touche les tuiles noires pour jouer des airs célèbres, de plus en plus vite… sinon « Meuh ! »', emoji: '🐄', bg: ['#4a3a78', '#3e6a44'] },
+  { id: 'berger', name: 'Le Berger', href: 'berger.html', best: 'polichinelles_best_berger', fresh: true, shot: true, desc: 'Guide ton chien pour faire rentrer tout le troupeau dans l’enclos, malgré la rivière et les loups !', emoji: '🐑', bg: ['#5aa04a', '#2e6a34'] },
 ];
 const ls = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
 try { const prof = JSON.parse(ls('polichinelles_loge')); document.getElementById('wallet').textContent = prof && prof.wallet || 0 } catch (e) {}
@@ -246,7 +246,7 @@ function drawArt(cv, kind) {
 
 // ---------- general leaderboard: ranking points from every game ----------
 const FB = { apiKey: 'AIzaSyDgY5fK99pmytouCmoJ1_BdCZpAnzogYHM', projectId: 'polichinelles' };
-const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_trampo', '🤸'], ['scores_tir', '🎯'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹'], ['scores_briques', '🧱'], ['scores_farandole', '💃'], ['scores_traversee', '🚦'], ['scores_tracteur', '🚜'], ['scores_oeufs', '🥚']];
+const BOARDS = [['scores', '🏃'], ['scores_envol', '🎈'], ['scores_trampo', '🤸'], ['scores_tir', '🎯'], ['scores_tape', '🔨'], ['scores_pyramide', '🏛️'], ['scores_jongleur', '🤹'], ['scores_briques', '🧱'], ['scores_farandole', '💃'], ['scores_traversee', '🚦'], ['scores_tracteur', '🚜'], ['scores_oeufs', '🥚'], ['scores_traite', '🐄'], ['scores_berger', '🐑']];
 const RTDB = 'https://polichinelles-default-rtdb.europe-west1.firebasedatabase.app';
 async function topOf(coll) {
   const key = coll === 'scores' ? 'course' : coll.slice(7);
