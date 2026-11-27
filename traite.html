@@ -709,9 +709,25 @@ const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0
 const NL = 4, PERF = .075, GOOD = .15, MISS = .17;
 let tiles = [], drums = [], sprays = [], burstP = [], wrongF = [0, 0, 0, 0], press = [0, 0, 0, 0], holdBy = {}, hits = 0, misses = 0, patience = 100, milk = 0, buckets = 0, judgeTxt = null, cowMood = 0, kickT = 0;
 let useAC = false, songStart = 0, lastClk = 0, songT = 0, genT = 0, genBeat = 0, lastLane = 0, busy = [0, 0, 0, 0];
-const TR_CH = [['C3', 'C4', 'E4', 'G4', 'C5'], ['A2', 'A3', 'C4', 'E4', 'A4'], ['F2', 'F3', 'A3', 'C4', 'F4'], ['G2', 'G3', 'B3', 'D4', 'G4']];
+// an original comic chase tune: stride piano for the band, the melody is played by the player's taps (one note per eighth)
+const CH = { C: ['C3', 'C4', 'E4', 'G4', 'C5'], G: ['G2', 'G3', 'B3', 'D4', 'G4'], F: ['F2', 'F3', 'A3', 'C4', 'F4'], Am: ['A2', 'A3', 'C4', 'E4', 'A4'], Dm: ['D3', 'D4', 'F4', 'A4', 'D5'] };
+const SONG_CH = ['C', 'C', 'G', 'G', 'C', 'C', 'F', 'G', 'C', 'Am', 'Dm', 'G', 'C', 'F', 'G', 'C'];
+const SONG_MEL = ('G4 E4 G4 A4 G4 E4 C4 E4 | G4 G4 A4 G4 E5 D5 C5 - | B4 G4 B4 C5 B4 G4 D4 G4 | B4 B4 C5 B4 F5 E5 D5 - | ' +
+  'E5 D5 C5 B4 C5 G4 E4 G4 | A4 G4 F#4 G4 E5 - C5 - | A4 C5 F5 E5 D5 C5 A4 C5 | B4 A4 G4 F4 E4 D4 B3 D4 | ' +
+  'C4 E4 G4 C5 E5 C5 G4 E4 | A4 C5 E5 A5 G5 E5 C5 A4 | F4 A4 D5 F5 E5 D5 A4 F4 | G4 B4 D5 G5 F5 D5 B4 G4 | ' +
+  'C5 C5 E5 C5 G5 - E5 - | F5 E5 D5 C5 A4 C5 F5 - | G5 F5 E5 D5 C5 B4 A4 B4 | C5 G4 C5 - C4 - - -').replace(/\|/g, '').trim().split(/\s+/);
+function chordAt(b) { return CH[SONG_CH[M.floor(b / 4) % 16]] }
+// a reedy, slightly bent "sax" voice
+function sax(f, dur) {
+  if (!AC || !OPTS.sfx) return; const t0 = AC.currentTime, o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter(), lfo = AC.createOscillator(), lg = AC.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(f * .94, t0); o.frequency.exponentialRampToValueAtTime(f, t0 + .05);
+  lfo.frequency.value = 6; lg.gain.value = f * .012; lfo.connect(lg).connect(o.frequency);
+  fl.type = 'lowpass'; fl.frequency.value = 1900; fl.Q.value = 3;
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.12, t0 + .02); g.gain.setValueAtTime(.1, t0 + dur * .75); g.gain.linearRampToValueAtTime(0, t0 + dur);
+  o.connect(fl).connect(g).connect(AC.destination); o.start(t0); lfo.start(t0); o.stop(t0 + dur + .02); lfo.stop(t0 + dur + .02);
+}
 function clk() { return useAC && AC ? AC.currentTime : performance.now() / 1000 }
-function trBpm(beat) { return M.min(150, 88 + 8 * M.floor(M.max(0, beat - 4) / 32)) }
+function trBpm(beat) { return M.min(168, 112 + 8 * M.floor(M.max(0, beat - 4) / 32)) }
 function trLvl() { return M.min(1, M.max(0, genBeat - 4) / 240) }
 function boardW() { return LAND ? M.min(W * .62, 400) : W - 12 }
 function laneW() { return boardW() / NL }
@@ -725,18 +741,20 @@ function pickLane(avoid) { let l, k = 0; do { l = M.floor(M.random() * NL); k++ 
 // writes the next beats of the chart: tiles for the player, drums and bass for the band
 function genChart() {
   while (genT < songT + leadT() + .7) {
-    const b = genBeat, spb = 60 / trBpm(b), l = trLvl(), bar = M.floor(b / 4), inBar = b % 4, chord = TR_CH[bar % 4];
-    drums.push({ t: genT, k: inBar % 2 ? 'snare' : 'kick' }, { t: genT + spb / 2, k: 'hat' }, { t: genT, k: 'bass', f: NOTE(chord[0]) });
+    const b = genBeat, spb = 60 / trBpm(b), l = trLvl(), inBar = b % 4, chord = chordAt(b);
+    // stride: bass on 1 and 3, a chord stab on 2 and 4
+    drums.push({ t: genT, k: inBar % 2 ? 'snare' : 'kick' }, { t: genT + spb / 2, k: 'hat' });
+    if (inBar % 2 === 0) drums.push({ t: genT, k: 'bass', f: NOTE(chord[0]) * (inBar === 2 ? 1.5 : 1) }); else drums.push({ t: genT, k: 'stab', f: [NOTE(chord[2]), NOTE(chord[3]), NOTE(chord[1])] });
     if (b < 4) drums.push({ t: genT, k: 'count', n: 4 - b });
     else if (M.random() < .82 + .15 * l) {
       const r = M.random();
       if (b > 10 && r < .1 + .1 * l && inBar % 2 === 0) { // long tile: hold for two beats
-        const lane = pickLane([]); lastLane = lane; tiles.push({ t: genT, d: spb * 2, lane, b, hold: true }); busy[lane] = genT + spb * 2.2;
+        const lane = pickLane([]); lastLane = lane; tiles.push({ t: genT, d: spb * 2, lane, b, p: (b - 4) * 2, hold: true }); busy[lane] = genT + spb * 2.2;
       } else if (b > 16 && r < .16 + .22 * l) { // two at once
-        const a = pickLane([]), c = pickLane([a]); tiles.push({ t: genT, lane: a, b }, { t: genT, lane: c, b, pair: true }); busy[a] = busy[c] = genT + spb * .9; lastLane = c;
-      } else { const lane = pickLane([]); lastLane = lane; tiles.push({ t: genT, lane, b, gold: M.random() < .045 }); busy[lane] = genT + spb * .9 }
+        const a = pickLane([]), c = pickLane([a]); tiles.push({ t: genT, lane: a, b, p: (b - 4) * 2 }, { t: genT, lane: c, b, p: (b - 4) * 2, pair: true }); busy[a] = busy[c] = genT + spb * .9; lastLane = c;
+      } else { const lane = pickLane([]); lastLane = lane; tiles.push({ t: genT, lane, b, p: (b - 4) * 2, gold: M.random() < .045 }); busy[lane] = genT + spb * .9 }
       // a quick one in between, more and more often
-      if (b > 20 && M.random() < .06 + .35 * l) { const lane = pickLane([]); if (busy[lane] <= genT + spb / 2) { lastLane = lane; tiles.push({ t: genT + spb / 2, lane, b, short: true }); busy[lane] = genT + spb * .95 } }
+      if (b > 20 && M.random() < .06 + .35 * l) { const lane = pickLane([]); if (busy[lane] <= genT + spb / 2) { lastLane = lane; tiles.push({ t: genT + spb / 2, lane, b, p: (b - 4) * 2 + 1, short: true }); busy[lane] = genT + spb * .95 } }
     }
     if (b > 4 && (b - 4) % 32 === 0) drums.push({ t: genT, k: 'faster' });
     genT += spb; genBeat++;
@@ -750,11 +768,13 @@ function traiteMusic() {
     if (d.k === 'kick') { voice(70, t0, .14, 'sine', .5, 0); voice(140, t0, .05, 'triangle', .2, 0) }
     else if (d.k === 'snare') voice(200, t0, .08, 'square', .06, 900);
     else if (d.k === 'hat') voice(5200, t0, .03, 'square', .012, 0);
-    else if (d.k === 'bass') voice(d.f, t0, spb * .8, 'triangle', .2, 0);
+    else if (d.k === 'bass') voice(d.f, t0, spb * .7, 'triangle', .24, 0);
+    else if (d.k === 'stab') for (const f of d.f) voice(f, t0, spb * .35, 'square', .03, 1600);
     else if (d.k === 'count') voice(d.n === 1 ? 1046 : 784, t0, .1, 'square', .05, 2000);
   }
 }
-function playNote(tile, dur) { if (!OPTS.sfx) return; const ch = TR_CH[M.floor(tile.b / 4) % 4], f = NOTE(ch[1 + tile.lane]); beep(f, f, dur, 'triangle', .09); beep(f * 2, f * 2, M.min(dur, .1), 'sine', .03) }
+// the tile plays the tune's note at its place in the song (or a chord note on a rest)
+function playNote(tile, dur) { const n = tile.pair ? null : SONG_MEL[((tile.p % 128) + 128) % 128]; sax(n && n !== '-' ? NOTE(n) : NOTE(chordAt(tile.b)[1 + tile.lane]), M.max(.14, M.min(dur, 1.4))) }
 function mult() { return M.min(4, 1 + M.floor(combo / 10)) }
 function goodHit(tile, perfect) {
   hits++; combo++; const pts = (perfect ? 30 : 15) * mult() + (tile.gold ? 50 : 0);
