@@ -3056,7 +3056,7 @@ function drawGame() {
   if (bx > 300 && bx > x0 && bx < x1) { const by = ground(bx); line('#5a3a1c', 2, [bx, by, bx, by - 44]); poly(COL.yellow, [bx, by - 44, bx + 22, by - 38, bx, by - 32]); txt('Record', bx, by - 52, 10, '#3a2010', 'center', false) }
   // the ground, zone by zone
   for (let zn = zoneN(x0); ; zn++) {
-    const za = M.max(x0, 120 + zn * ZLEN * PXM), zb = M.min(x1, 120 + (zn + 1) * ZLEN * PXM); if (za >= x1) break;
+    const za = zn === 0 ? x0 : M.max(x0, 120 + zn * ZLEN * PXM), zb = M.min(x1, 120 + (zn + 1) * ZLEN * PXM); if (za >= x1) break;
     if (zb > za) drawGroundSeg(M.floor(za / 8) * 8, zb, ZONES[zoneOfN(zn)], zoneOfN(zn));
   }
   // fuel cans and stars

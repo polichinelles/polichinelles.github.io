@@ -706,7 +706,7 @@ const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- La Traite : piano-tiles in rhythm on the four teats of the cow ----
-const NL = 4, PERF = .075, GOOD = .15, MISS = .17;
+const NL = 4, PERF = .08, GOOD = .2, MISS = .17;
 let tiles = [], drums = [], sprays = [], burstP = [], wrongF = [0, 0, 0, 0], press = [0, 0, 0, 0], holdBy = {}, hits = 0, misses = 0, patience = 100, milk = 0, buckets = 0, judgeTxt = null, cowMood = 0, kickT = 0;
 let useAC = false, songStart = 0, lastClk = 0, songT = 0, genT = 0, genBeat = 0, lastLane = 0, busy = [0, 0, 0, 0];
 // an original comic chase tune: stride piano for the band, the melody is played by the player's taps (one note per eighth)
@@ -745,6 +745,7 @@ function genChart() {
     // stride: bass on 1 and 3, a chord stab on 2 and 4
     drums.push({ t: genT, k: inBar % 2 ? 'snare' : 'kick' }, { t: genT + spb / 2, k: 'hat' });
     if (inBar % 2 === 0) drums.push({ t: genT, k: 'bass', f: NOTE(chord[0]) * (inBar === 2 ? 1.5 : 1) }); else drums.push({ t: genT, k: 'stab', f: [NOTE(chord[2]), NOTE(chord[3]), NOTE(chord[1])] });
+    if (b >= 4) for (const h of [0, 1]) { const n = SONG_MEL[((b - 4) * 2 + h) % 128]; if (n !== '-') drums.push({ t: genT + h * spb / 2, k: 'mel', f: NOTE(n) }) }
     if (b < 4) drums.push({ t: genT, k: 'count', n: 4 - b });
     else if (M.random() < .82 + .15 * l) {
       const r = M.random();
@@ -765,11 +766,12 @@ function traiteMusic() {
   for (const d of drums) {
     if (d.s || d.t > songT + .15) continue; d.s = true;
     const t0 = M.max(AC.currentTime, songStart + d.t), spb = 60 / trBpm(genBeat);
-    if (d.k === 'kick') { voice(70, t0, .14, 'sine', .5, 0); voice(140, t0, .05, 'triangle', .2, 0) }
-    else if (d.k === 'snare') voice(200, t0, .08, 'square', .06, 900);
-    else if (d.k === 'hat') voice(5200, t0, .03, 'square', .012, 0);
-    else if (d.k === 'bass') voice(d.f, t0, spb * .7, 'triangle', .24, 0);
-    else if (d.k === 'stab') for (const f of d.f) voice(f, t0, spb * .35, 'square', .03, 1600);
+    if (d.k === 'kick') { voice(90, t0, .12, 'sine', .5, 0); voice(180, t0, .04, 'square', .08, 1200) }
+    else if (d.k === 'snare') { voice(320, t0, .07, 'square', .07, 2400); voice(190, t0, .06, 'triangle', .1, 0) }
+    else if (d.k === 'hat') voice(6000, t0, .03, 'square', .02, 0);
+    else if (d.k === 'bass') { voice(d.f * 2, t0, spb * .6, 'square', .07, 900); voice(d.f, t0, spb * .7, 'triangle', .25, 0) }
+    else if (d.k === 'stab') for (const f of d.f) voice(f, t0, spb * .3, 'square', .05, 2200);
+    else if (d.k === 'mel') voice(d.f, t0, spb * .42, 'triangle', .07, 0);
     else if (d.k === 'count') voice(d.n === 1 ? 1046 : 784, t0, .1, 'square', .05, 2000);
   }
 }
@@ -2710,8 +2712,12 @@ function drawBoard() {
   for (let i = 0; i < NL; i++) { if (wrongF[i] > 0) { X.fillStyle = `rgba(255,60,60,${wrongF[i] / 14 * .45})`; X.fillRect(x0 + lw * i, ty - 10, lw, hy - ty + 34) } if (press[i] > 0) { X.fillStyle = `rgba(255,150,190,${press[i] / 9 * .35})`; X.fillRect(x0 + lw * i, hy - 90, lw, 114) } }
   X.fillStyle = 'rgba(42,34,48,.18)'; for (let i = 1; i < NL; i++) X.fillRect(x0 + lw * i - .75, ty - 10, 1.5, hy - ty + 34);
   // the milking line
-  const lg = X.createLinearGradient(0, hy - 18, 0, hy + 22); lg.addColorStop(0, 'rgba(244,160,176,0)'); lg.addColorStop(.5, 'rgba(244,160,176,.45)'); lg.addColorStop(1, 'rgba(244,160,176,0)'); X.fillStyle = lg; X.fillRect(x0, hy - 18, bw, 40);
-  X.fillStyle = '#e88a9c'; X.fillRect(x0, hy - 1.5, bw, 3);
+  // the zone where you tap: tiles turn pink inside it
+  const k0 = pxs(), zt = hy - GOOD * k0, zb = hy + MISS * k0;
+  X.fillStyle = 'rgba(244,120,150,.16)'; X.fillRect(x0, zt, bw, zb - zt);
+  X.strokeStyle = 'rgba(232,90,130,.8)'; X.lineWidth = 2; X.setLineDash([8, 6]); X.beginPath(); X.moveTo(x0, zt); X.lineTo(x0 + bw, zt); X.stroke(); X.setLineDash([]);
+  X.fillStyle = '#e85a82'; X.fillRect(x0, hy - 2, bw, 4);
+  if (genBeat < 24) txt('TOUCHE ICI ↓', W / 2, zt - 10, 12, '#e85a82', 'center', false);
   // the tiles
   const k = pxs();
   for (const n of tiles) {
@@ -2720,7 +2726,9 @@ function drawBoard() {
     const x = x0 + lw * n.lane + 3, w = lw - 6;
     X.save();
     if (n.done && !n.missed) X.globalAlpha = M.max(0, 1 - (songT - n.hitT) / .35);
-    let col = n.gold ? '#e6b830' : n.missed ? '#c8303a' : '#241c34';
+    const now = !n.done && !n.held && n.t - songT <= GOOD && songT - n.t <= MISS;
+    let col = n.gold ? '#e6b830' : n.missed ? '#c8303a' : now ? '#e85a82' : '#241c34';
+    if (now) { X.shadowColor = '#ff6a9a'; X.shadowBlur = 16 }
     if (n.done && !n.missed && !n.hold) col = '#d8d0e0';
     X.fillStyle = col; X.beginPath(); X.roundRect(x, ytop, w, h, 8); X.fill();
     if (n.hold) {
