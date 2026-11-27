@@ -724,10 +724,10 @@ const UP_COST = [100, 250, 500, 900, 1500, 2500], UP_MAX = UP_COST.length;
 // ---- vehicles: each one is better (and far more expensive) than the one before ----
 // tq/sp = engine torque/top speed, ic = how easily it rotates, grip, fwd = built-in 4x4, ks/cs = springs/damping, fuel = consumption, air = air control
 const VEH = [
-  { k: 'tracteur', n: 'Le Tracteur', ic0: '🚜', price: 0, sag: 10, wheels: [[-24, 16, 15], [25, 19, 10]], body: [[-36, 10], [38, 4], [36, -10], [-34, -4]], roof: [[-10, -34], [-24, -42], [2, -42]], st: { tq: 1, sp: 1, ic: 360, grip: 0, fwd: 0, ks: 1, cs: 1, fuel: 1, air: 1 }, back: [-39, -9], front: [38, 0], pipe: [19, -26], strut: 14, d: 'Le vieux fidèle de la ferme' },
+  { k: 'tracteur', n: 'Le Tracteur', ic0: '🚜', price: 0, sag: 10, wheels: [[-24, 16, 15], [25, 19, 10]], body: [[-36, 10], [38, 4], [36, -10], [-34, -4]], roof: [[-10, -40], [-24, -50], [2, -50]], st: { tq: 1, sp: 1, ic: 360, grip: 0, fwd: 0, ks: 1, cs: 1, fuel: 1, air: 1 }, back: [-39, -9], front: [38, 0], pipe: [19, -26], strut: 14, d: 'Le vieux fidèle de la ferme' },
   { k: 'quad', n: 'Le Quad', ic0: '🏍️', price: 3000, sag: 9, wheels: [[-21, 12, 12], [21, 12, 12]], body: [[-28, 8], [28, 6], [24, -8], [-26, -8]], roof: [[-4, -36], [-12, -32], [4, -32]], st: { rx: .7, tq: 1, sp: 1.3, ic: 360, grip: .1, fwd: 0, ks: 1.4, cs: 1.6, fuel: .9, air: 1.3 }, back: [-30, -8], front: [27, 0], pipe: [-22, -12], strut: 10, d: 'Léger et vif, parfait pour les saltos' },
   { k: 'pickup', n: 'Le Pick-up', ic0: '🛻', price: 10000, sag: 10, wheels: [[-30, 14, 14], [30, 14, 14]], body: [[-48, 8], [48, 6], [46, -12], [-48, -12], [-6, -32], [14, -30]], roof: [[-6, -34], [14, -32], [4, -34]], st: { rx: .8, tq: 1.3, sp: 1.45, ic: 430, grip: .12, fwd: .5, ks: 1.5, cs: 2, fuel: .82, air: 1 }, back: [-50, -14], front: [49, 0], pipe: [-46, 4], strut: 12, d: '4x4 de série, grimpe tout' },
-  { k: 'monster', n: 'Le Monster Truck', ic0: '🚙', price: 25000, sag: 14, wheels: [[-30, 22, 22], [30, 22, 22]], body: [[-44, 2], [44, 0], [42, -22], [-44, -20], [-4, -40], [14, -40]], roof: [[-4, -44], [14, -44], [6, -45]], st: { rx: .6, tq: 1.5, sp: 1.55, ic: 760, grip: .2, fwd: .6, ks: 1.25, cs: 2.4, fuel: .75, air: 1.15 }, back: [-47, -18], front: [46, -10], pipe: [-12, -30], strut: 18, d: 'Roues géantes : écrase toutes les bosses' },
+  { k: 'monster', n: 'Le Monster Truck', ic0: '🚙', price: 25000, sag: 14, wheels: [[-30, 22, 22], [30, 22, 22]], body: [[-44, 2], [44, 0], [42, -22], [-44, -20], [-4, -40], [14, -40]], roof: [[-4, -44], [14, -44], [6, -45]], st: { rx: .6, tq: 1.5, sp: 1.55, ic: 760, grip: .2, fwd: .6, ks: 1.25, cs: 2.4, fuel: .75, air: 1.15 }, back: [-47, -18], front: [46, -10], pipe: [-12, -30], strut: 28, d: 'Roues géantes : écrase toutes les bosses' },
   { k: 'carrosse', n: 'Le Carrosse à fusée', ic0: '🚀', price: 60000, sag: 11, wheels: [[-28, 16, 17], [28, 16, 15]], body: [[-40, 6], [40, 4], [36, -20], [-36, -24], [0, -40]], roof: [[0, -50], [-14, -44], [14, -44], [30, -42]], st: { rx: .55, tq: 1.5, sp: 1.9, ic: 600, grip: .16, fwd: .5, ks: 1.8, cs: 2.6, fuel: .65, air: 1.6 }, back: [-46, -10], front: [42, -4], pipe: [-44, -10], strut: 14, d: 'Le véhicule royal du Théâtre, propulsé à la fusée !' }];
 let VD = VEH[0];
 function vehOwned() { try { const o = JSON.parse(localStorage.getItem('polichinelles_tracteur2_veh') || '["tracteur"]'); return o.includes('tracteur') ? o : ['tracteur', ...o] } catch (e) { return ['tracteur'] } }
@@ -799,7 +799,7 @@ function reset() {
   TR = { V: VD, U: UPV, x: 120, y: 300 - M.max(...WHEELS.map(w => w[1] + w[2])) - 2, vx: 0, vy: 0, a: 0, w: 0, fuel: 100, ground: 2, dead: false }; placeWheels();
   cans = []; coins = []; smoke = []; flips = 0; airT = 0; airRot = 0; maxX = 120; crashT = 0; emptyT = 0; nextCan = 1300; nextCoin = 600; lastSign = 0;
   gasOn = brakeOn = keyGas = keyBrake = false; gasId = brakeId = null;
-  ZM = LAND ? 1 : M.min(1, W / 380); VW = W / ZM; VH = H / ZM; camX = TR.x - VW * .32; camY = TR.y - VH * .58;
+  ZM = LAND ? .8 : M.min(1, W / 380); VW = W / ZM; VH = H / ZM; camX = TR.x - VW * .32; camY = TR.y - VH * .58;
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -2837,7 +2837,7 @@ function drawStage() {
   circ('#7a4a10', -8, -4, 2.4); circ('#7a4a10', 8, -4, 2.4); X.strokeStyle = '#7a4a10'; X.lineWidth = 2; X.beginPath(); X.arc(0, 4, 9, .3, M.PI - .3); X.stroke(); circ('rgba(255,120,80,.4)', -14, 6, 4); circ('rgba(255,120,80,.4)', 14, 6, 4);
   X.restore();
   for (let i = 0; i < 5; i++) {
-    const cx = ((i * 260 - camX * .08 * ZM) % (W + 260) + W + 260) % (W + 260) - 130, cy = H * (.09 + (i % 3) * .06), sway = M.sin(t * .03 + i) * 3;
+    const cx = ((i * 260 - camX * .08 * ZM) % (W + 260) + W + 260) % (W + 260) - 130, cy = H * ((LAND ? .34 : .2) + (i % 3) * .05), sway = M.sin(t * .03 + i) * 3;
     line('#2a2230', 1, [cx, 0, cx + sway, cy - 10]);
     flat(() => { X.beginPath(); X.ellipse(cx + sway, cy, 32, 10, 0, 0, 6.29); X.ellipse(cx + 18 + sway, cy - 6, 20, 10, 0, 0, 6.29); X.ellipse(cx - 16 + sway, cy - 3, 16, 8, 0, 0, 6.29) }, '#fbfbff');
   }
@@ -2916,10 +2916,10 @@ function drawTractorBody(T0, U, gasFx) {
   // driver (behind the bodywork)
   X.save(); X.translate(-10, 8); X.scale(.42, .42); drawPoli({ run: 0, idle: true, dead: T0.dead }, LOOK); X.restore();
   // roll bar and roof
-  X.strokeStyle = tot >= 30 ? GOLD : '#2a2a33'; X.lineWidth = 3; X.beginPath(); X.moveTo(-24, -2); X.lineTo(-24, -40); X.moveTo(2, -2); X.lineTo(2, -40); X.stroke();
-  X.fillStyle = '#c8302a'; X.beginPath(); X.roundRect(-28, -44, 34, 5, 2); X.fill(); X.fillStyle = '#f2c230'; X.fillRect(-28, -40, 34, 1.5);
+  X.strokeStyle = tot >= 30 ? GOLD : '#2a2a33'; X.lineWidth = 3; X.beginPath(); X.moveTo(-24, -2); X.lineTo(-24, -48); X.moveTo(2, -2); X.lineTo(2, -48); X.stroke();
+  X.fillStyle = '#c8302a'; X.beginPath(); X.roundRect(-28, -52, 34, 5, 2); X.fill(); X.fillStyle = '#f2c230'; X.fillRect(-28, -48, 34, 1.5);
   // 4x4 level 5: light bar on the roof
-  if (aw >= 5) { X.fillStyle = '#2a2a33'; X.fillRect(-26, -48, 30, 4); for (let k = 0; k < 4; k++) circ(gasFx || T0 !== TR ? '#fff6a0' : '#ffe680', -22 + k * 8, -46, 2.2) }
+  if (aw >= 5) { X.fillStyle = '#2a2a33'; X.fillRect(-26, -56, 30, 4); for (let k = 0; k < 4; k++) circ(gasFx || T0 !== TR ? '#fff6a0' : '#ffe680', -22 + k * 8, -54, 2.2) }
   // body: plain, striped, metallic then legendary
   let bodyFill = '#d8402c';
   if (tot >= 18) { const g = X.createLinearGradient(0, -12, 0, 12); g.addColorStop(0, '#ff6a50'); g.addColorStop(.5, '#d8402c'); g.addColorStop(1, '#8a1f1a'); bodyFill = g }
@@ -2950,7 +2950,7 @@ function drawTractorBody(T0, U, gasFx) {
   // fuel tank level 2+: tank under the cab
   if (tk >= 2) { X.fillStyle = tk >= 6 ? GOLD : tk >= 5 ? CHR : '#8a8a96'; X.beginPath(); X.roundRect(-6, 7, 16, 7, 3.5); X.fill(); if (tk >= 4) { X.fillStyle = '#7dff8a'; X.fillRect(-3, 9.5, 8, 2) } }
   // legendary: a golden star on the hood
-  if (tot >= 30) star(-11, -55, 5, (t || 0) * .03, GOLD);
+  if (tot >= 30) star(-11, -63, 5, (t || 0) * .03, GOLD);
   // 4x4 level 1: drive shaft to the front wheel
   if (aw >= 1) line('#4a4a55', 2.5, [-24, 16, 25, 19]);
   X.restore();
@@ -3094,7 +3094,7 @@ function drawHud() {
     X.fillStyle = 'rgba(20,16,40,.6)'; X.beginPath(); X.roundRect(fx, fy, fw, 10, 5); X.fill();
     X.fillStyle = low ? (M.floor(t / 10) % 2 ? '#ff4f4f' : '#ffb060') : '#7dff8a'; X.beginPath(); X.roundRect(fx, fy, M.max(4, fw * TR.fuel / 100), 10, 5); X.fill();
     const nc = cans.find(c => !c.got && c.x > TR.x - 10), ncx = nc ? nc.x : nextCan; txt(`prochain ⛽ ${M.max(0, M.round((ncx - TR.x) / PXM))} m`, W / 2, fy + 25, 12, low ? '#ffb060' : '#fff', 'center', true);
-    txt(`🪙 ${ecusCoins}`, 28, fy + 25, 14, '#ffe066', 'left', true);
+    if (LAND) txt(`🪙 ${ecusCoins}`, fx + fw + 16, fy + 5, 14, '#ffe066', 'left', true); else txt(`🪙 ${ecusCoins}`, 28, fy + 25, 14, '#ffe066', 'left', true);
   }
   // pedals
   const big = LAND ? M.min(40, H * .12) : 46, py = H - 22 - big;
