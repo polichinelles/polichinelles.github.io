@@ -331,6 +331,7 @@ const sfx = {
   crash: () => { beep(200, 40, .35, 'sawtooth', .12); beep(1800, 600, .2, 'square', .03) },
   twang: () => beep(140, 220, .3, 'triangle', .08),
   moo: () => { beep(190, 120, .45, 'sawtooth', .07); beep(196, 126, .45, 'square', .03) },
+  wrong: () => { beep(150, 110, .18, 'square', .06) },
   full: () => [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => beep(f, f, .09, 'triangle', .06), i * 55)),
   kick: () => { beep(160, 40, .5, 'sawtooth', .1); beep(90, 30, .6, 'square', .08) },
 
@@ -704,34 +705,38 @@ const PX = 70;                       // player x
 const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
-// ---- La Traite : a rhythm game, tap in time to milk the cow ----
-let notes = [], drums = [], sprays = [], burstP = [], hits = 0, misses = 0, patience = 100, milk = 0, buckets = 0, judgeTxt = null, lanePress = [0, 0], cowMood = 0, kickT = 0;
-let useAC = false, songStart = 0, lastClk = 0, songT = 0, genT = 0, genBeat = 0, lastLane = 0, melI = 0, keyHeld = [false, false];
+// ---- La Traite : piano-tiles in rhythm on the four teats of the cow ----
+const NL = 4, PERF = .075, GOOD = .15, MISS = .17;
+let tiles = [], drums = [], sprays = [], burstP = [], wrongF = [0, 0, 0, 0], press = [0, 0, 0, 0], holdBy = {}, hits = 0, misses = 0, patience = 100, milk = 0, buckets = 0, judgeTxt = null, cowMood = 0, kickT = 0;
+let useAC = false, songStart = 0, lastClk = 0, songT = 0, genT = 0, genBeat = 0, lastLane = 0, busy = [0, 0, 0, 0];
 const TR_CH = [['C3', 'C4', 'E4', 'G4', 'C5'], ['A2', 'A3', 'C4', 'E4', 'A4'], ['F2', 'F3', 'A3', 'C4', 'F4'], ['G2', 'G3', 'B3', 'D4', 'G4']];
-const PERF = .075, GOOD = .14, MISS = .17;
 function clk() { return useAC && AC ? AC.currentTime : performance.now() / 1000 }
-function trBpm(beat) { return M.min(152, 92 + 8 * M.floor(M.max(0, beat - 4) / 32)) }
-function trLvl() { return M.min(1, M.max(0, genBeat - 4) / 220) }
-function hitY() { return LAND ? H - 70 : H * .7 }
-function topY() { return LAND ? 26 : 112 }
-function laneX(i) { const d = LAND ? 54 : 40; return W / 2 + (i ? d : -d) }
-function leadT() { return 1.65 - .5 * trLvl() }
-// writes the next beats of the chart: notes for the player, drums and bass for the band
+function trBpm(beat) { return M.min(150, 88 + 8 * M.floor(M.max(0, beat - 4) / 32)) }
+function trLvl() { return M.min(1, M.max(0, genBeat - 4) / 240) }
+function boardW() { return LAND ? M.min(W * .62, 400) : W - 12 }
+function laneW() { return boardW() / NL }
+function laneX(i) { return W / 2 - boardW() / 2 + laneW() * (i + .5) }
+function hitY() { return LAND ? H - 96 : H - 196 }
+function topY() { return LAND ? 64 : 104 }
+function leadT() { return 1.7 - .45 * trLvl() }
+function pxs() { return (hitY() - topY()) / leadT() }
+function laneAt(x) { const l = M.floor((x - (W / 2 - boardW() / 2)) / laneW()); return l >= 0 && l < NL ? l : -1 }
+function pickLane(avoid) { let l, k = 0; do { l = M.floor(M.random() * NL); k++ } while ((l === lastLane || avoid.includes(l) || busy[l] > genT) && k < 20); return l }
+// writes the next beats of the chart: tiles for the player, drums and bass for the band
 function genChart() {
-  while (genT < songT + leadT() + .6) {
+  while (genT < songT + leadT() + .7) {
     const b = genBeat, spb = 60 / trBpm(b), l = trLvl(), bar = M.floor(b / 4), inBar = b % 4, chord = TR_CH[bar % 4];
     drums.push({ t: genT, k: inBar % 2 ? 'snare' : 'kick' }, { t: genT + spb / 2, k: 'hat' }, { t: genT, k: 'bass', f: NOTE(chord[0]) });
     if (b < 4) drums.push({ t: genT, k: 'count', n: 4 - b });
-    else {
+    else if (M.random() < .82 + .15 * l) {
       const r = M.random();
-      if (r > .3 - .22 * l) {
-        let lane = M.random() < .62 ? 1 - lastLane : lastLane; lastLane = lane;
-        const gold = M.random() < .045;
-        if (!gold && M.random() < .04 + .2 * l && inBar === 0) { notes.push({ t: genT, lane: 0, b }, { t: genT, lane: 1, b, pair: true }) }
-        else notes.push({ t: genT, lane, b, gold });
-      }
-      // an eighth note in between, more and more often
-      if (b > 12 && M.random() < .08 + .4 * l) { const lane = 1 - lastLane; lastLane = lane; notes.push({ t: genT + spb / 2, lane, b }) }
+      if (b > 10 && r < .1 + .1 * l && inBar % 2 === 0) { // long tile: hold for two beats
+        const lane = pickLane([]); lastLane = lane; tiles.push({ t: genT, d: spb * 2, lane, b, hold: true }); busy[lane] = genT + spb * 2.2;
+      } else if (b > 16 && r < .16 + .22 * l) { // two at once
+        const a = pickLane([]), c = pickLane([a]); tiles.push({ t: genT, lane: a, b }, { t: genT, lane: c, b, pair: true }); busy[a] = busy[c] = genT + spb * .9; lastLane = c;
+      } else { const lane = pickLane([]); lastLane = lane; tiles.push({ t: genT, lane, b, gold: M.random() < .045 }); busy[lane] = genT + spb * .9 }
+      // a quick one in between, more and more often
+      if (b > 20 && M.random() < .06 + .35 * l) { const lane = pickLane([]); if (busy[lane] <= genT + spb / 2) { lastLane = lane; tiles.push({ t: genT + spb / 2, lane, b, short: true }); busy[lane] = genT + spb * .95 } }
     }
     if (b > 4 && (b - 4) % 32 === 0) drums.push({ t: genT, k: 'faster' });
     genT += spb; genBeat++;
@@ -749,27 +754,40 @@ function traiteMusic() {
     else if (d.k === 'count') voice(d.n === 1 ? 1046 : 784, t0, .1, 'square', .05, 2000);
   }
 }
-function judge(lane) {
-  lanePress[lane] = 9;
-  let best = null, bd = 9;
-  for (const n of notes) if (!n.done && n.lane === lane) { const d = M.abs(n.t - songT); if (d < bd) { bd = d; best = n } }
-  if (!best || bd > GOOD) return;
-  best.done = true; best.hit = true; hits++; combo++;
-  const perfect = bd <= PERF, mult = M.min(4, 1 + M.floor(combo / 10)), pts = (perfect ? 30 : 15) * mult + (best.gold ? 50 : 0);
+function playNote(tile, dur) { if (!OPTS.sfx) return; const ch = TR_CH[M.floor(tile.b / 4) % 4], f = NOTE(ch[1 + tile.lane]); beep(f, f, dur, 'triangle', .09); beep(f * 2, f * 2, M.min(dur, .1), 'sine', .03) }
+function mult() { return M.min(4, 1 + M.floor(combo / 10)) }
+function goodHit(tile, perfect) {
+  hits++; combo++; const pts = (perfect ? 30 : 15) * mult() + (tile.gold ? 50 : 0);
   starPts += pts; patience = M.min(100, patience + (perfect ? 3 : 1.5));
-  if (best.gold) { stars++; sfx.star(); flash = 4 }
+  if (tile.gold) { stars++; sfx.star(); flash = 4 }
   if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() }
   judgeTxt = { s: perfect ? 'Parfait !' : 'Bien', k: perfect ? '#ffe066' : '#9fe0ff', l: 30 };
-  // the hit plays the tune: a chord note of the current bar, low on the left, high on the right
-  const chord = TR_CH[M.floor(best.b / 4) % 4], f = NOTE(chord[1 + lane * 2 + (melI++ % 2)]);
-  if (OPTS.sfx) { beep(f, f, .16, 'triangle', .09); beep(f * 2, f * 2, .08, 'sine', .03) }
-  buzz(perfect ? 12 : 6);
-  milk++; sprays.push({ lane, l: 10 });
-  for (let i = 0; i < (perfect ? 8 : 4); i++) burstP.push({ x: laneX(lane), y: hitY(), vx: rnd(-2.5, 2.5), vy: rnd(-3.5, -.5), l: 26, k: best.gold ? '#ffe066' : '#fff' });
-  if (milk >= 30) { milk = 0; buckets++; starPts += 100 * mult; sfx.full(); popup(W / 2, hitY() + 20 - T, 'Seau plein ! +' + 100 * mult, '#fff') }
+  buzz(perfect ? 12 : 6); milk++; sprays.push({ lane: tile.lane, l: 12 });
+  for (let i = 0; i < (perfect ? 8 : 4); i++) burstP.push({ x: laneX(tile.lane), y: hitY(), vx: rnd(-2.5, 2.5), vy: rnd(-3.5, -.5), l: 26, k: tile.gold ? '#ffe066' : '#fff' });
+  if (milk >= 30) { milk = 0; buckets++; starPts += 100 * mult(); sfx.full(); popup(W / 2, hitY() + 70 - T, 'Seau plein ! +' + 100 * mult(), '#fff') }
 }
-function missNote(n) {
-  n.done = true; misses++; combo = 0; patience -= n.gold ? 7 : 13; cowMood = 40;
+function tapLane(lane, pid) {
+  press[lane] = 9;
+  let best = null, bd = 9;
+  for (const n of tiles) if (!n.done && !n.held && n.lane === lane) { const d = M.abs(n.t - songT); if (d < bd) { bd = d; best = n } }
+  if (!best || bd > GOOD) {
+    // a wrong note (only when nothing was coming in that lane)
+    if (!best || bd > .32) { wrongF[lane] = 14; patience -= 5; combo = 0; sfx.wrong(); judgeTxt = { s: 'Fausse note !', k: '#ff8a8a', l: 26 } }
+    return;
+  }
+  const perfect = bd <= PERF;
+  if (best.hold) { best.held = true; best.pid = pid; best.perfect = perfect; holdBy[pid] = best; playNote(best, best.d); goodHit(best, perfect) }
+  else { best.done = true; best.hitT = songT; playNote(best, .16); goodHit(best, perfect) }
+}
+function releasePid(pid) {
+  const h = holdBy[pid]; if (!h) return; delete holdBy[pid];
+  if (h.done) return; h.done = true; h.hitT = songT;
+  const left = h.t + h.d - songT;
+  if (left < .15) { const bonus = 40 * mult(); starPts += bonus; popup(laneX(h.lane), hitY() - 40 - T, 'Traite complète ! +' + bonus, '#fff') }
+  else { combo = 0; judgeTxt = { s: 'Trop tôt', k: '#ffb060', l: 24 } }
+}
+function missTile(n) {
+  n.done = true; n.missed = true; misses++; combo = 0; patience -= n.gold ? 7 : 13; cowMood = 40;
   judgeTxt = { s: 'Meuh !', k: '#ff8a8a', l: 30 }; sfx.moo(); buzz([30, 20, 30]);
 }
 
@@ -782,8 +800,8 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  notes = []; drums = []; sprays = []; burstP = []; hits = 0; misses = 0; patience = 100; milk = 0; buckets = 0; judgeTxt = null; lanePress = [0, 0]; cowMood = 0; kickT = 0;
-  useAC = !!AC; songStart = clk() + .9; lastClk = clk(); songT = -.9; genT = 0; genBeat = 0; lastLane = 0; melI = 0;
+  tiles = []; drums = []; sprays = []; burstP = []; wrongF = [0, 0, 0, 0]; press = [0, 0, 0, 0]; holdBy = {}; hits = 0; misses = 0; patience = 100; milk = 0; buckets = 0; judgeTxt = null; cowMood = 0; kickT = 0;
+  useAC = !!AC; songStart = clk() + .9; lastClk = clk(); songT = -.9; genT = 0; genBeat = 0; lastLane = 0; busy = [0, 0, 0, 0];
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
   duckPointers.clear(); jumpPointers.clear();
@@ -2473,11 +2491,14 @@ function update() {
     // the song clock (a pause or a hidden tab does not count)
     const c = clk(); if (c - lastClk > .25) songStart += c - lastClk - 1 / 60; lastClk = c; songT = c - songStart;
     genChart();
-    for (const d of drums) if (d.k === 'faster' && !d.f && d.t <= songT) { d.f = true; setAct(act + 1, false); popup(W / 2, topY() + 40 - T, 'Plus vite !', '#ffe066') }
-    for (const n of notes) if (!n.done && songT - n.t > MISS) missNote(n);
-    notes = notes.filter(n => !n.done);
+    for (const d of drums) if (d.k === 'faster' && !d.f && d.t <= songT) { d.f = true; setAct(act + 1, false); popup(W / 2, topY() + 60 - T, 'Plus vite !', '#ffe066') }
+    for (const n of tiles) {
+      if (n.held && !n.done) { if (songT >= n.t + n.d) { n.done = true; n.hitT = songT; const bonus = 40 * mult(); starPts += bonus; popup(laneX(n.lane), hitY() - 40 - T, 'Traite complète ! +' + bonus, '#fff'); delete holdBy[n.pid] } else if (playT % 6 === 0) { starPts += 2; sprays.push({ lane: n.lane, l: 8 }) } }
+      else if (!n.done && songT - n.t > MISS) missTile(n);
+    }
+    tiles = tiles.filter(n => !n.done || songT - (n.hitT ?? n.t) < .35);
     drums = drums.filter(d => d.t > songT - 1);
-    for (let i = 0; i < 2; i++) if (lanePress[i] > 0) lanePress[i]--;
+    for (let i = 0; i < NL; i++) { if (press[i] > 0) press[i]--; if (wrongF[i] > 0) wrongF[i]-- }
     for (const s of sprays) s.l--; sprays = sprays.filter(s => s.l > 0);
     for (const p of burstP) { p.x += p.vx; p.y += p.vy; p.vy += .18; p.l-- } burstP = burstP.filter(p => p.l > 0);
     if (judgeTxt && --judgeTxt.l <= 0) judgeTxt = null;
@@ -2606,9 +2627,9 @@ function render() {
       txt('LES POLICHINELLES', W / 2, 44, 32, COL.yellow);
       txt('La Traite', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
-      txt('Touche GAUCHE ou DROITE quand la goutte est dans le rond', mx, 166, 13, '#ddd', 'center', false);
-      txt('En rythme = du lait et un joli air · raté = « Meuh ! »', mx, 184, 13, '#ddd', 'center', false);
-      txt('Si la vache perd patience, elle renverse le seau !', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('Touche les tuiles quand elles arrivent sur les pis', mx, 166, 13, '#ddd', 'center', false);
+      txt('Tuile longue = garde le doigt appuyé pour traire', mx, 184, 13, '#ddd', 'center', false);
+      txt('Fausse note ou tuile ratée = la vache perd patience !', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
@@ -2617,9 +2638,9 @@ function render() {
     txt('LES POLICHINELLES', W / 2, ty, W < 330 ? 22 : W < 400 ? 26 : 34, COL.yellow);
     txt('La Traite', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
-    txt('Touche GAUCHE ou DROITE quand la goutte est dans le rond', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    txt('En rythme = du lait et un joli air · raté = « Meuh ! »', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    if (T > 80) txt('Si la vache perd patience, elle renverse le seau !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
+    txt('Touche les tuiles quand elles arrivent sur les pis', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    txt('Tuile longue = garde le doigt appuyé pour traire', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    if (T > 80) txt('Fausse note ou tuile ratée = la vache perd patience !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -2643,112 +2664,107 @@ function render() {
 
 
 function onKey() {}
-function onPointerDown(e) { if (state !== 'play' || kickT) return; judge(e.clientX / S < W / 2 ? 0 : 1) }
-addEventListener('keydown', e => { if (state !== 'play' || kickT || e.repeat) return; if (e.key === 'ArrowLeft' || e.key === 'q' || e.key === 'f') judge(0); else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'j') judge(1) });
-// ---------- the meadow at night ----------
+function onPointerDown(e) { if (state !== 'play' || kickT) return; const l = laneAt(e.clientX / S); if (l >= 0) tapLane(l, e.pointerId) }
+function trUp(e) { releasePid(e.pointerId) }
+addEventListener('pointerup', trUp); addEventListener('pointercancel', trUp);
+const TR_KEYS = { d: 0, f: 1, j: 2, k: 3, ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
+addEventListener('keydown', e => { const l = TR_KEYS[e.key]; if (l === undefined || state !== 'play' || kickT || e.repeat) return; tapLane(l, 'k' + l) });
+addEventListener('keyup', e => { const l = TR_KEYS[e.key]; if (l !== undefined) releasePid('k' + l) });
+// ---------- the barn at night ----------
 function drawStage() {
   X.save(); X.translate(0, -T);
-  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1a1840'); g.addColorStop(.6, '#4a3a78'); g.addColorStop(1, '#8a5a7a'); X.fillStyle = g; X.fillRect(0, 0, W, H);
-  for (let i = 0; i < 40; i++) { const x = (i * 97.3) % W, y = (i * 53.7) % (H * .45); X.globalAlpha = .4 + .4 * M.sin(t * .05 + i); circ('#fff', x, y, i % 5 ? .9 : 1.5) } X.globalAlpha = 1;
-  circ('#fff6d0', W * .78, LAND ? 70 : topY() + 60, 16); circ('#f0e4b0', W * .78 + 5, (LAND ? 70 : topY() + 60) - 4, 4);
-  const hy = hitY();
-  // hills, barn and fence
-  X.fillStyle = '#2e4a3a'; X.beginPath(); X.moveTo(0, hy - 40); X.quadraticCurveTo(W * .3, hy - 120, W * .6, hy - 60); X.quadraticCurveTo(W * .85, hy - 20, W, hy - 70); X.lineTo(W, H); X.lineTo(0, H); X.fill();
-  X.fillStyle = '#5a2020'; X.fillRect(W * .06, hy - 130, 56, 60); poly('#3a1414', [W * .06 - 6, hy - 130, W * .06 + 28, hy - 160, W * .06 + 62, hy - 130]); X.fillStyle = '#ffd88a'; X.fillRect(W * .06 + 22, hy - 112, 12, 14);
+  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2a1a3a'); g.addColorStop(1, '#5a2e3a'); X.fillStyle = g; X.fillRect(0, 0, W, H);
+  for (let x = 0, i = 0; x < W; x += 26, i++) { X.fillStyle = ['rgba(122,74,42,.35)', 'rgba(110,64,36,.35)', 'rgba(140,90,52,.35)'][i % 3]; X.fillRect(x, 0, 25, H) }
   X.save(); X.globalCompositeOperation = 'soft-light'; X.globalAlpha = .5; X.fillStyle = `rgb(${AMB.spot})`; X.fillRect(0, 0, W, H); X.restore();
-  X.fillStyle = '#3e6a44'; X.fillRect(0, hy + 34, W, H - hy - 34); X.fillStyle = '#4e8a4a'; X.fillRect(0, hy + 34, W, 5);
-  X.strokeStyle = '#8a6a44'; X.lineWidth = 3; X.beginPath(); for (let x = 6; x < W; x += 34) { X.moveTo(x, hy + 36); X.lineTo(x, hy + 6) } X.moveTo(0, hy + 14); X.lineTo(W, hy + 14); X.moveTo(0, hy + 26); X.lineTo(W, hy + 26); X.stroke();
-  // spotlight on the cow
-  X.save(); X.globalAlpha = .14; X.fillStyle = '#fff3c0'; X.beginPath(); X.moveTo(W / 2 - 30, 0); X.lineTo(W / 2 + 30, 0); X.lineTo(W / 2 + 170, hy + 80); X.lineTo(W / 2 - 170, hy + 80); X.fill(); X.restore();
   X.restore();
 }
 function drawCrowd() {}
 function drawValance() {}
 function drawBatten() {}
-function drawCow() {
-  const hy = hitY(), cx = W / 2, cy = hy - 62, angry = patience < 35 || cowMood > 0, kick = kickT > 0, chew = M.sin(t * .15) * 1.5;
-  // legs
-  X.fillStyle = '#f4f0e8'; for (const lx of [-86, -60, 58, 84]) { const k = kick && lx > 70 ? M.min(1, kickT / 10) : 0; X.save(); X.translate(cx + lx, cy + 30); X.rotate(-k * 1.1); X.fillRect(-7, 0, 14, 50); X.fillStyle = '#2a2230'; X.fillRect(-8, 44, 16, 8); X.fillStyle = '#f4f0e8'; X.restore() }
-  // tail
-  const tw = M.sin(t * (angry ? .3 : .08)) * (angry ? .6 : .3);
-  X.save(); X.translate(cx + 108, cy - 26); X.rotate(.4 + tw); line('#f4f0e8', 4, [0, 0, 4, 40]); X.fillStyle = '#2a2230'; X.beginPath(); X.ellipse(4, 46, 5, 9, 0, 0, 6.29); X.fill(); X.restore();
-  // body with spots
-  X.fillStyle = '#f8f4ec'; X.beginPath(); X.ellipse(cx, cy, 116, 46, 0, 0, 6.29); X.fill();
-  X.save(); X.beginPath(); X.ellipse(cx, cy, 116, 46, 0, 0, 6.29); X.clip(); X.fillStyle = '#2a2230';
-  for (const [sx, sy, rx, ry] of [[-60, -22, 26, 18], [10, -30, 30, 16], [64, 6, 24, 20], [-20, 20, 18, 12], [92, -24, 14, 12]]) { X.beginPath(); X.ellipse(cx + sx, cy + sy, rx, ry, .4, 0, 6.29); X.fill() } X.restore();
-  // udder: the two teats sit in the rings
-  X.fillStyle = '#f4a0b0'; X.beginPath(); X.ellipse(cx, hy - 22, 62, 18, 0, 0, M.PI); X.fill();
-  for (let i = 0; i < 2; i++) { const tx = laneX(i), sq = lanePress[i] > 0 ? 3 : 0; X.fillStyle = '#e88a9c'; X.beginPath(); X.roundRect(tx - 6, hy - 24, 12, 20 - sq, 6); X.fill() }
-  // head
-  const hx = cx - 128, hyy = cy - 22 + (angry ? M.sin(t * .5) * 2 : 0);
-  X.fillStyle = '#f8f4ec'; X.beginPath(); X.ellipse(hx, hyy, 30, 26, -.2, 0, 6.29); X.fill();
-  X.fillStyle = '#2a2230'; X.beginPath(); X.ellipse(hx + 10, hyy - 12, 12, 9, .3, 0, 6.29); X.fill();
-  X.fillStyle = '#f4b0bc'; X.beginPath(); X.ellipse(hx - 14, hyy + 12 + chew * .3, 18, 12, -.2, 0, 6.29); X.fill(); circ('#c86a7a', hx - 20, hyy + 10, 2.4); circ('#c86a7a', hx - 9, hyy + 9, 2.4);
-  poly('#e8dcc0', [hx + 4, hyy - 22, hx + 14, hyy - 40, hx + 14, hyy - 22]); poly('#e8dcc0', [hx - 16, hyy - 20, hx - 26, hyy - 36, hx - 8, hyy - 24]);
-  X.fillStyle = '#f8f4ec'; X.beginPath(); X.ellipse(hx + 26, hyy - 14, 12, 5, .5, 0, 6.29); X.fill();
-  for (const ex of [-12, 6]) { circ('#fff', hx + ex, hyy - 4, 5); circ(angry ? '#d8302a' : '#1d1d24', hx + ex - 1, hyy - 3, 2.6) }
-  if (angry) { line('#1d1d24', 2, [hx - 18, hyy - 12, hx - 7, hyy - 9]); line('#1d1d24', 2, [hx + 12, hyy - 12, hx + 1, hyy - 9]);
-    X.save(); X.globalAlpha = .6; for (const sx of [-22, -6]) circ('#fff', hx + sx, hyy + 24 - (t * .8 % 20), 3 + (t * .2 % 4)); X.restore() }
-  // bell
-  line('#8a5a2a', 3, [hx + 6, hyy + 20, hx + 22, hyy + 26]); circ('#f2c230', hx + 16, hyy + 30, 6);
-}
-function drawBucket() {
-  const hy = hitY(), bx = W / 2, by = hy + 26, k = kickT > 0 ? M.min(1, kickT / 14) : 0;
-  X.save(); X.translate(bx + k * 40, by + k * 10); X.rotate(k * 1.4);
-  X.fillStyle = '#9aa4b4'; X.beginPath(); X.moveTo(-26, -18); X.lineTo(26, -18); X.lineTo(20, 22); X.lineTo(-20, 22); X.closePath(); X.fill();
-  X.fillStyle = '#c4ccd8'; X.fillRect(-26, -20, 52, 5); X.fillStyle = 'rgba(0,0,0,.15)'; X.fillRect(-22, 4, 44, 3);
-  const lv = milk / 30; X.fillStyle = '#fbfbf4'; X.beginPath(); X.ellipse(0, -14 + (1 - lv) * 6, 22, 4, 0, 0, 6.29); X.fill();
-  X.strokeStyle = '#6a7484'; X.lineWidth = 2; X.beginPath(); X.arc(0, -18, 26, M.PI, 0); X.stroke();
-  X.restore();
-  if (k > 0) { X.fillStyle = '#fbfbf4'; X.beginPath(); X.ellipse(bx + 50, hy + 52, 40 * k, 6, 0, 0, 6.29); X.fill() }
-  if (buckets) txt(`🪣 ×${buckets}`, bx - 64, hy + 58, 12, '#fff');
-}
-function drawNote(n) {
-  const hy = hitY(), y = hy - (n.t - songT) * (hy - topY()) / leadT(), x = laneX(n.lane);
-  if (y < topY() - 20 || y > hy + 40) return;
-  X.save(); X.translate(x, y);
-  if (n.gold) { X.globalAlpha = .4; circ('#ffe680', 0, 0, 19); X.globalAlpha = 1; X.fillStyle = '#f2c230'; X.beginPath(); X.moveTo(-10, 8); X.quadraticCurveTo(-10, -12, 0, -12); X.quadraticCurveTo(10, -12, 10, 8); X.closePath(); X.fill(); X.fillStyle = '#c99a2e'; X.fillRect(-12, 6, 24, 4); circ('#8a6a1a', 0, 11, 3); star(0, -3, 3.5, t * .05, '#fff') }
-  else {
-    const col = n.lane ? '#7ac8ff' : '#ff8ac0';
-    X.globalAlpha = .35; circ(col, 0, 0, 16); X.globalAlpha = 1;
-    X.fillStyle = '#fbfbf4'; X.beginPath(); X.moveTo(0, -15); X.quadraticCurveTo(11, 0, 9, 6); X.arc(0, 5, 9, 0, M.PI); X.quadraticCurveTo(-11, 0, 0, -15); X.fill();
-    X.strokeStyle = col; X.lineWidth = 2.5; X.stroke(); circ('rgba(255,255,255,.9)', -3, 2, 2.4);
+function drawBoard() {
+  const x0 = W / 2 - boardW() / 2, bw = boardW(), lw = laneW(), ty = topY(), hy = hitY();
+  // the cow's flank: cream keys with big black spots
+  X.save(); X.beginPath(); X.roundRect(x0, ty - 10, bw, hy - ty + 34, 14); X.clip();
+  X.fillStyle = '#fbf6ea'; X.fillRect(x0, ty - 10, bw, hy - ty + 34);
+  X.fillStyle = 'rgba(42,34,48,.09)'; for (const [sx, sy, rx, ry] of [[.18, .2, .2, .1], [.7, .35, .24, .12], [.35, .62, .18, .09], [.85, .78, .14, .1], [.1, .85, .12, .07]]) { X.beginPath(); X.ellipse(x0 + bw * sx, ty + (hy - ty) * sy, bw * rx, (hy - ty) * ry, .3, 0, 6.29); X.fill() }
+  for (let i = 0; i < NL; i++) { if (wrongF[i] > 0) { X.fillStyle = `rgba(255,60,60,${wrongF[i] / 14 * .45})`; X.fillRect(x0 + lw * i, ty - 10, lw, hy - ty + 34) } if (press[i] > 0) { X.fillStyle = `rgba(255,150,190,${press[i] / 9 * .35})`; X.fillRect(x0 + lw * i, hy - 90, lw, 114) } }
+  X.fillStyle = 'rgba(42,34,48,.18)'; for (let i = 1; i < NL; i++) X.fillRect(x0 + lw * i - .75, ty - 10, 1.5, hy - ty + 34);
+  // the milking line
+  const lg = X.createLinearGradient(0, hy - 18, 0, hy + 22); lg.addColorStop(0, 'rgba(244,160,176,0)'); lg.addColorStop(.5, 'rgba(244,160,176,.45)'); lg.addColorStop(1, 'rgba(244,160,176,0)'); X.fillStyle = lg; X.fillRect(x0, hy - 18, bw, 40);
+  X.fillStyle = '#e88a9c'; X.fillRect(x0, hy - 1.5, bw, 3);
+  // the tiles
+  const k = pxs();
+  for (const n of tiles) {
+    const yb = hy - (n.t - songT) * k, h = n.hold ? n.d * k : M.min(k * 60 / trBpm(n.b) * (n.short ? .45 : .88), 120), ytop = yb - h;
+    if (yb < ty - 20 || ytop > hy + 40) continue;
+    const x = x0 + lw * n.lane + 3, w = lw - 6;
+    X.save();
+    if (n.done && !n.missed) X.globalAlpha = M.max(0, 1 - (songT - n.hitT) / .35);
+    let col = n.gold ? '#e6b830' : n.missed ? '#c8303a' : '#241c34';
+    if (n.done && !n.missed && !n.hold) col = '#d8d0e0';
+    X.fillStyle = col; X.beginPath(); X.roundRect(x, ytop, w, h, 8); X.fill();
+    if (n.hold) {
+      // the milk rises in a long tile while you hold it
+      const filled = n.held ? M.min(h, (songT - n.t) * k) : 0;
+      X.fillStyle = 'rgba(255,255,255,.12)'; X.fillRect(x + w / 2 - 3, ytop + 8, 6, h - 16);
+      if (filled > 0) { X.fillStyle = '#fbfbf4'; X.beginPath(); X.roundRect(x + 3, yb - filled, w - 6, filled, 6); X.fill() }
+      circ('#f4a0b0', x + w / 2, ytop + 14, 6);
+    } else if (!n.done) {
+      // a little milk drop on each tile
+      const cx = x + w / 2, cy = yb - M.min(h, 120) / 2; X.fillStyle = n.gold ? '#fff6c0' : '#fbfbf4'; X.beginPath(); X.moveTo(cx, cy - 11); X.quadraticCurveTo(cx + 8, cy, cx + 7, cy + 4); X.arc(cx, cy + 4, 7, 0, M.PI); X.quadraticCurveTo(cx - 8, cy, cx, cy - 11); X.fill();
+      if (n.gold) star(cx, cy + 3, 3.5, t * .05, '#e6b830');
+    }
+    X.restore();
   }
+  X.restore();
+  // frame
+  X.strokeStyle = '#8a5a2a'; X.lineWidth = 4; X.beginPath(); X.roundRect(x0, ty - 10, bw, hy - ty + 34, 14); X.stroke();
+}
+function drawUdder() {
+  const hy = hitY(), x0 = W / 2 - boardW() / 2, bw = boardW(), angry = patience < 35 || cowMood > 0;
+  // belly of the cow and the big pink udder with its four teats
+  X.fillStyle = '#fbf6ea'; X.beginPath(); X.ellipse(W / 2, hy + 30, bw * .62, 22, 0, 0, M.PI); X.fill();
+  X.fillStyle = '#2a2230'; X.beginPath(); X.ellipse(W / 2 + bw * .32, hy + 32, 26, 10, 0, 0, M.PI); X.fill();
+  const ug = X.createLinearGradient(0, hy + 28, 0, hy + 70); ug.addColorStop(0, '#f8b8c4'); ug.addColorStop(1, '#e88a9c');
+  X.fillStyle = ug; X.beginPath(); X.ellipse(W / 2, hy + 34, bw * .46, 34, 0, 0, M.PI); X.fill();
+  for (let i = 0; i < NL; i++) {
+    const tx = laneX(i), sq = press[i] > 0 ? press[i] / 9 : 0, len = 34 - sq * 8, wd = M.min(22, laneW() * .3);
+    X.fillStyle = '#e8899c'; X.beginPath(); X.roundRect(tx - wd / 2 + sq * 2, hy + 46, wd - sq * 4, len, wd / 2); X.fill();
+    X.fillStyle = 'rgba(255,255,255,.35)'; X.fillRect(tx - wd / 2 + 4, hy + 52, 3, len - 14);
+  }
+  // milk streams into the trough
+  const ty = hy + (LAND ? 84 : 120);
+  for (const s of sprays) { const x = laneX(s.lane); X.save(); X.globalAlpha = s.l / 12; line('#fbfbf4', 5, [x, hy + 80, x, ty - 4]); X.restore() }
+  X.fillStyle = '#8a5a2a'; X.beginPath(); X.moveTo(x0 - 6, ty - 4); X.lineTo(x0 + bw + 6, ty - 4); X.lineTo(x0 + bw - 6, ty + 16); X.lineTo(x0 + 6, ty + 16); X.closePath(); X.fill();
+  X.fillStyle = '#fbfbf4'; X.fillRect(x0, ty - 2, bw * (milk / 30), 5); X.fillStyle = '#6a4220'; X.fillRect(x0 - 6, ty - 6, bw + 12, 4);
+  if (buckets) txt(`🪣 ×${buckets}`, x0 + bw - 30, ty + 26, 12, '#fff');
+  // the cow's head peeks in on the left of the udder
+  const hx = x0 + (LAND ? -44 : 26), hyy = hy + (LAND ? 40 : 92), chew = M.sin(t * .15) * 1.5;
+  X.save(); X.translate(hx, hyy); X.scale(.8, .8);
+  X.fillStyle = '#f8f4ec'; X.beginPath(); X.ellipse(0, 0, 30, 26, -.2, 0, 6.29); X.fill();
+  X.fillStyle = '#2a2230'; X.beginPath(); X.ellipse(10, -12, 12, 9, .3, 0, 6.29); X.fill();
+  X.fillStyle = '#f4b0bc'; X.beginPath(); X.ellipse(-14, 12 + chew * .3, 18, 12, -.2, 0, 6.29); X.fill(); circ('#c86a7a', -20, 10, 2.4); circ('#c86a7a', -9, 9, 2.4);
+  poly('#e8dcc0', [4, -22, 14, -40, 14, -22]); poly('#e8dcc0', [-16, -20, -26, -36, -8, -24]);
+  for (const ex of [-12, 6]) { circ('#fff', ex, -4, 5); circ(angry ? '#d8302a' : '#1d1d24', ex - 1, -3, 2.6) }
+  if (angry) { line('#1d1d24', 2, [-18, -12, -7, -9]); line('#1d1d24', 2, [12, -12, 1, -9]); X.save(); X.globalAlpha = .6; for (const sx of [-22, -6]) circ('#fff', sx, 24 - (t * .8 % 20), 3 + (t * .2 % 4)); X.restore() }
   X.restore();
 }
 function drawGame() {
   X.save(); X.translate(0, -T);
-  const hy = hitY();
-  drawCow();
-  // the two lanes
-  for (let i = 0; i < 2; i++) {
-    const x = laneX(i), col = i ? '122,200,255' : '255,138,192';
-    const g = X.createLinearGradient(0, topY(), 0, hy); g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(1, `rgba(${col},.28)`); X.fillStyle = g; X.fillRect(x - 20, topY(), 40, hy - topY());
-    const p = lanePress[i] / 9; X.strokeStyle = `rgba(${col},${.7 + p * .3})`; X.lineWidth = 3 + p * 3; X.beginPath(); X.arc(x, hy, 20 + p * 4, 0, 6.29); X.stroke();
-    if (p > 0) { X.save(); X.globalAlpha = p * .4; circ(`rgb(${col})`, x, hy, 22); X.restore() }
-  }
-  // double notes are joined by a bar
-  for (const n of notes) if (n.pair && !n.done) { const y = hy - (n.t - songT) * (hy - topY()) / leadT(); if (y > topY() - 20 && y < hy + 40) { X.fillStyle = 'rgba(255,255,255,.5)'; X.fillRect(laneX(0), y - 2, laneX(1) - laneX(0), 4) } }
-  for (const n of notes) if (!n.done) drawNote(n);
-  // milk squirts from the teats to the bucket
-  for (const s of sprays) { const x = laneX(s.lane); X.save(); X.globalAlpha = s.l / 10; line('#fbfbf4', 4, [x, hy - 4, (x + W / 2) / 2, hy + 6, W / 2, hy + 10]); X.restore() }
-  drawBucket();
+  drawBoard(); drawUdder();
   for (const p of burstP) { X.save(); X.globalAlpha = p.l / 26; circ(p.k, p.x, p.y, 2.6); X.restore() }
-  // the polichinelle on his stool
-  const px = W / 2 + (LAND ? 150 : 104), py = hy + (LAND ? 58 : 92), sc = LAND ? .5 : .56, pump = (lanePress[0] + lanePress[1]) > 0 ? -2 : 0;
-  X.fillStyle = '#8a5a2a'; X.fillRect(px - 14, py - 16, 28, 5); line('#6a4220', 3, [px - 10, py - 12, px - 13, py + 2, px + 10, py - 12, px + 13, py + 2]);
-  X.save(); X.translate(px, py - 12 + pump); X.scale(-sc, sc); drawPoli({ run: t * .05, idle: true }); X.restore();
-  if (judgeTxt) { X.save(); X.globalAlpha = M.min(1, judgeTxt.l / 12); txt(judgeTxt.s, W / 2, hy - 120 - (30 - judgeTxt.l), 22, judgeTxt.k); X.restore() }
-  if (songT < 0 || genBeat < 8) { const b = M.floor((songT) / (60 / trBpm(0))); if (b >= 0 && b < 4) txt(String(4 - b), W / 2, hy - 160, 40, COL.yellow); else if (b >= 4 && b < 5) txt('Traite !', W / 2, hy - 160, 32, COL.yellow) }
+  const hy = hitY();
+  if (judgeTxt) { X.save(); X.globalAlpha = M.min(1, judgeTxt.l / 12); txt(judgeTxt.s, W / 2, hy - 110 - (30 - judgeTxt.l), 22, judgeTxt.k); X.restore() }
+  if (genBeat < 9) { const b = M.floor(songT / (60 / trBpm(0))); if (b >= 0 && b < 4) txt(String(4 - b), W / 2, (topY() + hy) / 2, 44, COL.yellow); else if (b === 4) txt('Traite !', W / 2, (topY() + hy) / 2, 34, COL.yellow) }
+  if (kickT) { X.save(); X.globalAlpha = M.min(.6, kickT / 30); X.fillStyle = '#fbfbf4'; X.beginPath(); X.ellipse(W / 2, hy + 120, 120, 14, 0, 0, 6.29); X.fill(); X.restore() }
   X.restore();
 }
 function drawHud() {
   X.save(); X.translate(0, -T);
-  const ty = LAND ? 40 : (T > 60 ? 74 : 64), bw = M.min(150, W * .42), bx = W / 2 - bw / 2;
+  const ty = LAND ? 40 : topY() - 26, bw = M.min(130, W * .4), bx = W / 2 - bw / 2;
   txt('🐄', bx - 14, ty + 1, 16, '#fff');
   X.fillStyle = 'rgba(20,16,40,.6)'; X.beginPath(); X.roundRect(bx, ty - 6, bw, 12, 6); X.fill();
-  const low = patience < 35; X.fillStyle = low ? (M.floor(t / 10) % 2 ? '#ff4f4f' : '#ffb060') : '#7dff8a'; X.beginPath(); X.roundRect(bx, ty - 6, M.max(4, bw * patience / 100), 12, 6); X.fill();
-  txt(patience < 35 ? 'La vache s’énerve !' : 'Patience de la vache', W / 2, ty + 22, 12, patience < 35 ? '#ff8a8a' : '#fff', 'center', true);
+  const low = patience < 35; X.fillStyle = low ? (M.floor(t / 10) % 2 ? '#ff4f4f' : '#ffb060') : '#7dff8a'; X.beginPath(); X.roundRect(bx, ty - 6, M.max(4, bw * M.max(0, patience) / 100), 12, 6); X.fill();
   X.restore();
 }
 
