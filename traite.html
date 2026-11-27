@@ -714,7 +714,7 @@ const SONGS = [
   ['La lettre à Élise', 1, 'E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 G#4 B4 C5:2 E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 C5 B4 A4:2 E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 C4 E4 A4 B4:2 E4 G#4 B4 C5:2'],
   ['La marche turque', 1, 'B4 A4 G#4 A4 C5:2 D5 C5 B4 C5 E5:2 F5 E5 D#5 E5 B5 A5 G#5 A5 B5 A5 G#5 A5 C6:2 A5 C6 B5 A5 G5 A5 B5 A5 G5 A5 B5 A5 G5 F#5 E5:2 B4 A4 G#4 A4 C5:2 D5 C5 B4 C5 E5:2'],
   ['Le galop infernal (French cancan)', 1, 'G4 C5 C5 D5 F5 E5 D5 G5 G5 G5 A5 E5 F5 D5 D5 D5 F5 E5 D5 C5 C6 B5 A5 G5 F5 E5 D5 G4 C5 C5 D5 F5 E5 D5 G5 G5 G5 A5 E5 F5 D5 D5 D5 F5 E5 D5 C5 G5 D5 E5 C5:2']];
-let rows = [], burstP = [], wrongCell = null, pos = 0, started = false, tspd = 0, songI = 0, songLoop = 0, nextRow = 0, noteI = 0, lastLane = -1, tilesHit = 0, deadT = 0, holdBy = {}, songBan = 0, songsDone = 0, press = [0, 0, 0, 0];
+let lives = 3, wrongs = [], rings = [], rows = [], burstP = [], wrongCell = null, pos = 0, started = false, tspd = 0, songI = 0, songLoop = 0, nextRow = 0, noteI = 0, lastLane = -1, tilesHit = 0, deadT = 0, holdBy = {}, songBan = 0, songsDone = 0, press = [0, 0, 0, 0];
 const NL = 4;
 function boardW() { return LAND ? M.min(W * .7, 460) : W - 4 }
 function laneW() { return boardW() / NL }
@@ -730,7 +730,7 @@ function genRows() {
   while (nextRow < pos + 7) {
     const song = SONGP[songI], note = song[noteI];
     let lane; do lane = M.floor(M.random() * NL); while (lane === lastLane); lastLane = lane;
-    const len = note.d >= 2 ? 2 : 1;
+    const len = note.d >= 2 ? M.min(3, note.d) : 1;
     rows.push({ r: nextRow, len, lane, f: NOTE(note.n), hold: len > 1, gold: M.random() < .03, first: !started && nextRow === 0, song: songI, last: noteI === song.length - 1 });
     nextRow += len; noteI++;
     if (noteI >= song.length) { noteI = 0; songI = (songI + 1) % SONGP.length; if (songI === 0) songLoop++; rows[rows.length - 1].endSong = true }
@@ -738,10 +738,13 @@ function genRows() {
 }
 function songSpeed(n) { return M.min(7.5, 2.4 + n * .45) } // tiles per second, faster with every song
 // a little piano: the note and its octave below, quick attack, ringing decay
-function piano(f, dur) {
-  if (!AC || !(OPTS.sfx || OPTS.music)) return; const t0 = AC.currentTime, g = AC.createGain(); g.connect(AC.destination);
-  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.22, t0 + .006); g.gain.exponentialRampToValueAtTime(.06, t0 + .25); g.gain.exponentialRampToValueAtTime(.001, t0 + .25 + dur);
-  for (const [fr, ty, v] of [[f, 'triangle', 1], [f * 2, 'sine', .35], [f / 2, 'sine', .5], [f * 3, 'sine', .08]]) { const o = AC.createOscillator(), og = AC.createGain(); o.type = ty; o.frequency.value = fr; og.gain.value = v; o.connect(og).connect(g); o.start(t0); o.stop(t0 + .3 + dur) }
+function piano(f, dur, sustain) {
+  if (!AC || !(OPTS.sfx || OPTS.music)) return null; const t0 = AC.currentTime, g = AC.createGain(), os = []; g.connect(AC.destination);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.22, t0 + .006);
+  // a held note keeps singing softly until the finger lifts
+  if (sustain) { g.gain.exponentialRampToValueAtTime(.09, t0 + .3) } else { g.gain.exponentialRampToValueAtTime(.06, t0 + .25); g.gain.exponentialRampToValueAtTime(.001, t0 + .25 + dur) }
+  for (const [fr, ty, v] of [[f, 'triangle', 1], [f * 2, 'sine', .35], [f / 2, 'sine', .5], [f * 3, 'sine', .08]]) { const o = AC.createOscillator(), og = AC.createGain(); o.type = ty; o.frequency.value = fr; og.gain.value = v; o.connect(og).connect(g); o.start(t0); o.stop(t0 + (sustain ? 8 : .3 + dur)); os.push(o) }
+  return { stop() { const n = AC.currentTime; g.gain.cancelScheduledValues(n); g.gain.setValueAtTime(g.gain.value, n); g.gain.exponentialRampToValueAtTime(.001, n + .35); for (const o of os) try { o.stop(n + .4) } catch (e) {} } };
 }
 function tileBottom(t) { return botY() - (t.r - pos) * rowH() }
 function lose(why, cell) {
@@ -753,21 +756,25 @@ function tapLane(lane, pid, y) {
   press[lane] = 9;
   const next = rows.filter(t => !t.done && !t.held).sort((a, b) => a.r - b.r)[0];
   if (!next) return;
-  if (next.lane !== lane) { lose('Fausse note !', { lane, y }); return }
+  if (next.lane !== lane) {
+    lives--; combo = 0; wrongs.push({ lane, y, l: 40 }); sfx.moo(); buzz([60, 40, 60]); shake = 5;
+    if (lives <= 0) lose('Trop de fausses notes !', { lane, y }); else popup(laneX(lane), y - 20 - T, 'Fausse note !', '#ff8a8a');
+    return;
+  }
   if (!started) { started = true; tspd = songSpeed(0); songBan = 120 }
   tilesHit++; combo++; const pts = 10 + songsDone * 2 + (next.gold ? 50 : 0); starPts += pts;
   if (next.gold) { stars++; sfx.star(); flash = 4 }
   if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() }
   for (let i = 0; i < 6; i++) burstP.push({ x: laneX(lane), y: M.min(botY() - 30, tileBottom(next) - rowH() / 2), vx: rnd(-2.5, 2.5), vy: rnd(-3, 0), l: 24, k: next.gold ? '#ffe066' : '#fbfbf4' });
-  if (next.hold) { next.held = true; next.pid = pid; holdBy[pid] = next; piano(next.f, 1.2) }
-  else { next.done = true; next.doneT = t; piano(next.f, .6) }
+  if (next.hold) { next.held = true; next.pid = pid; next.snd = piano(next.f, 0, true); holdBy[pid] = next }
+  else { next.done = true; next.doneT = t; piano(next.f, .6); rings.push({ x: laneX(lane), y: M.min(botY() - 20, tileBottom(next) - rowH() / 2), l: 18 }) }
   if (next.endSong) songEnd(next);
 }
 function songEnd(tile) {
   songsDone++; const bonus = 100 * songsDone; starPts += bonus; sfx.songUp();
   popup(W / 2, H * .38 - T, `Bravo ! +${bonus}`, '#ffe066'); tspd = songSpeed(songsDone); songBan = 150; setAct(songsDone, false); actBanner = 0;
 }
-function releasePid(pid) { const h = holdBy[pid]; if (!h) return; delete holdBy[pid]; if (!h.done) { h.done = true; h.doneT = t } }
+function releasePid(pid) { const h = holdBy[pid]; if (!h) return; delete holdBy[pid]; if (h.snd) h.snd.stop(); if (!h.done) { h.done = true; h.doneT = t; h.early = true } }
 
 let obs = [], items = [], parts = [];
 const crowd = [];
@@ -778,7 +785,7 @@ function reset() {
   score = 0; stars = 0; dist = 0; speed = 5; nextObs = 260; nextStar = 400; paused = false; resumeT = 0;
   fellIn = null; fallY = 0; playT = 0; power = null; slowK = 1; combo = 0; starPts = 0; bonusPts = 0; nextPow = rnd(1500, 2400); popups = []; setAct(0, true); actBanner = 0;
   obs = []; items = []; parts = []; shake = 0; flash = 0;
-  rows = []; burstP = []; wrongCell = null; pos = 0; started = false; tspd = 0; songI = 0; songLoop = 0; nextRow = 0; noteI = 0; lastLane = -1; tilesHit = 0; deadT = 0; holdBy = {}; songBan = 0; songsDone = 0; press = [0, 0, 0, 0];
+  lives = 3; wrongs = []; rings = []; rows = []; burstP = []; wrongCell = null; pos = 0; started = false; tspd = 0; songI = 0; songLoop = 0; nextRow = 0; noteI = 0; lastLane = -1; tilesHit = 0; deadT = 0; holdBy = {}; songBan = 0; songsDone = 0; press = [0, 0, 0, 0];
   genRows();
 
   Object.assign(P, { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 });
@@ -2471,13 +2478,14 @@ function update() {
       genRows();
       for (const r of rows) {
         // a long tile ends when its top reaches the bottom; extra points while holding it
-        if (r.held && !r.done) { if (pos >= r.r + r.len - .15) { r.done = true; r.doneT = t; delete holdBy[r.pid]; starPts += 20; popup(laneX(r.lane), botY() - 60 - T, '+20', '#fff') } else if (playT % 6 === 0) starPts += 1 }
-        else if (!r.done && !r.held && pos - r.r > .35) { r.missed = true; lose('Tuile oubliée !', null); pos = r.r - .6; break }
+        if (r.held && !r.done) { if (pos >= r.r + r.len - .2) { r.done = true; r.doneT = t; delete holdBy[r.pid]; if (r.snd) r.snd.stop(); const b = 15 * r.len; starPts += b; sfx.star(); popup(laneX(r.lane), botY() - 70 - T, `Traite parfaite ! +${b}`, '#fff'); for (let i = 0; i < 12; i++) burstP.push({ x: laneX(r.lane), y: botY() - 40, vx: rnd(-3, 3), vy: rnd(-5, -1), l: 30, k: '#fbfbf4' }) } else if (playT % 5 === 0) { starPts += 1; burstP.push({ x: laneX(r.lane) + rnd(-6, 6), y: botY() - 26, vx: rnd(-.6, .6), vy: rnd(-2.5, -1), l: 20, k: '#fbfbf4' }) } }
+        else if (!r.done && !r.held && pos - r.r > .35) { r.missed = true; lose('Tuile oubliée !', null); pos = r.r - .6; for (const k in holdBy) { const h = holdBy[k]; if (h.snd) h.snd.stop() } break }
       }
       rows = rows.filter(r => r.r + r.len > pos - 1.5);
     }
     for (let i = 0; i < NL; i++) if (press[i] > 0) press[i]--;
     for (const p of burstP) { p.x += p.vx; p.y += p.vy; p.vy += .2; p.l-- } burstP = burstP.filter(p => p.l > 0);
+    for (const w of wrongs) w.l--; wrongs = wrongs.filter(w => w.l > 0); for (const g of rings) g.l--; rings = rings.filter(g => g.l > 0);
     score = starPts;
     if (deadT && ++deadT > 70) gameOver();
   }
@@ -2602,8 +2610,8 @@ function render() {
       txt('La Traite', W / 2, 76, 17, '#fff');
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
       txt('Touche les tuiles noires de bas en haut : chacune joue la chanson', mx, 166, 13, '#ddd', 'center', false);
-      txt('Tuile longue = reste appuyé · la vitesse monte à chaque chanson', mx, 184, 13, '#ddd', 'center', false);
-      txt('Une case blanche ou une tuile oubliée… et c’est « Meuh ! »', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('Tuile longue = garde le doigt dessus jusqu’au bout', mx, 184, 13, '#ddd', 'center', false);
+      txt('3 fausses notes permises · une tuile oubliée et c’est « Meuh ! »', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
@@ -2613,8 +2621,8 @@ function render() {
     txt('La Traite', W / 2, ty + 32, 18, '#fff');
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
     txt('Touche les tuiles noires de bas en haut : chacune joue la chanson', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    txt('Tuile longue = reste appuyé · la vitesse monte à chaque chanson', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    if (T > 80) txt('Une case blanche ou une tuile oubliée… et c’est « Meuh ! »', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
+    txt('Tuile longue = garde le doigt dessus jusqu’au bout', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
+    if (T > 80) txt('3 fausses notes permises · une tuile oubliée et c’est « Meuh ! »', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -2646,8 +2654,10 @@ addEventListener('keydown', e => { const l = TR_KEYS[e.key]; if (l === undefined
 addEventListener('keyup', e => { const l = TR_KEYS[e.key]; if (l !== undefined) releasePid('k' + l) });
 function drawStage() {
   X.save(); X.translate(0, -T);
-  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#2a1a3a'); g.addColorStop(1, '#5a2e3a'); X.fillStyle = g; X.fillRect(0, 0, W, H);
-  for (let x = 0, i = 0; x < W; x += 26, i++) { X.fillStyle = ['rgba(122,74,42,.35)', 'rgba(110,64,36,.35)', 'rgba(140,90,52,.35)'][i % 3]; X.fillRect(x, 0, 25, H) }
+  // the barn at night: plank walls, warm lanterns
+  const g = X.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#3a2030'); g.addColorStop(1, '#6a3a2a'); X.fillStyle = g; X.fillRect(0, 0, W, H);
+  for (let x = 0, i = 0; x < W; x += 24, i++) { X.fillStyle = ['rgba(150,96,56,.28)', 'rgba(130,80,46,.28)', 'rgba(170,110,64,.28)'][i % 3]; X.fillRect(x, 0, 23, H); X.fillStyle = 'rgba(0,0,0,.25)'; X.fillRect(x + 23, 0, 1, H) }
+  for (const lx of [W * .12, W * .88]) { const ly = topY() - 26; X.save(); X.globalAlpha = .35 + .05 * M.sin(t * .1 + lx); const rg = X.createRadialGradient(lx, ly, 2, lx, ly, 60); rg.addColorStop(0, '#ffd88a'); rg.addColorStop(1, 'rgba(255,216,138,0)'); X.fillStyle = rg; X.fillRect(lx - 60, ly - 60, 120, 120); X.restore() }
   X.restore();
 }
 function drawCrowd() {}
@@ -2656,7 +2666,7 @@ function drawBatten() {}
 function drawGame() {
   X.save(); X.translate(0, -T);
   const x0 = W / 2 - boardW() / 2, bw = boardW(), lw = laneW(), ty = topY(), by = botY(), rh = rowH();
-  X.save(); X.beginPath(); X.rect(x0, ty, bw, by - ty); X.clip();
+  X.save(); X.fillStyle = 'rgba(0,0,0,.35)'; X.beginPath(); X.roundRect(x0 + 3, ty + 5, bw, by - ty, 12); X.fill(); X.beginPath(); X.roundRect(x0, ty, bw, by - ty, 12); X.clip();
   // the cow's flank as the keyboard
   X.fillStyle = '#fbf6ea'; X.fillRect(x0, ty, bw, by - ty);
   const sh = (pos * rh) % (by - ty);
@@ -2669,33 +2679,44 @@ function drawGame() {
     const yb = by - (r.r - pos) * rh, h = r.len * rh, x = x0 + lw * r.lane + 1.5, w = lw - 3;
     if (yb < ty || yb - h > by) continue;
     X.save();
-    if (r.done && !r.held) { X.globalAlpha = .35; X.fillStyle = '#c8c0d4'; X.fillRect(x, yb - h + 1, w, h - 2) }
+    if (r.done && !r.held) { X.globalAlpha = r.early ? .5 : .45; X.fillStyle = r.early ? '#d8c8e0' : '#f8d0dc'; X.beginPath(); X.roundRect(x + 2, yb - h + 3, w - 4, h - 6, 7); X.fill() }
     else {
-      X.fillStyle = r.missed ? '#d8303a' : r.gold ? '#e6b830' : '#1e1830'; X.fillRect(x, yb - h + 1, w, h - 2);
+      const tg = X.createLinearGradient(x, 0, x + w, 0); const c1 = r.missed ? '#ff5060' : r.gold ? '#ffd860' : '#3a2e58', c2 = r.missed ? '#a01828' : r.gold ? '#c8901a' : '#141024'; tg.addColorStop(0, c1); tg.addColorStop(1, c2);
+      X.fillStyle = tg; X.beginPath(); X.roundRect(x, yb - h + 1, w, h - 2, 7); X.fill();
+      X.fillStyle = 'rgba(255,255,255,.1)'; X.beginPath(); X.roundRect(x + 3, yb - h + 4, w * .35, h - 8, 5); X.fill();
       if (r.hold) {
-        const fill = r.held ? M.min(h, (pos - r.r + .5) * rh) : 0;
-        X.fillStyle = 'rgba(255,255,255,.14)'; X.fillRect(x + w / 2 - 2, yb - h + 10, 4, h - 20);
-        if (fill > 0) { const gg = X.createLinearGradient(0, yb, 0, yb - fill); gg.addColorStop(0, '#fbfbf4'); gg.addColorStop(1, '#f8c4d0'); X.fillStyle = gg; X.fillRect(x + 3, yb - fill, w - 6, fill - 2) }
-        circ('#f4a0b0', x + w / 2, yb - h + 18, 7);
+        // a long tile: a pink track, the milk rises while you hold it
+        const fill = r.held ? M.max(0, M.min(h - 4, (pos - r.r + .55) * rh)) : 0;
+        X.fillStyle = 'rgba(244,160,176,.35)'; X.beginPath(); X.roundRect(x + w / 2 - 4, yb - h + 22, 8, h - 34, 4); X.fill();
+        if (fill > 0) { const gg = X.createLinearGradient(0, yb, 0, yb - fill); gg.addColorStop(0, '#ffffff'); gg.addColorStop(1, '#f8c4d0'); X.fillStyle = gg; X.beginPath(); X.roundRect(x + 4, yb - fill - 1, w - 8, fill - 2, 6); X.fill(); X.save(); X.globalAlpha = .5 + .3 * M.sin(t * .4); circ('#fff', x + w / 2, yb - fill + 2, w * .3); X.restore() }
+        X.fillStyle = '#f4a0b0'; X.beginPath(); X.ellipse(x + w / 2, yb - h + 14, 9, 7, 0, 0, 6.29); X.fill(); X.fillStyle = '#e8899c'; X.beginPath(); X.roundRect(x + w / 2 - 3.5, yb - h + 16, 7, 9, 3.5); X.fill();
+        if (!r.held && !r.done) txt('APPUIE', x + w / 2, yb - 22, 10, 'rgba(255,255,255,.7)', 'center', false);
       } else { const cx = x + w / 2, cy = yb - h / 2; X.fillStyle = r.gold ? '#fff6c0' : 'rgba(251,251,244,.85)'; X.beginPath(); X.moveTo(cx, cy - 10); X.quadraticCurveTo(cx + 7, cy, cx + 6, cy + 4); X.arc(cx, cy + 4, 6, 0, M.PI); X.quadraticCurveTo(cx - 7, cy, cx, cy - 10); X.fill() }
       if (r.first && !started) { txt('DÉPART', x + w / 2, yb - h / 2 + 26, 13, '#ffe066') }
-      if (r.r === nextR && !deadT && !r.held) { X.strokeStyle = '#ff6a9a'; X.lineWidth = 3; X.strokeRect(x + 1.5, yb - h + 2.5, w - 3, h - 5) }
+      if (r.r === nextR && !deadT && !r.held) { X.save(); X.shadowColor = '#ff6a9a'; X.shadowBlur = 10 + 6 * M.sin(t * .25); X.strokeStyle = '#ff7aa8'; X.lineWidth = 3; X.beginPath(); X.roundRect(x + 1.5, yb - h + 2.5, w - 3, h - 5, 7); X.stroke(); X.restore() }
     }
     X.restore();
   }
+  for (const wq of wrongs) { const rowTop = by - (M.floor((by - wq.y) / rh) + 1) * rh; X.save(); X.globalAlpha = wq.l / 40 * .7; X.fillStyle = '#d8303a'; X.fillRect(x0 + lw * wq.lane + 1.5, M.max(ty, rowTop), lw - 3, rh); X.restore() }
+  for (const g of rings) { X.save(); X.globalAlpha = g.l / 18; X.strokeStyle = '#f8a0b8'; X.lineWidth = 3; X.beginPath(); X.arc(g.x, g.y, (18 - g.l) * 3 + 10, 0, 6.29); X.stroke(); X.restore() }
   if (wrongCell) { const y = wrongCell.y, rowTop = by - (M.floor((by - y) / rh) + 1) * rh; X.save(); X.globalAlpha = .6 + .4 * M.sin(t * .5); X.fillStyle = '#d8303a'; X.fillRect(x0 + lw * wrongCell.lane + 1.5, M.max(ty, rowTop), lw - 3, rh); X.restore() }
   // the four teats at the bottom
   const ug = X.createLinearGradient(0, by - 40, 0, by); ug.addColorStop(0, 'rgba(248,184,196,0)'); ug.addColorStop(1, 'rgba(248,184,196,.6)'); X.fillStyle = ug; X.fillRect(x0, by - 40, bw, 40);
   for (let i = 0; i < NL; i++) { const tx = laneX(i), sq = press[i] / 9, len = 22 - sq * 7, wd = M.min(18, lw * .24); X.fillStyle = '#e8899c'; X.beginPath(); X.roundRect(tx - wd / 2 + sq * 2, by - len, wd - sq * 4, len + 6, wd / 2); X.fill() }
   X.restore();
-  X.strokeStyle = '#8a5a2a'; X.lineWidth = 3; X.strokeRect(x0, ty, bw, by - ty);
+  X.strokeStyle = '#a8753a'; X.lineWidth = 4; X.beginPath(); X.roundRect(x0, ty, bw, by - ty, 12); X.stroke(); X.strokeStyle = '#5a3218'; X.lineWidth = 1.5; X.beginPath(); X.roundRect(x0 - 2, ty - 2, bw + 4, by - ty + 4, 13); X.stroke();
   for (const p of burstP) { X.save(); X.globalAlpha = p.l / 24; circ(p.k, p.x, p.y, 2.6); X.restore() }
   // song title
   if (songBan > 0 || !started) { const s = SONGS[started ? (songsDone % SONGS.length) : 0]; X.save(); X.globalAlpha = started ? M.min(1, songBan / 30) : 1; txt('♪ ' + s[0], W / 2, ty + 34, 15, '#8a5a2a', 'center', false); if (started && songsDone) txt('Plus vite !', W / 2, ty + 54, 12, '#e85a82', 'center', false); X.restore() }
   if (combo >= 5 && !deadT) { X.save(); X.globalAlpha = .5; txt(String(tilesHit), W / 2, ty + 100, 44, '#e85a82'); X.restore() }
   X.restore();
 }
-function drawHud() {}
+function drawHud() {
+  X.save(); X.translate(0, -T);
+  const hy = topY() - 18;
+  for (let i = 0; i < 3; i++) { const x = W / 2 + (i - 1) * 24, on = i < lives; X.save(); X.globalAlpha = on ? 1 : .3; X.fillStyle = on ? '#ff4f6a' : '#888'; const r = 5; X.beginPath(); X.arc(x - r, hy - 3, r, M.PI, 0); X.arc(x + r, hy - 3, r, M.PI, 0); X.lineTo(x, hy + r * 1.9); X.closePath(); X.fill(); X.restore() }
+  X.restore();
+}
 
 // ---------- loop (fixed 60 Hz step) ----------
 let last = performance.now(), acc = 0;

@@ -334,6 +334,8 @@ const sfx = {
   penned: () => [784, 988, 1175].forEach((f, i) => setTimeout(() => beep(f, f, .07, 'triangle', .06), i * 60)),
   lost: () => { beep(400, 120, .4, 'sawtooth', .06) },
   howl: () => { beep(300, 520, .5, 'sine', .07); setTimeout(() => beep(520, 380, .5, 'sine', .06), 450) },
+  thunder: () => { beep(110, 40, .9, 'sawtooth', .1); beep(70, 30, 1.1, 'square', .07) },
+  honk: () => { beep(330, 330, .12, 'square', .06); setTimeout(() => beep(330, 330, .12, 'square', .06), 160) },
   clear: () => [523, 659, 784, 1046, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, f, .1, 'triangle', .07), i * 90)),
 
   power: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, f * 1.01, .12, 'triangle', .1), i * 70)),
@@ -707,12 +709,12 @@ const BATTEN = 44;                   // lighting bar the spotlights hang from
 const HANG_GAP = 62;                 // free space under a hanging spotlight
 const P = { y: 0, vy: 0, jumps: 0, hold: false, duck: false, duckK: 0, squash: 0, run: 0, lastStep: 0 };
 // ---- Le Berger : herd the sheep into the pen with the dog ----
-let sheep = [], wolves = [], bushes = [], fx = [], DOG = null, PEN = null, RIVER = null, lvl = 0, hearts = 3, timeLeft = 0, tgt = null, dragId = null, keyV = [0, 0], clearT = 0, penTotal = 0, lostLvl = 0, barkT = 0, introT = 0, wolfT = 0;
+let EV = {}, evList = [], stormT = 0, flashB = 0, bolt = null, TRK = null, trkT = 0, gateDone = false, clover = null, stunT = 0, sheep = [], wolves = [], bushes = [], fx = [], DOG = null, PEN = null, RIVER = null, lvl = 0, hearts = 3, timeLeft = 0, tgt = null, dragId = null, keyV = [0, 0], clearT = 0, penTotal = 0, lostLvl = 0, barkT = 0, introT = 0, wolfT = 0;
 function fTop() { return LAND ? 92 : 104 }
 function fBot() { return H - (LAND ? 10 : 18) }
 function newLevel() {
-  lvl++; lostLvl = 0; clearT = 0; introT = 110; sheep = []; wolves = []; bushes = []; fx = [];
-  const top = fTop(), bot = fBot(), n = M.min(10, 2 + lvl), pw = M.max(100, 146 - lvl * 4), ph = M.max(70, 92 - lvl * 2), gate = M.max(52, 76 - lvl * 2.5);
+  lvl++; lostLvl = 0; clearT = 0; introT = 150; sheep = []; wolves = []; bushes = []; fx = [];
+  const top = fTop(), bot = fBot(), n = M.min(14, 2 + lvl), pw = M.max(100, 146 - lvl * 4), ph = M.max(70, 92 - lvl * 2), gate = M.max(52, 76 - lvl * 2.5);
   // the pen sits in a top corner, its gate facing the field
   const left = lvl % 2 === 1, px = left ? 2 : W - 2 - pw; // flush with the edges: no gap where a sheep could get stuck
   PEN = { x: px, y: top, w: pw, h: ph, gate, gx: px + pw / 2 };
@@ -721,11 +723,22 @@ function newLevel() {
   for (let i = 0; i < nb; i++) for (let k = 0; k < 20; k++) { const b = { x: rnd(30, W - 30), y: rnd(top + ph + 40, bot - 30), r: rnd(12, 18) }; if (RIVER && M.abs(b.y - RIVER.y) < 40) continue; if (bushes.some(o => M.hypot(o.x - b.x, o.y - b.y) < 50)) continue; bushes.push(b); break }
   // the flock starts at the bottom, a lamb and sometimes a golden sheep
   const cx = W / 2 + rnd(-40, 40), cy = top + (bot - top) * (RIVER ? .78 : .62);
-  for (let i = 0; i < n; i++) sheep.push({ x: cx + rnd(-40, 40), y: cy + rnd(-24, 16), vx: 0, vy: 0, r: 8, ph: rnd(0, 6), dir: rnd(0, 6), lamb: i === 1 && lvl >= 3, gold: i === 2 && M.random() < .5 });
+  const groups = lvl >= 12 ? 3 : lvl >= 6 ? 2 : 1, gx0 = [cx, W * .2, W * .8];
+  for (let i = 0; i < n; i++) sheep.push({ x: (groups > 1 ? gx0[i % groups] : cx) + rnd(-30, 30), y: cy + rnd(-24, 16) - (i % groups) * 40, vx: 0, vy: 0, r: 8, ph: rnd(0, 6), dir: rnd(0, 6), lamb: i === 1 && lvl >= 3, gold: i === 2 && M.random() < .5 });
   for (const s of sheep) if (s.lamb) s.r = 6;
-  penTotal = n; timeLeft = (45 + n * 5 + (RIVER ? 12 : 0)) * 60;
+  penTotal = n; timeLeft = M.max(20 + n * 2, 34 + n * 3 + (RIVER ? 8 : 0) - M.max(0, lvl - 4) * 2.5) * 60;
   DOG = { x: W / 2, y: bot - 24, vx: 0, vy: 0, a: -M.PI / 2, wag: 0 }; tgt = null;
-  wolfT = lvl >= 7 ? 420 : 1e9;
+  wolfT = lvl >= 4 ? 220 : 1e9;
+  // the events of this level: more and more of them, picked at random
+  const ch = (from, p) => lvl >= from && M.random() < M.min(.85, p + (lvl - from) * .05);
+  EV = { storm: ch(3, .45), tractor: ch(5, .4), gate: ch(6, .4), fox: lvl >= 9 && M.random() < .6, ram: lvl >= 7, clover: M.random() < .5 };
+  if (lvl >= 4) EV.wolf = true;
+  stormT = 200; flashB = 0; bolt = null; TRK = null; trkT = 180 + M.random() * 200; gateDone = false; stunT = 0;
+  clover = EV.clover ? { x: rnd(40, W - 40), y: rnd(fTop() + PEN.h + 50, fBot() - 60) } : null;
+  if (EV.ram) { const r = sheep[3] || sheep[0]; r.ram = true; r.r = 10 }
+  if (EV.fox) wolves.push({ x: M.random() < .5 ? -10 : W + 10, y: rnd(fTop() + 150, fBot() - 40), vx: 0, vy: 0, run: 0, a: 0, fox: true, wait: 160 });
+  evList = [EV.storm && '⛈️ Orage', EV.tractor && '🚜 Tracteur', EV.gate && '🚪 Portail capricieux', EV.wolf && '🐺 Loups', EV.fox && '🦊 Renard', EV.ram && '🐏 Bélier têtu'].filter(Boolean);
+  timeLeft += evList.length * 3 * 60;
   setAct(lvl - 1, false); actBanner = 0; // our own "Niveau N" title instead of the act banner
 }
 function inPen(s) { const P = PEN; return s.x > P.x + 4 && s.x < P.x + P.w - 4 && s.y > P.y + 4 && s.y < P.y + P.h - 4 }
@@ -742,7 +755,7 @@ function pushOut(o, r) {
 function inWater(o) { return RIVER && M.abs(o.y - RIVER.y) < RIVER.h / 2 && M.abs(o.x - RIVER.bx) > RIVER.bw / 2 }
 function loseSheep(s, why) {
   s.lost = why; hearts--; lostLvl++; combo = 0; sfx.lost(); buzz([60, 40, 90]); shake = 6;
-  popup(s.x, s.y - 20 - T, why === 'wolf' ? 'Le loup !' : 'Emporté !', '#ff8a8a');
+  popup(s.x, s.y - 20 - T, why === 'wolf' ? 'Le loup !' : why === 'fox' ? 'Le renard !' : 'Emporté !', '#ff8a8a');
   for (let i = 0; i < 10; i++) fx.push({ x: s.x, y: s.y, vx: rnd(-2, 2), vy: rnd(-2, 2), l: 40, k: why === 'wolf' ? '#fff' : '#9fd8f4' });
 }
 
@@ -2445,7 +2458,7 @@ function update() {
     const D = DOG;
     // the dog runs to the finger
     if (keyV[0] || keyV[1]) tgt = { x: D.x + keyV[0] * 40, y: D.y + keyV[1] * 40 };
-    if (tgt) { const dx = tgt.x - D.x, dy = tgt.y - D.y, d = M.hypot(dx, dy); if (d > 3) { const sp = M.min(3.4, d * .12); D.vx += (dx / d * sp - D.vx) * .25; D.vy += (dy / d * sp - D.vy) * .25 } else { D.vx *= .7; D.vy *= .7 } } else { D.vx *= .85; D.vy *= .85 }
+    if (stunT > 0) { stunT--; D.vx *= .8; D.vy *= .8 } else if (tgt) { const dx = tgt.x - D.x, dy = tgt.y - D.y, d = M.hypot(dx, dy); if (d > 3) { const sp = M.min(3.4, d * .12); D.vx += (dx / d * sp - D.vx) * .25; D.vy += (dy / d * sp - D.vy) * .25 } else { D.vx *= .7; D.vy *= .7 } } else { D.vx *= .85; D.vy *= .85 }
     D.x += D.vx; D.y += D.vy; pushOut(D, 9); const dsp = M.hypot(D.vx, D.vy); if (dsp > .3) D.a = M.atan2(D.vy, D.vx); D.wag += .3 + dsp * .1;
     if (barkT > 0) barkT--;
     const flee = 74 + M.min(24, dsp * 7) + (barkT > 0 ? 40 : 0);
@@ -2456,17 +2469,19 @@ function update() {
       if (s.penned) { s.vx += rnd(-.05, .05); s.vy += rnd(-.05, .05); s.vx *= .9; s.vy *= .9; s.x += s.vx; s.y += s.vy; const P = PEN; s.x = M.max(P.x + 8, M.min(P.x + P.w - 8, s.x)); s.y = M.max(P.y + 8, M.min(P.y + P.h - 8, s.y)); continue }
       let ax = 0, ay = 0;
       const dx = s.x - D.x, dy = s.y - D.y, dd = M.hypot(dx, dy);
-      if (dd < flee) { const k = (1 - dd / flee) * .38; ax += dx / dd * k; ay += dy / dd * k; if (M.random() < .004) sfx.baa() }
+      if (TRK && !TRK.warn) { const tx = s.x - TRK.x, ty = s.y - TRK.y, td = M.hypot(tx, ty); if (td < 70) { ax += tx / td * .6; ay += ty / td * .6 } }
+      if (s.spook > 0) { s.spook--; ay += .12 }
+      if (dd < flee) { const k = (1 - dd / flee) * .38 * (s.ram ? .5 : 1); ax += dx / dd * k; ay += dy / dd * k; if (M.random() < .004) sfx.baa() }
       for (const w of wolves) { const wx = s.x - w.x, wy = s.y - w.y, wd = M.hypot(wx, wy); if (wd < 70) { ax += wx / wd * .25; ay += wy / wd * .25 } }
       let cx = 0, cy = 0, cn = 0;
       for (const o of live) { if (o === s || o.penned) continue; const ox = s.x - o.x, oy = s.y - o.y, od = M.hypot(ox, oy); if (od < 70) { cx += o.x; cy += o.y; cn++ } if (od < s.r + o.r + 3 && od > .01) { ax += ox / od * .25; ay += oy / od * .25 } }
-      if (cn) { ax += (cx / cn - s.x) * .005; ay += (cy / cn - s.y) * .005 }
+      const coh = M.max(.0015, .005 - lvl * .00025); if (cn) { ax += (cx / cn - s.x) * coh; ay += (cy / cn - s.y) * coh }
       // near the gate the sheep want to go in (and they follow the ones already inside)
-      { const gx = PEN.gx, gy = PEN.y + PEN.h, gd = M.hypot(s.x - gx, s.y - gy), pull = gd < 60 ? .09 : gd < 110 && sheep.some(o => o.penned) ? .03 : 0;
+      { const gx = PEN.gx, gy = PEN.y + PEN.h, gd = M.hypot(s.x - gx, s.y - gy), pull = s.spook > 0 ? 0 : gd < M.max(30, 62 - lvl * 2) ? .08 : lvl < 8 && gd < 110 && sheep.some(o => o.penned) ? .03 : 0;
         if (pull) { const tx = gx, ty = PEN.y + PEN.h * .5; const d2 = M.hypot(tx - s.x, ty - s.y) || 1; ax += (tx - s.x) / d2 * pull; ay += (ty - s.y) / d2 * pull }
         // stuck along the outside of the fence: slide towards the gate
         const P = PEN; if (!inPen(s) && s.x > P.x - 18 && s.x < P.x + P.w + 18 && s.y < P.y + P.h + 18) { ax += M.sign(gx - s.x) * .06; ay += .03 } }
-      if (dd >= flee) { if (M.random() < .02) s.dir += rnd(-1.5, 1.5); ax += M.cos(s.dir) * .02; ay += M.sin(s.dir) * .02 }
+      if (dd >= flee) { if (M.random() < .02 + lvl * .002) s.dir += rnd(-1.5, 1.5); const wa = .02 + M.min(.05, lvl * .003) * (s.lamb ? 2 : 1); ax += M.cos(s.dir) * wa; ay += M.sin(s.dir) * wa }
       s.vx = (s.vx + ax) * .9; s.vy = (s.vy + ay) * .9; const sp = M.hypot(s.vx, s.vy), mx = s.lamb ? 2 : 1.7; if (sp > mx) { s.vx *= mx / sp; s.vy *= mx / sp }
       s.x += s.vx; s.y += s.vy; pushOut(s, s.r);
       // the river: sheep never fall in, they walk along the bank to the bridge
@@ -2476,23 +2491,43 @@ function update() {
         if (M.abs(dy) < bank + 30) s.vx += M.sign(RIVER.bx - s.x) * .07;
       }
       if (inPen(s) && s.y < PEN.y + PEN.h - 10) {
-        s.penned = true; combo++; const mult = M.min(4, 1 + M.floor(combo / 4)), pts = (s.gold ? 100 : s.lamb ? 80 : 50) * mult;
+        s.penned = true; combo++; const mult = M.min(4, 1 + M.floor(combo / 4)), pts = (s.gold || s.ram ? 100 : s.lamb ? 80 : 50) * mult;
         starPts += pts; if (s.gold) { stars++; sfx.star(); flash = 4 } else sfx.penned(); buzz(10);
         popup(s.x, s.y - 16 - T, `+${pts}${mult > 1 ? ' ×' + mult : ''}`, s.gold ? '#ffe066' : '#fff');
         if (combo > PROF.stats.maxCombo) { PROF.stats.maxCombo = combo; checkUnlocks() }
       }
     }
     // wolves come out of the woods and go for the nearest sheep
-    if (--wolfT <= 0 && wolves.length < M.min(3, M.floor((lvl - 2) / 2))) { const sx = M.random() < .5 ? -10 : W + 10; wolves.push({ x: sx, y: rnd(fTop() + 120, fBot() - 40), vx: 0, vy: 0, run: 0, a: 0 }); sfx.howl(); wolfT = M.max(300, 700 - lvl * 40) }
+    if (EV.wolf && --wolfT <= 0 && wolves.filter(w => !w.fox).length < M.min(3, 1 + M.floor((lvl - 4) / 4))) { const sx = M.random() < .5 ? -10 : W + 10; wolves.push({ x: sx, y: rnd(fTop() + 120, fBot() - 40), vx: 0, vy: 0, run: 0, a: 0 }); sfx.howl(); wolfT = M.max(200, 520 - lvl * 18) }
     for (const w of wolves) {
       const dx = w.x - D.x, dy = w.y - D.y, dd = M.hypot(dx, dy);
-      if (!w.run && dd < 58) { w.run = 1; sfx.woof(); barkT = 20; starPts += 30; popup(w.x, w.y - 20 - T, 'Ouaf ! +30', '#ffe066') }
+      if (w.wait > 0) { w.wait--; continue }
+      if (!w.run && dd < (w.fox ? 70 : 58)) { w.run = 1; sfx.woof(); barkT = 20; starPts += 30; popup(w.x, w.y - 20 - T, 'Ouaf ! +30', '#ffe066') }
       if (w.run) { w.vx += (dx / dd * 3.2 - w.vx) * .1; w.vy += (dy / dd * 3.2 - w.vy) * .1 }
       else { let best = null, bd = 1e9; for (const s of live) if (!s.penned) { const d = M.hypot(s.x - w.x, s.y - w.y); if (d < bd) { bd = d; best = s } }
-        if (best) { const sp = .6 + lvl * .03; w.vx += ((best.x - w.x) / bd * sp - w.vx) * .08; w.vy += ((best.y - w.y) / bd * sp - w.vy) * .08; if (bd < best.r + 7) { loseSheep(best, 'wolf'); w.run = 1 } } }
+        if (w.fox) { const lamb = live.find(s => s.lamb && !s.penned); if (lamb) { best = lamb; bd = M.hypot(lamb.x - w.x, lamb.y - w.y) } }
+        if (best) { const sp = (w.fox ? 1.15 : .6) + lvl * .03; w.vx += ((best.x - w.x) / bd * sp - w.vx) * .08; w.vy += ((best.y - w.y) / bd * sp - w.vy) * .08; if (bd < best.r + 7) { loseSheep(best, w.fox ? 'fox' : 'wolf'); w.run = 1 } } }
       w.x += w.vx; w.y += w.vy; if (M.hypot(w.vx, w.vy) > .2) w.a = M.atan2(w.vy, w.vx);
     }
     wolves = wolves.filter(w => w.x > -40 && w.x < W + 40 && w.y > -40 && w.y < H + 40);
+    const live2 = sheep.filter(s => !s.lost && !s.penned);
+    // storm: lightning strikes near the flock and scatters it
+    if (EV.storm && !clearT && live2.length && --stormT <= 0) {
+      const tgS = live2[M.floor(M.random() * live2.length)], bx = tgS.x + rnd(-40, 40), by = tgS.y + rnd(-40, 40);
+      bolt = { x: bx, y: by, l: 14 }; flashB = 10; sfx.thunder(); shake = 7; buzz([40, 30, 80]);
+      for (const s2 of live2) { const dx = s2.x - bx, dy = s2.y - by, d = M.hypot(dx, dy) || 1; if (d < 120) { s2.vx += dx / d * 3.2; s2.vy += dy / d * 3.2; s2.dir = M.atan2(dy, dx) } }
+      stormT = M.round(rnd(260, 380) - M.min(120, lvl * 5));
+    }
+    if (flashB > 0) flashB--; if (bolt && --bolt.l <= 0) bolt = null;
+    // a tractor crosses the field: a warning first, then it rolls through
+    if (EV.tractor && !clearT) {
+      if (!TRK && --trkT <= 0) { const dir = M.random() < .5 ? 1 : -1; TRK = { dir, x: dir > 0 ? -30 : W + 30, y: rnd(fTop() + PEN.h + 40, fBot() - 30), warn: 100 }; sfx.honk() }
+      if (TRK) { if (TRK.warn > 0) TRK.warn--; else { TRK.x += TRK.dir * 2.3; if (M.hypot(D.x - TRK.x, D.y - TRK.y) < 24 && !stunT) { stunT = 60; D.vx = TRK.dir * 4; popup(D.x, D.y - 20 - T, 'Ouille !', '#ffb060'); buzz(40) } if (TRK.x < -40 || TRK.x > W + 40) { TRK = null; trkT = rnd(360, 560) - M.min(150, lvl * 6) } } }
+    }
+    // the gate swings open once: two sheep run out
+    if (EV.gate && !gateDone && !clearT) { const inn = sheep.filter(s2 => s2.penned); if (inn.length >= M.ceil(penTotal / 2) && live2.length >= 1) { gateDone = true; sfx.honk(); popup(PEN.gx, PEN.y + PEN.h + 20 - T, 'Le portail s’ouvre !', '#ffb060'); for (const s2 of inn.slice(0, 2)) { s2.penned = false; s2.x = PEN.gx + rnd(-10, 10); s2.y = PEN.y + PEN.h + 14; s2.vy = 2.5; s2.spook = 80; combo = 0 } } }
+    // a four-leaf clover gives extra time to the dog that finds it
+    if (clover && M.hypot(D.x - clover.x, D.y - clover.y) < 18) { timeLeft += 8 * 60; sfx.star(); popup(clover.x, clover.y - 20 - T, '☘️ +8 s', '#7dff8a'); clover = null }
     for (const p of fx) { p.x += p.vx; p.y += p.vy; p.vx *= .95; p.vy *= .95; p.l-- } fx = fx.filter(p => p.l > 0);
     // end of the level
     const left = sheep.filter(s => !s.lost && !s.penned).length;
@@ -2625,7 +2660,7 @@ function render() {
       if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', mx, 136, 17, '#fff');
       txt('Guide le chien avec ton doigt : les moutons le fuient', mx, 166, 13, '#ddd', 'center', false);
       txt('Fais-les tous rentrer dans l’enclos avant la fin du temps', mx, 184, 13, '#ddd', 'center', false);
-      txt('Attention à la rivière et aux loups !', mx, 214, 13, '#ffe9a0', 'center', false);
+      txt('Orages, tracteur, loups, renards… garde ton troupeau !', mx, 214, 13, '#ffe9a0', 'center', false);
       if (best) txt('Ton record : ' + best, mx, 252, 14, COL.yellow);
       drawBoard(W - 95, 110, 5, true);
     } else {
@@ -2636,7 +2671,7 @@ function render() {
     if (M.floor(t / 30) % 2 === 0) txt('Touche l’écran pour jouer', W / 2, G + 34, 17, '#fff');
     txt('Guide le chien avec ton doigt : les moutons le fuient', W / 2, G + 62, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
     txt('Fais-les tous rentrer dans l’enclos avant la fin du temps', W / 2, G + 80, W < 320 ? 11.5 : 13, '#ddd', 'center', false);
-    if (T > 80) txt('Attention à la rivière et aux loups !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
+    if (T > 80) txt('Orages, tracteur, loups, renards… garde ton troupeau !', W / 2, G + 106, W < 320 ? 11.5 : 13, '#ffe9a0', 'center', false);
     if (T > 80) { if (best) txt('Ton record : ' + best, W / 2, G + 134, 14, COL.yellow); (boardStatus === 'ok' && board.length ? txt(`🥇 Meilleur joueur : ${board[0].name} (${board[0].score})`, W / 2, G + 160, 14, '#ffe9a0', 'center', false) : 0) }
     }
   }
@@ -2693,6 +2728,7 @@ function drawSheep(s) {
   X.fillStyle = '#2a2230'; X.beginPath(); X.ellipse(r * .95, 0, r * .45, r * .36, 0, 0, 6.29); X.fill();
   X.fillStyle = '#3a3240'; X.beginPath(); X.ellipse(r * .8, -r * .45, r * .25, r * .12, -.6, 0, 6.29); X.ellipse(r * .8, r * .45, r * .25, r * .12, .6, 0, 6.29); X.fill();
   if (s.gold) star(0, 0, 3, t * .05, '#fff');
+  if (s.ram) { X.strokeStyle = '#8a6a3a'; X.lineWidth = 2.5; X.beginPath(); X.arc(r * .75, -r * .55, 3.5, 0, 5); X.stroke(); X.beginPath(); X.arc(r * .75, r * .55, 3.5, 1.3, 6.3); X.stroke() }
   X.restore();
 }
 function drawDog() {
@@ -2712,9 +2748,10 @@ function drawWolf(w) {
   X.save(); X.translate(w.x, w.y); X.rotate(w.a);
   const st = M.sin(t * .4) * 2;
   for (const [lx, ly] of [[8, -6], [8, 6], [-8, -6], [-8, 6]]) circ('#3a3a44', lx + (lx > 0 ? st : -st), ly, 2.4);
-  X.fillStyle = '#6a6a78'; X.beginPath(); X.ellipse(-14, 0, 8, 3, 0, 0, 6.29); X.fill();
-  X.fillStyle = '#7a7a88'; X.beginPath(); X.ellipse(0, 0, 13, 8, 0, 0, 6.29); X.fill(); X.fillStyle = '#9a9aa8'; X.beginPath(); X.ellipse(3, 0, 6, 5, 0, 0, 6.29); X.fill();
-  circ('#7a7a88', 13, 0, 6.5); poly('#7a7a88', [14, -2, 23, 0, 14, 2]); poly('#5a5a66', [10, -4, 13, -10, 15, -4]); poly('#5a5a66', [10, 4, 13, 10, 15, 4]);
+  const fur = w.fox ? '#d8702a' : '#7a7a88';
+  X.fillStyle = w.fox ? '#c8601a' : '#6a6a78'; X.beginPath(); X.ellipse(-14, 0, 8, 3, 0, 0, 6.29); X.fill(); if (w.fox) circ('#fff', -21, 0, 2.5);
+  X.fillStyle = fur; X.beginPath(); X.ellipse(0, 0, 13, 8, 0, 0, 6.29); X.fill(); X.fillStyle = '#9a9aa8'; X.beginPath(); X.ellipse(3, 0, 6, 5, 0, 0, 6.29); X.fill();
+  circ(fur, 13, 0, 6.5); poly(fur, [14, -2, 23, 0, 14, 2]); poly('#5a5a66', [10, -4, 13, -10, 15, -4]); poly('#5a5a66', [10, 4, 13, 10, 15, 4]);
   circ('#ffe040', 16, -2.5, 1.4); circ('#ffe040', 16, 2.5, 1.4);
   X.restore();
 }
@@ -2743,11 +2780,21 @@ function drawGame() {
   if (tgt && dragId !== null) { X.save(); X.globalAlpha = .5; X.strokeStyle = '#fff'; X.lineWidth = 2; X.beginPath(); X.arc(tgt.x, tgt.y, 10 + M.sin(t * .2) * 2, 0, 6.29); X.stroke(); X.restore() }
   for (const s of sheep) if (!s.lost) drawSheep(s);
   for (const w of wolves) drawWolf(w);
+  if (clover) { const c = clover, b = M.sin(t * .1) * 2; X.save(); X.translate(c.x, c.y + b); for (let k = 0; k < 4; k++) { X.rotate(1.57); X.fillStyle = '#3aa84a'; X.beginPath(); X.ellipse(0, -5, 4, 5, 0, 0, 6.29); X.fill() } line('#2a7a34', 1.5, [0, 0, 3, 8]); X.restore(); X.save(); X.globalAlpha = .4 + .3 * M.sin(t * .2); X.strokeStyle = '#ffe066'; X.lineWidth = 1.5; X.beginPath(); X.arc(c.x, c.y + b, 13, 0, 6.29); X.stroke(); X.restore() }
+  if (TRK) { const K = TRK;
+    if (K.warn > 0) { const ex = K.dir > 0 ? 18 : W - 18; X.save(); X.globalAlpha = M.floor(t / 8) % 2 ? 1 : .4; txt('🚜', ex, K.y, 20, '#fff'); txt(K.dir > 0 ? '→' : '←', ex + K.dir * 22, K.y, 18, '#ffb060'); X.restore(); X.save(); X.globalAlpha = .15; X.fillStyle = '#ffb060'; X.fillRect(0, K.y - 16, W, 32); X.restore() }
+    else { X.save(); X.translate(K.x, K.y); X.scale(K.dir, 1); X.globalAlpha = .25; X.fillStyle = '#000'; X.fillRect(-16, -10, 34, 24); X.globalAlpha = 1;
+      for (const [wx, wy, wr] of [[-9, -12, 6], [-9, 12, 6], [11, -10, 4], [11, 10, 4]]) { X.fillStyle = '#1d1d24'; X.fillRect(wx - wr, wy - 2.5, wr * 2, 5) }
+      X.fillStyle = '#d8402c'; X.beginPath(); X.roundRect(-16, -9, 32, 18, 4); X.fill(); X.fillStyle = '#a82a1e'; X.fillRect(-14, -7, 12, 14); X.fillStyle = '#2a2a33'; X.fillRect(8, -3, 5, 2); circ('#fff8c0', 16, -5, 1.8); circ('#fff8c0', 16, 5, 1.8); X.restore() } }
+  if (EV.storm) { X.save(); X.fillStyle = 'rgba(20,24,60,.22)'; X.fillRect(0, 0, W, H); X.strokeStyle = 'rgba(180,200,255,.35)'; X.lineWidth = 1; for (let i = 0; i < 40; i++) { const rx = (i * 53 + t * 3) % W, ry = (i * 97 + t * 9) % H; X.beginPath(); X.moveTo(rx, ry); X.lineTo(rx - 3, ry + 10); X.stroke() } X.restore() }
+  if (bolt) { X.save(); X.globalAlpha = bolt.l / 14; X.strokeStyle = '#fff6c0'; X.lineWidth = 3; X.beginPath(); let bx = bolt.x + rnd(-10, 10), by = 0; X.moveTo(bx, by); while (by < bolt.y) { by += 22; bx += rnd(-12, 12); X.lineTo(bx, M.min(by, bolt.y)) } X.stroke(); circ('rgba(255,246,192,.5)', bolt.x, bolt.y, 18); X.restore() }
+  if (flashB > 0) { X.save(); X.globalAlpha = flashB / 20; X.fillStyle = '#fff'; X.fillRect(0, 0, W, H); X.restore() }
+  if (stunT > 0) txt('💫', DOG.x, DOG.y - 18, 14, '#fff');
   { const D = DOG, fr = 74 + M.min(24, M.hypot(D.vx, D.vy) * 7); X.save(); X.globalAlpha = .18; X.strokeStyle = '#fff'; X.lineWidth = 2; X.setLineDash([6, 6]); X.beginPath(); X.arc(D.x, D.y, fr, 0, 6.29); X.stroke(); X.setLineDash([]); X.restore() }
   if (lvl <= 2 && !clearT) { const gx = PEN.gx, gy = PEN.y + PEN.h + 18 + M.sin(t * .15) * 4; X.save(); X.globalAlpha = .8; poly('#ffe066', [gx, gy - 10, gx - 10, gy + 4, gx - 4, gy + 4, gx - 4, gy + 14, gx + 4, gy + 14, gx + 4, gy + 4, gx + 10, gy + 4]); X.restore() }
   drawDog();
   for (const p of fx) { X.save(); X.globalAlpha = p.l / 40; circ(p.k, p.x, p.y, 3); X.restore() }
-  if (introT > 0) { X.save(); X.globalAlpha = M.min(1, introT / 20); txt(`Niveau ${lvl}`, W / 2, H * .42, 30, COL.yellow); txt(`${penTotal} moutons à rentrer` + (lvl === 1 ? ' · pousse-les vers la flèche' : lvl === 5 ? ' · passe par le pont !' : lvl === 7 ? ' · gare aux loups !' : ''), W / 2, H * .42 + 26, 12, '#fff'); X.restore() }
+  if (introT > 0) { X.save(); X.globalAlpha = M.min(1, introT / 20); txt(`Niveau ${lvl}`, W / 2, H * .42, 30, COL.yellow); if (evList.length) { const h2 = M.ceil(evList.length / 2); txt(evList.slice(0, h2).join('  ·  '), W / 2, H * .42 + 46, 11, '#ffe680'); if (evList.length > h2) txt(evList.slice(h2).join('  ·  '), W / 2, H * .42 + 62, 11, '#ffe680') } txt(`${penTotal} moutons à rentrer` + (lvl === 1 ? ' · pousse-les vers la flèche' : lvl === 5 ? ' · passe par le pont !' : lvl === 7 ? ' · gare aux loups !' : ''), W / 2, H * .42 + 26, 12, '#fff'); X.restore() }
   X.restore();
 }
 function drawHud() {
