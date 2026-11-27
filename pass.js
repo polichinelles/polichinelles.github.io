@@ -1,9 +1,9 @@
 // ===== Les Polichinelles : player level, daily challenges and the season pass (saved on the phone) =====
 const PASS_KEY = 'polichinelles_pass', PASS_MAX = 100, TIER_XP = 300;
-const PASS_GAMES = { course: 'La Course', envol: 'L’Envol', trampo: 'Le Trampoline', tir: 'Le Tir Forain', tape: 'Tape-Polichinelle', pyramide: 'La Pyramide', jongleur: 'Le Jongleur', briques: 'Le Casse-Décor', farandole: 'La Farandole', traversee: 'La Traversée' };
-const PASS_DE = { course: 'de La Course', envol: 'de L’Envol', trampo: 'du Trampoline', tir: 'du Tir Forain', tape: 'de Tape-Polichinelle', pyramide: 'de La Pyramide', jongleur: 'du Jongleur', briques: 'du Casse-Décor', farandole: 'de La Farandole', traversee: 'de La Traversée' };
-const PASS_A = { course: 'à La Course', envol: 'à L’Envol', trampo: 'au Trampoline', tir: 'au Tir Forain', tape: 'à Tape-Polichinelle', pyramide: 'à La Pyramide', jongleur: 'au Jongleur', briques: 'au Casse-Décor', farandole: 'à La Farandole', traversee: 'à La Traversée' };
-const PASS_SCORE = { course: 800, envol: 150, trampo: 200, tir: 1500, tape: 300, pyramide: 120, jongleur: 250, briques: 500, farandole: 250, traversee: 300 };
+const PASS_GAMES = { course: 'La Course', envol: 'L’Envol', trampo: 'Le Trampoline', tir: 'Le Tir Forain', tape: 'Tape-Polichinelle', pyramide: 'La Pyramide', jongleur: 'Le Jongleur', briques: 'Le Casse-Décor', farandole: 'La Farandole', traversee: 'La Traversée', tracteur: 'Le Tracteur', oeufs: 'Le Poulailler' };
+const PASS_DE = { course: 'de La Course', envol: 'de L’Envol', trampo: 'du Trampoline', tir: 'du Tir Forain', tape: 'de Tape-Polichinelle', pyramide: 'de La Pyramide', jongleur: 'du Jongleur', briques: 'du Casse-Décor', farandole: 'de La Farandole', traversee: 'de La Traversée', tracteur: 'du Tracteur', oeufs: 'du Poulailler' };
+const PASS_A = { course: 'à La Course', envol: 'à L’Envol', trampo: 'au Trampoline', tir: 'au Tir Forain', tape: 'à Tape-Polichinelle', pyramide: 'à La Pyramide', jongleur: 'au Jongleur', briques: 'au Casse-Décor', farandole: 'à La Farandole', traversee: 'à La Traversée', tracteur: 'au Tracteur', oeufs: 'au Poulailler' };
+const PASS_SCORE = { course: 800, envol: 150, trampo: 200, tir: 1500, tape: 300, pyramide: 120, jongleur: 250, briques: 500, farandole: 250, traversee: 300, tracteur: 400, oeufs: 300 };
 // ---- seasons: each one has 100 tiers (40 + 60 bonus tiers); the player level never resets ----
 const SEASONS = [
   { id: 1, name: 'Le Grand Carnaval', icon: '🎭', start: [2026, 11, 16], days: 10,
